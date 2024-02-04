@@ -1,0 +1,6 @@
+bin
+cmake-build-debug
+.vscode
+.idea
+tmp
+.git
