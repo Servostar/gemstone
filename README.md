@@ -42,6 +42,6 @@ lex (generate file)           │
 ## Docker images
 Currently, the SDK is based on Almalinux 9.3, an open source distro binary compatible to RHEL 9.3.
 
-The following images can be found in the offical repository at [Docker Bub](https://hub.docker.com/r/servostar/gemstone):
+The following images can be found in the offical repository at [Docker Hub](https://hub.docker.com/r/servostar/gemstone):
 - SDK
 - Devkit
