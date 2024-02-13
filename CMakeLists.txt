@@ -21,6 +21,8 @@ project(gemstone
     DESCRIPTION "programming language compiler"
     LANGUAGES C)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # ------------------------------------------------ #
 #  Lex                                             #
 # ------------------------------------------------ #
