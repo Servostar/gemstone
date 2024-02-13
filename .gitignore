@@ -4,3 +4,12 @@ cmake-build-debug
 .idea
 tmp
 .git
+CMakeFiles
+cmake_install.cmake
+CMakeCache.txt
+compile_commands.json
+Makefile
+.cache
+lexer.ll.c
+parser.tab.c
+parser.tab.h
