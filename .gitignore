@@ -13,3 +13,4 @@ Makefile
 lexer.ll.c
 parser.tab.c
 parser.tab.h
+build
