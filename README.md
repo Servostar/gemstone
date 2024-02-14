@@ -2,6 +2,17 @@
 
 Gemstone is a programming language compiler written in C with lex and yacc.
 
+## Development with VSCode/Codium
+
+Recommended extensions for getting a decent experience are the following:
+- https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd
+- https://marketplace.visualstudio.com/items?itemName=daohong-emilio.yash
+- https://marketplace.visualstudio.com/items?itemName=cschlosser.doxdocgen
+- https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools
+- https://marketplace.visualstudio.com/items?itemName=twxs.cmake
+
+In order to remove false error messages from clangd CMake has to be run once in order generate compile_commands.json.
+
 ## Build
 The build pipeline is configured with CMake in the file CMakeLists.txt.
 In order to avoid dependency and configuration issues the recommended way to build is by using the provided docker containers.
