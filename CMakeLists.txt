@@ -56,7 +56,7 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
 file(GLOB_RECURSE SOURCE_FILES src/*.c)
 
 # define default compile flags
-set(FLAGS -Wall -Wconversion)
+set(FLAGS -Wall -Wextra -Wconversion -Wpedantic)
 
 # ------------------------------------------------ #
 #  Target RELEASE                                  #
