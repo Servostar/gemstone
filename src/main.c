@@ -33,7 +33,7 @@ void setup(void)
     DEBUG("finished starting up gemstone...");
 }
 
-int main() {
+int main(void) {
     setup();
 
     yyparse();
