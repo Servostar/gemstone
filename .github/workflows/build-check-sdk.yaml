@@ -11,4 +11,4 @@ jobs:
     - name: Setup SDK
       run: docker pull servostar/gemstone:sdk-"$SDK" && docker build --tag gemstone:devkit-"$SDK" .
     - name: Compile
-      run: docker run gemstone:devkit-"$SDK" make -B release
+      run: docker run gemstone:devkit-"$SDK" make check
