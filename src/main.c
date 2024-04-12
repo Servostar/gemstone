@@ -1,6 +1,6 @@
 #include <yacc/parser.tab.h>
 
 int main() {
-    yyparse();
+    yypa rse();
     return 0;
 }
