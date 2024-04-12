@@ -6,8 +6,8 @@
     int yylex();
 %}
 
-// disable the following functions
-// to avoid failing code check
+/* disable the following functions */
+/* to avoid failing code check */
 %option nounput
 %option noinput
 
