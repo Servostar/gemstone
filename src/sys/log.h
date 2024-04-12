@@ -52,6 +52,16 @@ will not print.
             __logf(level, __FILE_NAME__, __LINE__, __func__, format, ##__VA_ARGS__); \
     } while(0)
 
+/**
+ * @brief Log a message into all registered streams
+ * 
+ * @param level of the message
+ * @param file origin of the message cause
+ * @param line line in which log call was made
+ * @param func function the log call was done in 
+ * @param format the format to print following args in
+ * @param ... 
+ */
 void __logf(
     const char* restrict level,
     const char* restrict file,
@@ -60,6 +70,15 @@ void __logf(
     const char* restrict format,
     ...);
 
+/**
+ * @brief Log a panic message to stderr and perform gracefull crash with exit() denoting a failure
+ * 
+ * @param file origin of the message cause
+ * @param line line in which log call was made
+ * @param func function the log call was done in 
+ * @param format the format to print following args in
+ * @param ... 
+ */
 void __panicf(
     const char* restrict file,
     const unsigned long line,
@@ -67,6 +86,15 @@ void __panicf(
     const char* restrict format,
     ...);
 
+/**
+ * @brief Log a critical message to stderr and perform ungracefull crash with abort()
+ * 
+ * @param file origin of the message cause
+ * @param line line in which log call was made
+ * @param func function the log call was done in 
+ * @param format the format to print following args in
+ * @param ... 
+ */
 void __fatalf(
     const char* restrict file,
     const unsigned long line,
@@ -74,8 +102,17 @@ void __fatalf(
     const char* restrict format,
     ...);
 
+/**
+ * @brief Initialize the logger by registering stderr as stream
+ * 
+ */
 void log_init(void);
 
+/**
+ * @brief Register a stream as output source. Must be freed manually at exit if necessary 
+ * 
+ * @param stream 
+ */
 void log_register_stream(FILE* restrict stream);
 
 #endif /* _SYS_ERR_H_ */
