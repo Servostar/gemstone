@@ -4,7 +4,7 @@ on: [push, pull_request]
 env:
   SDK: 0.1.0-alma-9.3
 jobs:
-  test-rust:
+  build-check-sdk:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
