@@ -13,8 +13,6 @@
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
-#define LOG_MAX_BACKTRACE_FRAMES 64
-
 #define LOG_STRING_PANIC       "Critical"
 #define LOG_STRING_FATAL       "Fatal"
 #define LOG_STRING_ERROR       "Error"
