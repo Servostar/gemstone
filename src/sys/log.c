@@ -16,6 +16,9 @@ void log_init(void)
 
 void log_register_stream(FILE* restrict stream)
 {
+    if (stream == NULL)
+        PANIC("stream to register is NULL");
+
     if (GlobalLogger.stream_count == 0)
     {
         GlobalLogger.streams = (FILE**) malloc(sizeof(FILE*));
