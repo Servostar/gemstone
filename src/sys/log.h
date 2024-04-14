@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <sys/cdefs.h>
+#include <string.h>
 
 #define LOG_DEFAULT_STREAM stderr
 
@@ -19,6 +20,16 @@
 #define LOG_STRING_WARNING     "Warning"
 #define LOG_STRING_INFORMATION "Information"
 #define LOG_STRING_DEBUG       "Debug"
+
+// define __FILE_NAME__ macro if not defined
+// generally not defined by GCC < 11.3 and MSVC
+#ifndef __FILE_NAME__
+#if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER)
+#define __FILE_NAME__ (strrstr(__FILE__, "\\\\") ? strrstr(__FILE__, "\\\\") + 1 : __FILE__)
+#else
+#define __FILE_NAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif
+#endif
 
 /**
  * @brief Panic is used in cases where the process is in an unrecoverable state.
