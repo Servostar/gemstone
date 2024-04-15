@@ -40,6 +40,15 @@
 
 %token KeyWhile
 
+%token KeyIn
+%token KeyOut
+%token KeyFun
+%token OpEquals
+%token OpAnd
+%token OpOr
+%token OpNot
+%token OpXor
+
 
 
 
@@ -65,6 +74,11 @@ decl: '=' {printf("=\n"); };
     | '*' {printf("*\n"); }; 
     | '/' {printf("/\n"); }; 
 
+    | '&' {printf("&\n"); }; 
+    | '^' {printf("^\n"); }; 
+    | '.' {printf(".\n"); }; 
+    | ',' {printf(",\n"); }; 
+    | ';' {printf(";\n"); }; 
 
 
 
@@ -91,6 +105,18 @@ decl: '=' {printf("=\n"); };
     | KeyElse {printf("KeyElse\n"); };
 
     | KeyWhile {printf("KeyWhile\n"); };
+
+    | KeyIn {printf("KeyIn\n"); };
+    | KeyOut {printf("KeyOut\n"); };
+    | KeyFun {printf("KeyFun\n"); };
+    | OpEquals {printf("OpEquals\n"); };
+    | OpAnd {printf("OpAnd\n"); };
+    | OpOr {printf("OpOr\n"); };
+    | OpNot {printf("OpNot\n"); };
+    | OpXor {printf("OpXor\n"); };
+
+
+
     
 %%
 

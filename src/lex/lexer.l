@@ -56,8 +56,19 @@
 
 "while" return(KeyWhile);
 
-
-
+"in" return(KeyIn);
+"out" return(KeyOut);
+"fun" return(KeyFun);
+"," return(',');
+";"  return(';');
+"==" return(OpEquals);
+"&&" return(OpAnd);
+"||" return(OpOr);
+"!!" return(OpNot);
+"^^" return(OpXor);
+"&" return('&');
+"^" return('^');
+"." return('.');
 
 
 
