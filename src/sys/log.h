@@ -25,7 +25,7 @@
 // generally not defined by GCC < 11.3 and MSVC
 #ifndef __FILE_NAME__
 #if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER)
-#define __FILE_NAME__ (strrstr(__FILE__, "\\\\") ? strrstr(__FILE__, "\\\\") + 1 : __FILE__)
+#define __FILE_NAME__ (strrstr(__FILE__, "\\") ? strrstr(__FILE__, "\\") + 1 : __FILE__)
 #else
 #define __FILE_NAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
