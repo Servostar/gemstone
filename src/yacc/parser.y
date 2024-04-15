@@ -50,6 +50,17 @@
 %token OpXor
 
 
+%token KeyImport
+%token KeySilent
+%token KeyBox
+%token FunTypeof
+%token FunSizeof
+%token FunFilename
+%token FunFunname
+%token FunLineno
+%token FunExtsupport
+%token ValStr
+%token ValMultistr
 
 
 %%
@@ -79,6 +90,7 @@ decl: '=' {printf("=\n"); };
     | '.' {printf(".\n"); }; 
     | ',' {printf(",\n"); }; 
     | ';' {printf(";\n"); }; 
+    | '#' {printf("#\n"); }; 
 
 
 
@@ -115,9 +127,20 @@ decl: '=' {printf("=\n"); };
     | OpNot {printf("OpNot\n"); };
     | OpXor {printf("OpXor\n"); };
 
+    | KeyImport {printf("KeyImport\n"); };
+    | KeySilent {printf("KeySilent\n"); };
+    | KeyBox {printf("KeyBox\n"); };
+    | FunTypeof {printf("FunTypeof\n"); };
+    | FunSizeof {printf("FunSizeof\n"); };
+    | FunFilename {printf("FunFilename\n"); };
+    | FunLineno {printf("FunLineno\n"); };
+    | FunExtsupport {printf("FunExtsupport\n"); };
+    | FunFunname {printf("FunFunname\n"); };
+
+    | ValStr {printf("ValStr\n"); };
+    | ValMultistr {printf("ValMultistr\n"); };
 
 
-    
 %%
 
 
