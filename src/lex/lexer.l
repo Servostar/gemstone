@@ -4,9 +4,10 @@
 
     int yyLineNumber = 1;
     int yylex();
+
+
 %}
 
-/*543fgrsdffsd*/
 
 %%
 "\n"    yyLineNumber++;
@@ -71,9 +72,22 @@
 "." return('.');
 
 
+"import" return(KeyImport);
+"silent" return(KeySilent);
+"box" return(KeyBox);
+"#" return('#');
+"typeof" return(FunTypeof);
+"sizeof" return(FunSizeof);
+"filename" return(FunFilename);
+"funname" return(FunFunname);
+"lineno" return(FunLineno);
+"extsupport" return(FunExtsupport);
+
 
 
 [a-zA-Z_]+ { yylval.string = strdup(yytext); return(Ident); };
 [0-9]+    { yylval.num = atoi(yytext); return(ValInt); };
+\"([^\"\n])*\" {yylval.string = strdup(yytext); return(ValStr);};
+\"\"\"([^\"\n]|\\\n)*\"\"\" {yylval.string = strdup(yytext); return(ValMultistr);};
 .;
 %%
