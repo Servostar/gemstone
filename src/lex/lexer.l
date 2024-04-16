@@ -7,6 +7,12 @@
 %}
 
 
+/* disable the following functions */
+/* to avoid failing code check */
+%option nounput
+%option noinput
+
+
 %%
 "\n"    yyLineNumber++;
 

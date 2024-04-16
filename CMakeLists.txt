@@ -102,3 +102,28 @@ target_compile_options(debug PUBLIC ${FLAGS} -g)
 
 # add src directory as include path
 target_include_directories(debug PUBLIC src)
+
+# ------------------------------------------------ #
+#  Target Code Check                               #
+# ------------------------------------------------ #
+
+# Same as debug but will fail on warnings
+# use as check
+
+add_executable(check
+        ${SOURCE_FILES}
+        ${LEX_GENERATED_SOURCE_FILE}
+        ${YACC_GENERATED_SOURCE_FILE})
+
+set_target_properties(check
+        PROPERTIES
+        OUTPUT_NAME "gsc"
+        RUNTIME_OUTPUT_DIRECTORY "bin/check")
+
+# compiler flags targeting a GCC debug environment
+# extra -Werror flag to treat warnings as error to make github action fail on warning
+target_compile_options(check PUBLIC ${FLAGS} -g -Werror)
+
+# add src directory as include path
+target_include_directories(check PUBLIC src)
+
