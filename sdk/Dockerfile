@@ -1,13 +1,13 @@
-FROM almalinux:9.3
+FROM alpine:3.19.1
 LABEL authors="servostar"
-LABEL version="0.1.0"
+LABEL version="0.2.0"
 LABEL description="base image for building the gemstone programming language compiler"
 LABEL website="https://github.com/Servostar/gemstone"
 
 # install dependencies
-RUN yum install cmake gcc flex byacc -y
+RUN apk add build-base gcc make cmake bison flex
 
 # create user for build
-RUN adduser lorang
+RUN adduser --disabled-password lorang
 WORKDIR /home/lorang
 USER lorang
