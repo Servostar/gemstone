@@ -8,16 +8,14 @@
 
 %union {
     char *string;
-    int num;
-    float real;
 }
 
 %token KeyInt
 %token KeyFloat
 %token KeyAs
-%token <num> ValInt
+%token <string> ValInt
 %token <string> Ident
-%token <real> ValFloat 
+%token <string> ValFloat 
 %token <string> ValStr
 %token <string> ValMultistr
 %token KeyShort

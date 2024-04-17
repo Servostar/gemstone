@@ -76,9 +76,9 @@
 "extsupport" return(FunExtsupport);
 
 [a-zA-Z_]+ { yylval.string = strdup(yytext); return(Ident); };
-[-+]?[0-9]+    { yylval.num = atoi(yytext); return(ValInt); };
+[0-9]+    { yylval.string = strdup(yytext); return(ValInt); };
 \"([^\"\n])*\" {yylval.string = strdup(yytext); return(ValStr);};
 \"\"\"([^\"\n]|\\\n)*\"\"\" {yylval.string = strdup(yytext); return(ValMultistr);};
-[-+]?[0-9]*\.[0-9]+ {yylval.real = atof(yytext); return(ValFloat);};
+[0-9]*\.[0-9]+ {yylval.string = strdup(yytext); return(ValFloat);};
 .;
 %%
