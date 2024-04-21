@@ -35,6 +35,10 @@ void setup(void)
 
 int main(void) {
     setup();
+    
+    FILE* input = fopen("program.gem", "r");
+
+    yyin = input;
 
     yyparse();
     return 0;
