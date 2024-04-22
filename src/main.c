@@ -48,8 +48,6 @@ int main(void) {
     
     yyin = input;
 
-    fclose(input);
-
     yyparse();
 
     atexit();
