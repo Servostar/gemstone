@@ -24,7 +24,7 @@
 %token KeyHalf
 %token KeyDouble
 %token KeySigned
-%token Keyunsigned
+%token KeyUnsigned
 %token KeyRef
 %token KeyType
 %token KeyLocal
