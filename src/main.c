@@ -31,12 +31,23 @@ void setup(void)
     #endif
 
     // actual setup
-
+    
     DEBUG("finished starting up gemstone...");
+}
+
+/**
+ * @brief Closes File after compiling.
+ * 
+ */
+
+void close_file(void)
+{
+    fclose(input);
 }
 
 int main(void) {
     setup();
+    atexit(close_file);
     
     FILE* input = fopen("program.gem", "r");
 
@@ -49,6 +60,5 @@ int main(void) {
 
     yyparse();
 
-    atexit(input);
     return 0;
 }
