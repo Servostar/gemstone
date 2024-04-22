@@ -7,12 +7,10 @@
     int yylex();
 %}
 
-
 /* disable the following functions */
 /* to avoid failing code check */
 %option nounput
 %option noinput
-
 
 %%
 "\n"    yyLineNumber++;
@@ -75,7 +73,6 @@
 "funname" {DEBUG("\"%s\" tokenized with \'FunFunname\'", yytext); return(FunFunname);};
 "lineno" {DEBUG("\"%s\" tokenized with \'FunLineno\'", yytext); return(FunLineno);};
 "extsupport" {DEBUG("\"%s\" tokenized with \'FunExtsupport\'", yytext); return(FunExtsupport);};
-
 
 [0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = strdup(yytext); return(ValInt); };
 [0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = strdup(yytext); return(ValFloat);};
