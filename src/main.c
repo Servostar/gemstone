@@ -4,6 +4,8 @@
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
+extern FILE* yyin;
+
 /**
  * @brief Log a debug message to inform about beginning exit procedures
  * 
@@ -38,10 +40,10 @@ int main(void) {
     
     FILE* input = fopen("program.gem", "r");
 
-    if (input == NULL)
+    if (NULL == Input)
     {
-        printf("Error opening file!\n");
-        return 1; // Error when opening file
+        ERROR("File couldn't be opened!");
+        atexit();
     }
     
     yyin = input;
@@ -49,5 +51,7 @@ int main(void) {
     fclose(input);
 
     yyparse();
+
+    atexit();
     return 0;
 }
