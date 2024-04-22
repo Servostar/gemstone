@@ -40,16 +40,15 @@ int main(void) {
     
     FILE* input = fopen("program.gem", "r");
 
-    if (NULL == Input)
+    if (NULL == input)
     {
         ERROR("File couldn't be opened!");
-        atexit();
     }
     
     yyin = input;
 
     yyparse();
 
-    atexit();
+    atexit(input);
     return 0;
 }
