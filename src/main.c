@@ -42,7 +42,7 @@ void setup(void)
 
 void close_file(void)
 {
-    fclose(input);
+    fclose(yyin);
 }
 
 int main(void) {
@@ -53,7 +53,7 @@ int main(void) {
 
     if (NULL == input)
     {
-        ERROR("File couldn't be opened!");
+        PANIC("File couldn't be opened!");
     }
     
     yyin = input;
