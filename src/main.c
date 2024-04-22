@@ -38,7 +38,15 @@ int main(void) {
     
     FILE* input = fopen("program.gem", "r");
 
+    if (input == NULL)
+    {
+        printf("Error opening file!\n");
+        return 1; // Error when opening file
+    }
+    
     yyin = input;
+
+    fclose(input);
 
     yyparse();
     return 0;
