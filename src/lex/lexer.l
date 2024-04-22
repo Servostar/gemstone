@@ -76,10 +76,11 @@
 "lineno" {DEBUG("\"%s\" tokenized with \'FunLineno\'", yytext); return(FunLineno);};
 "extsupport" {DEBUG("\"%s\" tokenized with \'FunExtsupport\'", yytext); return(FunExtsupport);};
 
-[a-zA-Z_]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = strdup(yytext); return(Ident); };
+
 [0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = strdup(yytext); return(ValInt); };
+[0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = strdup(yytext); return(ValFloat);};
+[a-zA-Z_0-9]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = strdup(yytext); return(Ident); };
 \"([^\"\n])*\" {DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
 \"\"\"([^\"\n]|\\\n)*\"\"\" {DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = strdup(yytext); return(ValMultistr);};
-[0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = strdup(yytext); return(ValFloat);};
 .;
 %%
