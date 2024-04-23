@@ -14,6 +14,16 @@ void notify_exit(void)
 }
 
 /**
+ * @brief Closes File after compiling.
+ * 
+ */
+
+void close_file(char file_to_close)
+{
+    fclose(file_to_close);
+}
+
+/**
  * @brief Run compiler setup here
  * 
  */
@@ -31,27 +41,17 @@ void setup(void)
     // actual setup
     
     DEBUG("finished starting up gemstone...");
-}
-
-/**
- * @brief Closes File after compiling.
- * 
- */
-
-void close_file(char file_to_close)
-{
-    fclose(file_to_close);
+    atexit(close_file(filename));
 }
 
 int main(int argc, char *argv[]) {
 
     setup();
-    atexit(close_file(filename);
 
     // Check for file input as argument
     if (2 != argc)
     {
-        printf("Usage: %s <filename>\n", argv[0]);
+        INFO("Usage: %s <filename>\n", argv[0]);
         PANIC("No File could be found");
     }
     
