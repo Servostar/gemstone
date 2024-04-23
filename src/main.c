@@ -64,8 +64,6 @@ int main(int argc, char *argv[]) {
     {
         PANIC("File couldn't be opened!");
     }
-    
-    yyin = input;
 
     yyparse();
 
