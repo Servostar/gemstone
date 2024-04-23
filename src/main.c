@@ -4,8 +4,6 @@
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
-extern FILE* yyin;
-
 /**
  * @brief Log a debug message to inform about beginning exit procedures
  * 
@@ -42,16 +40,27 @@ void setup(void)
 
 void close_file(void)
 {
-    fclose(yyin);
+    fclose(argv[1]);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+
     setup();
     atexit(close_file);
-    
-    FILE* input = fopen("program.gem", "r");
 
-    if (NULL == input)
+    // Check for file input as argument
+    if (2 != argc)
+    {
+        printf("Usage: %s <filename>\n", argv[0]);
+        PANIC("No File could be found");
+    }
+    
+    // filename as first argument
+    char *filename = argv[1];
+
+    FILE *file = fopen(filename, "r");
+
+    if (NULL == file)
     {
         PANIC("File couldn't be opened!");
     }
