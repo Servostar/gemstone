@@ -38,15 +38,15 @@ void setup(void)
  * 
  */
 
-void close_file(void)
+void close_file(char file_to_close)
 {
-    fclose(argv[1]);
+    fclose(file_to_close);
 }
 
 int main(int argc, char *argv[]) {
 
     setup();
-    atexit(close_file);
+    atexit(close_file(filename);
 
     // Check for file input as argument
     if (2 != argc)
