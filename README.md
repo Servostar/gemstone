@@ -2,6 +2,25 @@
 
 Gemstone is a programming language compiler written in C with lex and yacc.
 
+## Dependencies (build)
+
+### Windows 11
+
+For setup instruction see issue #30
+
+Requires:
+- Microsoft Build Tools 2022 (includes: CMake, MSVC)
+- WinFlexBison [find it here](https://github.com/lexxmark/winflexbison) (needs to be in PATH)
+
+### GNU/Linux
+
+Requires:
+- GCC
+- CMake
+- Make
+- bison
+- flex
+
 ## Development with VSCode/Codium
 
 Recommended extensions for getting a decent experience are the following:
