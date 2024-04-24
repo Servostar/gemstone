@@ -56,7 +56,11 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
 file(GLOB_RECURSE SOURCE_FILES src/*.c)
 
 # define default compile flags
-set(FLAGS -Wall -Wextra -Wconversion -Wpedantic)
+if (MSVC)
+    set(FLAGS /Wall /W3 /permissive)
+else()
+    set(FLAGS -Wall -Wextra -Wconversion -Wpedantic)
+endif()
 
 # ------------------------------------------------ #
 #  Target RELEASE                                  #
@@ -72,13 +76,20 @@ set_target_properties(release
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY "bin/release")
 
+# FIXME: cannot compile with /O2 because of /RTC1 flag
+if (MSVC)
+    set(RELEASE_FLAGS)
+else()
+    set(RELEASE_FLAGS -m64 -O3 -fprefetch-loop-arrays -mrecip)
+endif()
+
 # compiler flags targeting a 64-bit GCC release environment
 # flags:
 #  - m64: build for 64-bit
 #  - O3: optimization level 3
 #  - fprefetch-loop-arrays: pre load arrays used in loops by using prefetch instruction
 #  - mrecip: make use RCPSS and RSQRTSS instructions
-target_compile_options(release PUBLIC ${FLAGS} -m64 -O3 -fprefetch-loop-arrays -mrecip)
+target_compile_options(release PUBLIC ${FLAGS} ${RELEASE_FLAGS})
 
 # add src directory as include path
 target_include_directories(release PUBLIC src)
@@ -97,8 +108,14 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY "bin/debug")
 
+if (MSVC)
+    set(DEBUG_FLAGS /DEBUG)
+else()
+    set(DEBUG_FLAGS -g)
+endif()
+
 # compiler flags targeting a GCC debug environment
-target_compile_options(debug PUBLIC ${FLAGS} -g)
+target_compile_options(debug PUBLIC ${FLAGS} ${DEBUG_FLAGS})
 
 # add src directory as include path
 target_include_directories(debug PUBLIC src)
@@ -120,9 +137,15 @@ set_target_properties(check
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY "bin/check")
 
+if (MSVC)
+    set(CHECK_FLAGS /DEBUG /WX)
+else()
+    set(DEBUG_FLAGS -g /Werror)
+endif()
+
 # compiler flags targeting a GCC debug environment
 # extra -Werror flag to treat warnings as error to make github action fail on warning
-target_compile_options(check PUBLIC ${FLAGS} -g -Werror)
+target_compile_options(check PUBLIC ${FLAGS} ${DEBUG_FLAGS})
 
 # add src directory as include path
 target_include_directories(check PUBLIC src)
