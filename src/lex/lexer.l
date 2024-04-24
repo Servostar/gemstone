@@ -12,9 +12,6 @@
 %option nounput
 %option noinput
 
-/* prevent depency of unistd.h */
-%option nounistd
-
 %%
 "\n"    yyLineNumber++;
 

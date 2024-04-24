@@ -36,6 +36,11 @@ add_custom_command(OUTPUT ${LEX_GENERATED_SOURCE_FILE}
         COMMENT "generate C source file for lexer"
         VERBATIM)
 
+# remove dependency when compiling with MSVC on windows
+if (MSVC)
+    add_compile_definitions(YY_NO_UNISTD_H)
+endif()
+
 # ------------------------------------------------ #
 #  Yacc                                            #
 # ------------------------------------------------ #
@@ -140,7 +145,7 @@ set_target_properties(check
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)
 else()
-    set(DEBUG_FLAGS -g /Werror)
+    set(DEBUG_FLAGS -g -Werror)
 endif()
 
 # compiler flags targeting a GCC debug environment
