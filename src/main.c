@@ -41,13 +41,13 @@ void setup(void)
     // actual setup
     
     DEBUG("finished starting up gemstone...");
-    atexit(close_file(filename));
 }
 
 int main(int argc, char *argv[]) {
 
     setup();
-
+    atexit(close_file(filename));
+    
     // Check for file input as argument
     if (2 != argc)
     {
@@ -58,13 +58,14 @@ int main(int argc, char *argv[]) {
     // filename as first argument
     char *filename = argv[1];
 
-    FILE *file = fopen(filename, "r");
-
     if (NULL == file)
     {
         PANIC("File couldn't be opened!");
     }
 
+    FILE *file = fopen(filename, "r");
+    *file = yyin;
+    
     yyparse();
 
     return 0;
