@@ -4,6 +4,8 @@
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
+extern FILE* yyin;
+
 /**
  * @brief Log a debug message to inform about beginning exit procedures
  * 
@@ -18,9 +20,12 @@ void notify_exit(void)
  * 
  */
 
-void close_file(char file_to_close)
+void close_file(void)
 {
-    fclose(file_to_close);
+    if (NULL != yyin)
+    {
+        fclose(yyin);
+    }
 }
 
 /**
@@ -46,7 +51,7 @@ void setup(void)
 int main(int argc, char *argv[]) {
 
     setup();
-    atexit(close_file(filename));
+    atexit(close_file);
     
     // Check for file input as argument
     if (2 != argc)
@@ -58,13 +63,13 @@ int main(int argc, char *argv[]) {
     // filename as first argument
     char *filename = argv[1];
 
+    FILE *file = fopen(filename, "r");
+
     if (NULL == file)
     {
         PANIC("File couldn't be opened!");
     }
-
-    FILE *file = fopen(filename, "r");
-    *file = yyin;
+    yyin = file;
     
     yyparse();
 
