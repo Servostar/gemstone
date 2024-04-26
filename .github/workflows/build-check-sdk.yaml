@@ -2,7 +2,7 @@ name: "Build check gemstone in SDK"
 run-name: SDK build check to ${{ inputs.deploy_target }} by @${{ github.actor }}
 on: [push, pull_request]
 env:
-  SDK: 0.1.0-alma-9.3
+  SDK: 0.2.1-alpine-3.19.1
 jobs:
   build-check-sdk:
     runs-on: ubuntu-latest
