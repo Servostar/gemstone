@@ -56,7 +56,35 @@
 %token FunExtsupport
 
 %%
-program: ;
+program: assign
+    | definition;
+
+expr: ValFloat
+    | ValInt
+    | ValMultistr
+    | ValStr
+    | Ident;
+
+assign: Ident '=' expr { DEBUG("Assignment"); };
+
+decl: type ':' Ident { DEBUG("Declaration"); };
+
+definition: decl '=' expr { DEBUG("Definition"); };
+
+sign: KeySigned
+    | KeyUnsigned
+    | ;
+
+scale: scale KeyShort
+    | scale KeyHalf
+    | scale KeyLong
+    | scale KeyDouble
+    | ;
+
+type: Ident
+    | sign scale KeyInt
+    | sign scale KeyFloat;
+
 %%
 
 int yyerror(char *s) {
