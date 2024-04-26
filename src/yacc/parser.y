@@ -67,7 +67,11 @@ expr: ValFloat
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
-decl: type ':' Ident { DEBUG("Declaration"); };
+identlist: Ident ',' identlist
+        | Ident
+        | ;
+
+decl: type ':' identlist { DEBUG("Declaration"); };
 
 definition: decl '=' expr { DEBUG("Definition"); };
 
@@ -81,9 +85,11 @@ scale: scale KeyShort
     | scale KeyDouble
     | ;
 
-type: Ident
+type: sign scale Ident
     | sign scale KeyInt
     | sign scale KeyFloat;
+
+
 
 %%
 
