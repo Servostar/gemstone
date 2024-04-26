@@ -57,3 +57,20 @@ struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx) {
 void AST_delete_node(struct AST_Node_t *_) {
 #warning "FIXME: not implemented"
 }
+
+static void __AST_visit_nodes_recurse2(struct AST_Node_t *root,
+                                       void (*for_each)(struct AST_Node_t *node,
+                                                        size_t depth),
+                                       size_t depth) {
+  (for_each)(root, 0);
+
+  for (size_t i = 0; i < root->child_count; i++) {
+    __AST_visit_nodes_recurse2(root->children[i], for_each, depth + 1);
+  }
+}
+
+void AST_visit_nodes_recurse(struct AST_Node_t *root,
+                             void (*for_each)(struct AST_Node_t *node,
+                                              size_t depth)) {
+  __AST_visit_nodes_recurse2(root, for_each, 0);
+}
