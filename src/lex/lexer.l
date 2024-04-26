@@ -35,9 +35,9 @@
 ">" {DEBUG("\"%s\" tokenized with \'>\'", yytext); return('>');};
 "<" {DEBUG("\"%s\" tokenized with \'<\'", yytext); return('<');};
 
-"int" {DEBUG("\"%s\" tokenized with \'<KeyInt'", yytext); return(KeyInt);};
+"int" {DEBUG("\"%s\" tokenized with \'KeyInt'", yytext); return(KeyInt);};
 "float" {DEBUG("\"%s\" tokenized with \'KeyFloat\'", yytext); return(KeyFloat);};
-"as" {DEBUG("\"%s\" tokenized with \'<KeyAs'", yytext); return (KeyAs);};
+"as" {DEBUG("\"%s\" tokenized with \'KeyAs'", yytext); return (KeyAs);};
 "short" {DEBUG("\"%s\" tokenized with \'KeyShort\'", yytext); return(KeyShort);};
 "long" {DEBUG("\"%s\" tokenized with \'KeyLong\'", yytext); return(KeyLong);};
 "half" {DEBUG("\"%s\" tokenized with \'KeyHalf\'", yytext); return(KeyHalf);};
