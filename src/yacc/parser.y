@@ -55,6 +55,13 @@
 %token FunLineno
 %token FunExtsupport
 
+/* Operator associativity */
+%right '='
+%left '+' '-' '*' '/'
+%left OpEquals OpNot
+%left OpAnd OpOr OpXor
+%left OpBitand OpBitor OpBitxor OpBitnot
+
 %%
 program: assign
     | definition;
@@ -63,7 +70,8 @@ expr: ValFloat
     | ValInt
     | ValMultistr
     | ValStr
-    | Ident;
+    | Ident
+    | operation;
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
@@ -89,7 +97,28 @@ type: sign scale Ident
     | sign scale KeyInt
     | sign scale KeyFloat;
 
+operation: oparith
+    | oplogic
+    | opbool
+    | opbit;
 
+oparith: expr '+' expr
+    | expr '-' expr
+    | expr '*' expr
+    | expr '/' expr
+    | '-' expr %prec '*';
+
+oplogic: expr OpEquals expr;
+
+opbool: expr OpAnd expr
+    | expr OpOr expr
+    | expr OpXor expr
+    | OpNot expr %prec OpAnd;
+
+opbit: expr OpBitand expr
+    | expr OpBitor expr
+    | expr OpBitxor expr
+    | OpBitnot expr %prec OpBitand;
 
 %%
 
