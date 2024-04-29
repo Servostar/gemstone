@@ -65,6 +65,12 @@ expr: ValFloat
     | ValStr
     | Ident;
 
+exprlist: expr ',' exprlist
+        | expr
+        | ;
+
+funcall: Ident '(' exprlist ')' { DEBUG("Function call"); };
+
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
 identlist: Ident ',' identlist
