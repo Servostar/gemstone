@@ -58,7 +58,7 @@
 /* Operator associativity */
 %right '='
 %left '+' '-' '*' '/'
-%left OpEquals OpNot
+%left OpEquals OpNot '<' '>'
 %left OpAnd OpOr OpXor
 %left OpBitand OpBitor OpBitxor OpBitnot
 
@@ -108,7 +108,9 @@ oparith: expr '+' expr
     | expr '/' expr
     | '-' expr %prec '*';
 
-oplogic: expr OpEquals expr;
+oplogic: expr OpEquals expr
+    | expr '<' expr
+    | expr '>' expr;
 
 opbool: expr OpAnd expr
     | expr OpOr expr
