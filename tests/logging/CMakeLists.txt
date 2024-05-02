@@ -18,7 +18,7 @@ add_test(NAME logging_output
         COMMAND python ${GEMSTONE_TEST_DIR}/logging/test_logging.py check_output)
 
 # ------------------------------------------------------- #
-# CTEST 1
+# CTEST 2
 # test the panic functionality of the logger
 
 add_executable(logging_panic
@@ -31,3 +31,18 @@ set_target_properties(logging_panic
 add_test(NAME logging_panic
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         COMMAND python ${GEMSTONE_TEST_DIR}/logging/test_logging.py check_panic)
+
+# ------------------------------------------------------- #
+# CTEST 3
+# test the ability to write to multiple output streams
+
+add_executable(logging_streams
+        ${PROJECT_SOURCE_DIR}/src/sys/log.c
+        streams.c)
+set_target_properties(logging_streams
+        PROPERTIES
+        OUTPUT_NAME "stream"
+        RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/tests/logging)
+add_test(NAME logging_streams
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        COMMAND python ${GEMSTONE_TEST_DIR}/logging/test_logging.py check_stream)

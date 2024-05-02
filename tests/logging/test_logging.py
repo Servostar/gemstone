@@ -2,6 +2,7 @@ import subprocess
 import sys
 import logging
 from logging import info, error
+import os
 
 BIN_DIR = "bin/tests/logging/"
 
@@ -47,6 +48,40 @@ def run_check_panic():
     assert "after exit" not in output
 
 
+def run_check_stream():
+    info("started check panic...")
+
+    info("creating temporary folder...")
+
+    if not os.path.exists("tmp"):
+        os.mkdir("tmp")
+
+    info("cleaning temporary folder...")
+
+    if os.path.exists("tmp/test.log"):
+        os.remove("tmp/test.log")
+
+    info("launching test binary...")
+
+    p = subprocess.run(BIN_DIR + "stream", capture_output=True, text=True)
+
+    info("checking exit code...")
+
+    # check exit code
+    assert p.returncode == 0
+
+    with open("tmp/test.log", "r") as file:
+        assert "should be in both" in "".join(file.readlines())
+
+    output = p.stderr
+
+    # check if logs appear (not) in default log output (stderr)
+    info("checking stderr...")
+
+    assert "should only be in stderr" in output
+    assert "should be in both" in output
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -59,6 +94,8 @@ if __name__ == "__main__":
             run_check_output()
         case "check_panic":
             run_check_panic()
+        case "check_stream":
+            run_check_stream()
         case _:
             error(f"unknown target: {target}")
             exit(1)
