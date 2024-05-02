@@ -46,3 +46,18 @@ set_target_properties(logging_streams
 add_test(NAME logging_streams
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         COMMAND python ${GEMSTONE_TEST_DIR}/logging/test_logging.py check_stream)
+
+# ------------------------------------------------------- #
+# CTEST 4
+# test compile time log level switch
+
+add_executable(logging_level
+        ${PROJECT_SOURCE_DIR}/src/sys/log.c
+        level.c)
+set_target_properties(logging_level
+        PROPERTIES
+        OUTPUT_NAME "level"
+        RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/tests/logging)
+add_test(NAME logging_level
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        COMMAND python ${GEMSTONE_TEST_DIR}/logging/test_logging.py check_level)

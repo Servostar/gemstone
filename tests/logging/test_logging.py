@@ -28,6 +28,27 @@ def run_check_output():
     assert "logging some error..." in output
 
 
+def run_check_level():
+    info("started check level...")
+
+    p = subprocess.run(BIN_DIR + "level", capture_output=True, text=True)
+
+    info("checking exit code...")
+
+    # check exit code
+    assert p.returncode == 0
+
+    output = p.stderr
+
+    # check if logs appear in default log output (stderr)
+    info("checking stderr...")
+
+    assert "logging some debug..." not in output
+    assert "logging some info..." not in output
+    assert "logging some warning..." in output
+    assert "logging some error..." in output
+
+
 def run_check_panic():
     info("started check panic...")
 
@@ -96,6 +117,8 @@ if __name__ == "__main__":
             run_check_panic()
         case "check_stream":
             run_check_stream()
+        case "check_level":
+            run_check_level()
         case _:
             error(f"unknown target: {target}")
             exit(1)
