@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     match target:
         case "check_output":
-            run_logger_test()
+            run_check_output()
         case "check_panic":
             run_check_panic()
         case _:
