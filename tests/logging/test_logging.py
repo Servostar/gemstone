@@ -6,7 +6,7 @@ from logging import info, error
 BIN_DIR = "bin/tests/logging/"
 
 
-def run_logger_test():
+def run_check_output():
     info("started check output...")
 
     p = subprocess.run(BIN_DIR + "output", capture_output=True, text=True)
