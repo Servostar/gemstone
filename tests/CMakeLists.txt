@@ -7,3 +7,4 @@ set(CTEST_BINARY_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 # Provide test to run here or include another CMakeLists.txt
 
 add_subdirectory(logging)
+add_subdirectory(input_file)
