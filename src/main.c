@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/log.h>
-#include <yacc/parser.tab.h>
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
