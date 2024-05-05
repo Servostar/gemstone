@@ -69,31 +69,15 @@ statement: assign
         | decl
         | definition;
 
-
-
-
 identlist: Ident ',' identlist
         | Ident
         | ;
 
-
 decl: type ':' identlist { DEBUG("Declaration"); };
-
-
-
-
-
 
 definition: decl '=' expr { DEBUG("Definition"); };
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
-
-
-
-
-
-
-
 
 sign: KeySigned
     | KeyUnsigned
