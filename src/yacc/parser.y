@@ -56,8 +56,7 @@
 %token FunExtsupport
 
 %%
-program: assign
-    | definition;
+program: funcall;
 
 expr: ValFloat
     | ValInt
@@ -69,7 +68,10 @@ exprlist: expr ',' exprlist
         | expr
         | ;
 
-funcall: Ident '(' exprlist ')' { DEBUG("Function call"); };
+paramlist: paramlist '(' exprlist ')'
+    | ;
+
+funcall: Ident paramlist { DEBUG("Function call"); };
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
