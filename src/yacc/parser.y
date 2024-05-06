@@ -56,8 +56,8 @@
 %token FunExtsupport
 
 %%
-program: assign
-    | definition;
+program: statement;
+
 
 expr: ValFloat
     | ValInt
@@ -65,7 +65,9 @@ expr: ValFloat
     | ValStr
     | Ident;
 
-assign: Ident '=' expr { DEBUG("Assignment"); };
+statement: assign
+        | decl
+        | definition;
 
 identlist: Ident ',' identlist
         | Ident
@@ -74,6 +76,8 @@ identlist: Ident ',' identlist
 decl: type ':' identlist { DEBUG("Declaration"); };
 
 definition: decl '=' expr { DEBUG("Definition"); };
+
+assign: Ident '=' expr { DEBUG("Assignment"); };
 
 sign: KeySigned
     | KeyUnsigned
@@ -88,8 +92,6 @@ scale: scale KeyShort
 type: sign scale Ident
     | sign scale KeyInt
     | sign scale KeyFloat;
-
-
 
 %%
 
