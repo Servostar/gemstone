@@ -65,13 +65,23 @@
 %%
 program: statementlist;
 
-
 expr: ValFloat
     | ValInt
     | ValMultistr
     | ValStr
     | Ident
     | operation;
+
+exprlist: expr ',' exprlist
+        | expr
+        | ;
+
+paramlist: paramlist '(' exprlist ')'
+    | ;
+
+funcall: Ident paramlist { DEBUG("Function call"); };
+
+assign: Ident '=' expr { DEBUG("Assignment"); };
 
 statementlist: statementlist statement
     | ;
