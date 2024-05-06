@@ -89,6 +89,7 @@ statementlist: statementlist statement
 statement: assign
         | decl
         | definition
+        | while
         | branch;
 
 branchif: KeyIf expr '{' statementlist '}' { DEBUG("if"); };
@@ -100,6 +101,8 @@ branchelseifs: branchelseifs branchelseif
 
 branch: branchif branchelseifs
     | branchif branchelseifs branchelse;
+
+while: KeyWhile expr '{' statementlist '}' { DEBUG("while"); };
 
 identlist: Ident ',' identlist
         | Ident
