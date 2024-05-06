@@ -6,18 +6,58 @@
 
 // Syntax elements which are stored in a syntax tree
 enum AST_SyntaxElement_t {
-  AST_Statement,
-  AST_Expression,
-  AST_Branch,
-  AST_OperatorAdd,
-  AST_IntegerLiteral
+  AST_Stmt,
+  AST_Expr,
+  // Literals
+  AST_Int,
+  AST_Float,
+  AST_String,
+  // Control flow
+  AST_While,
+  AST_If,
+  AST_IfElse,
+  AST_Else,
+  // Variable management
+  AST_Decl,
+  AST_Assign,
+  AST_Def,
+  AST_Ident,
+  // Arithmetic operators
+  AST_Add,
+  AST_Sub,
+  AST_Mul,
+  AST_Div,
+  // Bitwise operators
+  AST_BitAnd,
+  AST_BitOr,
+  AST_BitXor,
+  AST_BitNot,
+  // Boolean operators
+  AST_BoolAnd,
+  AST_BoolOr,
+  AST_BoolXor,
+  AST_BoolNot,
+  // Logical operators
+  AST_Eq,
+  AST_Greater,
+  AST_Less,
+  // Casts
+  AST_Typecast,   // type cast
+  AST_Transmute,  // reinterpret cast
+  AST_Call,       // function call
+  AST_Macro,      // builtin functions: lineno(), filename(), ...
+  // Defintions
+  AST_Typedef,
+  AST_Box,
+  AST_Fun,
+  AST_Import
 };
 
 struct AST_Node_t {
   // parent node that owns this node
   struct AST_Node_t *parent;
 
-  // type of AST node: if, declration, ...
+  // type of AST node: if, declaration, ...
   enum AST_SyntaxElement_t kind;
   // optional value: integer literal, string literal, ...
   const char* value;
