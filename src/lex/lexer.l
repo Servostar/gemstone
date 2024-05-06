@@ -15,6 +15,8 @@
 %%
 "\n"    yyLineNumber++;
 
+#.* ;
+
 ":" {DEBUG("\"%s\" tokenized with \':\'", yytext); return(':');};
 "=" {DEBUG("\"%s\" tokenized with \'=\'", yytext); return('=');};
 "+" {DEBUG("\"%s\" tokenized with \'+\'", yytext); return('+');};
@@ -24,7 +26,6 @@
 "," {DEBUG("\"%s\" tokenized with \',\'", yytext); return(',');};
 ";" {DEBUG("\"%s\" tokenized with \';\'", yytext); return(';');};
 "." {DEBUG("\"%s\" tokenized with \'.\'", yytext); return('.');};
-"#" {DEBUG("\"%s\" tokenized with \'#\'", yytext); return('#');};
 
 "(" {DEBUG("\"%s\" tokenized with \'(\'", yytext); return('(');};
 ")" {DEBUG("\"%s\" tokenized with \')\'", yytext); return(')');};

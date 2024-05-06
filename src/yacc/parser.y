@@ -55,14 +55,22 @@
 %token FunLineno
 %token FunExtsupport
 
+/* Operator associativity */
+%right '='
+%left '+' '-' '*' '/'
+%left OpEquals OpNot '<' '>'
+%left OpAnd OpOr OpXor
+%left OpBitand OpBitor OpBitxor OpBitnot
+
 %%
-program: funcall;
+program: statementlist;
 
 expr: ValFloat
     | ValInt
     | ValMultistr
     | ValStr
-    | Ident;
+    | Ident
+    | operation;
 
 exprlist: expr ',' exprlist
         | expr
@@ -75,6 +83,24 @@ funcall: Ident paramlist { DEBUG("Function call"); };
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
+statementlist: statementlist statement
+    | ;
+
+statement: assign
+        | decl
+        | definition
+        | branch;
+
+branchif: KeyIf expr '{' statementlist '}' { DEBUG("if"); };
+branchelse: KeyElse '{' statementlist '}' { DEBUG("if-else"); };
+branchelseif: KeyElse KeyIf expr '{' statementlist '}' { DEBUG("else-if"); };
+
+branchelseifs: branchelseifs branchelseif
+    | ;
+
+branch: branchif branchelseifs
+    | branchif branchelseifs branchelse;
+
 identlist: Ident ',' identlist
         | Ident
         | ;
@@ -82,6 +108,8 @@ identlist: Ident ',' identlist
 decl: type ':' identlist { DEBUG("Declaration"); };
 
 definition: decl '=' expr { DEBUG("Definition"); };
+
+assign: Ident '=' expr { DEBUG("Assignment"); };
 
 sign: KeySigned
     | KeyUnsigned
@@ -97,8 +125,30 @@ type: sign scale Ident
     | sign scale KeyInt
     | sign scale KeyFloat;
 
+operation: oparith
+    | oplogic
+    | opbool
+    | opbit;
 
+oparith: expr '+' expr
+    | expr '-' expr
+    | expr '*' expr
+    | expr '/' expr
+    | '-' expr %prec '*';
 
+oplogic: expr OpEquals expr
+    | expr '<' expr
+    | expr '>' expr;
+
+opbool: expr OpAnd expr
+    | expr OpOr expr
+    | expr OpXor expr
+    | OpNot expr %prec OpAnd;
+
+opbit: expr OpBitand expr
+    | expr OpBitor expr
+    | expr OpBitxor expr
+    | OpBitnot expr %prec OpBitand;
 %%
 
 int yyerror(char *s) {
