@@ -63,8 +63,8 @@
 %left OpBitand OpBitor OpBitxor OpBitnot
 
 %%
-program: assign
-    | definition;
+program: statement;
+
 
 expr: ValFloat
     | ValInt
@@ -73,7 +73,9 @@ expr: ValFloat
     | Ident
     | operation;
 
-assign: Ident '=' expr { DEBUG("Assignment"); };
+statement: assign
+        | decl
+        | definition;
 
 identlist: Ident ',' identlist
         | Ident
@@ -82,6 +84,8 @@ identlist: Ident ',' identlist
 decl: type ':' identlist { DEBUG("Declaration"); };
 
 definition: decl '=' expr { DEBUG("Definition"); };
+
+assign: Ident '=' expr { DEBUG("Assignment"); };
 
 sign: KeySigned
     | KeyUnsigned
@@ -121,7 +125,6 @@ opbit: expr OpBitand expr
     | expr OpBitor expr
     | expr OpBitxor expr
     | OpBitnot expr %prec OpBitand;
-
 %%
 
 int yyerror(char *s) {
