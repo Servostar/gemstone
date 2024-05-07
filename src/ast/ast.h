@@ -6,7 +6,7 @@
 
 // Syntax elements which are stored in a syntax tree
 enum AST_SyntaxElement_t {
-  AST_Stmt,
+  AST_Stmt = 0,
   AST_Expr,
   // Literals
   AST_Int,
@@ -50,7 +50,10 @@ enum AST_SyntaxElement_t {
   AST_Typedef,
   AST_Box,
   AST_Fun,
-  AST_Import
+  AST_Import,
+  // amount of variants
+  // in this enum
+  AST_ELEMENT_COUNT
 };
 
 struct AST_Node_t {
@@ -68,6 +71,11 @@ struct AST_Node_t {
   // variable amount of child nodes
   struct AST_Node_t **children;
 };
+
+typedef struct AST_Node_t* AST_NODE_PTR;
+
+// initialize the global AST state
+void AST_init(void);
 
 // return a string representation of the nodes type and its value
 // does not take into account its children or parent

@@ -23,27 +23,64 @@ struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value
   return node;
 }
 
+static const char* lookup_table[AST_ELEMENT_COUNT] = { "__UNINIT__" };
+
+void AST_init() {
+  DEBUG("initializing global syntax tree...");
+
+  INFO("filling lookup table...");
+
+  lookup_table[AST_Expr] = "expr";
+
+  lookup_table[AST_Add] = "+";
+  lookup_table[AST_Sub] = "-";
+  lookup_table[AST_Mul] = "*";
+  lookup_table[AST_Div] = "/";
+
+  lookup_table[AST_BitAnd] = "&";
+  lookup_table[AST_BitOr] = "|";
+  lookup_table[AST_BitXor] = "^";
+  lookup_table[AST_BitNot] = "!";
+
+  lookup_table[AST_Eq] = "==";
+  lookup_table[AST_Less] = "<";
+  lookup_table[AST_Greater] = ">";
+
+  lookup_table[AST_BoolAnd] = "&&";
+  lookup_table[AST_BoolOr] = "||";
+  lookup_table[AST_BoolXor] = "^^";
+  lookup_table[AST_BoolNot] = "!!";
+
+  lookup_table[AST_While] = "while";
+  lookup_table[AST_If] = "if";
+  lookup_table[AST_IfElse] = "else if";
+  lookup_table[AST_Else] = "else";
+
+  lookup_table[AST_Decl] = "decl";
+  lookup_table[AST_Assign] = "assign";
+  lookup_table[AST_Def] = "def";
+
+  lookup_table[AST_Typedef] = "typedef";
+  lookup_table[AST_Box] = "box";
+  lookup_table[AST_Fun] = "fun";
+}
+
 const char* AST_node_to_string(struct AST_Node_t* node) {
   DEBUG("converting AST node to string: %p", node);
 
   const char* string = "unknown";
 
-  switch (node->kind) {
-    case AST_Expression:
-      string = "expression";
-      break;
-    case AST_Statement:
-      string = "statement";
-      break;
-    case AST_Branch:
-      string = "if";
-      break;
-    case AST_IntegerLiteral:
+  switch(node->kind) {
+    case AST_Int:
+    case AST_Float:
+    case AST_String:
+    case AST_Ident:
+    case AST_Macro:
+    case AST_Import:
       string = node->value;
       break;
-    case AST_OperatorAdd:
-      string = "+";
-      break;
+    default:
+      string = lookup_table[node->kind];
   }
 
   return string;
