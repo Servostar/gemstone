@@ -2,6 +2,47 @@
 
 Gemstone is a programming language compiler written in C with lex and yacc.
 
+## Dependencies (build)
+
+### Windows 11
+
+For setup instruction see issue #30
+
+Requires:
+- Microsoft Build Tools 2022 (includes: CMake, MSVC)
+- WinFlexBison [find it here](https://github.com/lexxmark/winflexbison) (needs to be in PATH)
+
+### GNU/Linux
+
+Requires:
+- GCC
+- CMake
+- Make
+- bison
+- flex
+
+## Writing Tests
+
+Since the project is build and configured through CMake it makes sense to rely for tests
+on CTest. All tests are located in the subfolder `tests`. In this directory is a CMakeLists.txt which specifies which tests
+are to be run. Actual tests are located in folders within tests and contain a final CMakeLists.txt which specifies what to run 
+for a single test.
+
+```
+tests
+  └─ test_group1
+      └─ CMakeLists.txt  # specify tests in this group
+      └─ ...             # test files of group 1
+      
+  └─ test_group2
+      └─ CMakeLists.txt  # specify tests in this group
+      └─ ...             # test files of group 2
+      
+  └─ CMakeLists.txt      # specify test groups to run
+  
+CMakeLists.txt           # build configuration
+```
+
 ## Development with VSCode/Codium
 
 Recommended extensions for getting a decent experience are the following:

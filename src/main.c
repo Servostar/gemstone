@@ -5,6 +5,8 @@
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
+extern FILE* yyin;
+
 /**
  * @brief Log a debug message to inform about beginning exit procedures
  * 
@@ -12,6 +14,19 @@
 void notify_exit(void)
 {
     DEBUG("Exiting gemstone...");
+}
+
+/**
+ * @brief Closes File after compiling.
+ * 
+ */
+
+void close_file(void)
+{
+    if (NULL != yyin)
+    {
+        fclose(yyin);
+    }
 }
 
 /**
@@ -30,12 +45,26 @@ void setup(void)
     #endif
 
     // actual setup
-
+    
     DEBUG("finished starting up gemstone...");
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+
     setup();
+    atexit(close_file);
+    
+    // Check for file input as argument
+    if (2 != argc)
+    {
+        INFO("Usage: %s <filename>\n", argv[0]);
+        PANIC("No File could be found");
+    }
+    
+    // filename as first argument
+    char *filename = argv[1];
+
+    FILE *file = fopen(filename, "r");
 
     struct AST_Node_t* node = AST_new_node(AST_Branch, NULL);
 
