@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/log.h>
+#include <gc/gc.h>
 
 struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
   DEBUG("creating new AST node: %d \"%s\"", kind, value);
