@@ -83,7 +83,7 @@ funcall: Ident paramlist { DEBUG("Function call"); };
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
-moduleimport: KeyImport FunFilename { DEBUG("Module-Import"); };
+moduleimport: KeyImport ValStr { DEBUG("Module-Import"); };
 
 statementlist: statementlist statement
     | ;
