@@ -6,6 +6,8 @@
 
 int main(void) {
 
+    AST_init();
+
     const AST_NODE_PTR node = AST_new_node(0, "value");
 
     for (size_t i = 0; i < AST_ELEMENT_COUNT; i++) {
@@ -16,4 +18,6 @@ int main(void) {
     }
 
     AST_delete_node(node);
+
+    return 0;
 }

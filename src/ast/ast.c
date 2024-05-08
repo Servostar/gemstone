@@ -30,6 +30,7 @@ void AST_init() {
 
   INFO("filling lookup table...");
 
+  lookup_table[AST_Stmt] = "stmt";
   lookup_table[AST_Expr] = "expr";
 
   lookup_table[AST_Add] = "+";
@@ -63,6 +64,10 @@ void AST_init() {
   lookup_table[AST_Typedef] = "typedef";
   lookup_table[AST_Box] = "box";
   lookup_table[AST_Fun] = "fun";
+
+  lookup_table[AST_Typecast] = "cast";
+  lookup_table[AST_Transmute] = "as";
+  lookup_table[AST_Condition] = "condition";
 }
 
 const char* AST_node_to_string(struct AST_Node_t* node) {
@@ -77,6 +82,7 @@ const char* AST_node_to_string(struct AST_Node_t* node) {
     case AST_Ident:
     case AST_Macro:
     case AST_Import:
+    case AST_Call:
       string = node->value;
       break;
     default:

@@ -17,6 +17,7 @@ enum AST_SyntaxElement_t {
   AST_If,
   AST_IfElse,
   AST_Else,
+  AST_Condition,
   // Variable management
   AST_Decl,
   AST_Assign,
