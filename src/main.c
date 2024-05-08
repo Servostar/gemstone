@@ -2,6 +2,7 @@
 #include <sys/log.h>
 #include <yacc/parser.tab.h>
 #include <ast/ast.h>
+#include <gc/gc.h>
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
@@ -46,6 +47,8 @@ void setup(void)
 
     // actual setup
     AST_init();
+
+    GC_init();
 
     DEBUG("finished starting up gemstone...");
 }

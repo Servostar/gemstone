@@ -2,6 +2,7 @@
 %{
     #include <yacc/parser.tab.h>
     #include <sys/log.h>
+    #include <gc/gc.h>
 
     int yyLineNumber = 1;
     int yylex();

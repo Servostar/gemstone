@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <sys/log.h>
 #include <assert.h>
+#include <gc/gc.h>
 
 AST_NODE_PTR AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
   DEBUG("creating new AST node: %d \"%s\"", kind, value);
