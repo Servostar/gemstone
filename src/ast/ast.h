@@ -17,6 +17,7 @@ enum AST_SyntaxElement_t {
   AST_If,
   AST_IfElse,
   AST_Else,
+  AST_Condition,
   // Variable management
   AST_Decl,
   AST_Assign,
@@ -68,6 +69,7 @@ struct AST_Node_t {
   // number of child nodes ownd by this node
   // length of children array
   size_t child_count;
+  size_t child_cap;
   // variable amount of child nodes
   struct AST_Node_t **children;
 };
@@ -88,6 +90,8 @@ void AST_delete_node(struct AST_Node_t *);
 
 // add a new child node
 void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
+
+AST_NODE_PTR AST_detach_node(AST_NODE_PTR parent, AST_NODE_PTR child);
 
 // get a specific child node
 struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
