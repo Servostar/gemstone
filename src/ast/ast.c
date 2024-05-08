@@ -1,6 +1,7 @@
 
 #include <ast/ast.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <sys/log.h>
 #include <assert.h>
