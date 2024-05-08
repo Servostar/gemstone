@@ -4,13 +4,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/log.h>
-#include <assert.h>
-#include <gc/gc.h>
 
-AST_NODE_PTR AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
+struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
   DEBUG("creating new AST node: %d \"%s\"", kind, value);
 
-  AST_NODE_PTR node = malloc(sizeof(struct AST_Node_t));
+  struct AST_Node_t *node = malloc(sizeof(struct AST_Node_t));
 
   if (node == NULL) {
     PANIC("failed to allocate AST node");
@@ -20,7 +18,6 @@ AST_NODE_PTR AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
   node->parent = NULL;
   node->children = NULL;
   node->child_count = 0;
-  node->child_cap = 0;
   node->kind = kind;
   node->value = value;
 
@@ -29,7 +26,7 @@ AST_NODE_PTR AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
 
 static const char* lookup_table[AST_ELEMENT_COUNT] = { "__UNINIT__" };
 
-void AST_init(void) {
+void AST_init() {
   DEBUG("initializing global syntax tree...");
 
   INFO("filling lookup table...");
@@ -96,24 +93,17 @@ const char* AST_node_to_string(struct AST_Node_t* node) {
   return string;
 }
 
-#define PRE_ALLOCATION_CNT 10
-
-void AST_push_node(AST_NODE_PTR owner, AST_NODE_PTR child) {
+void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
   DEBUG("Adding new node %p to %p", child, owner);
 
-  assert(PRE_ALLOCATION_CNT >= 1);
-
   // if there are no children for now
-  if (owner->children == NULL) {
-    assert(owner->child_count == 0);
+  if (owner->child_count == 0) {
     DEBUG("Allocating new children array");
     owner->children = malloc(sizeof(struct AST_Node_t *));
-    owner->child_cap = 1;
 
-  } else if (owner->child_count >= owner->child_cap) {
-    DEBUG("Reallocating old children array");
-    owner->child_cap += PRE_ALLOCATION_CNT;
-    const size_t size = sizeof(struct AST_Node_t *) * owner->child_cap;
+  } else {
+    DEBUG("Rellocating old children array");
+    const size_t size = sizeof(struct AST_Node_t *) * (owner->child_count + 1);
     owner->children = realloc(owner->children, size);
   }
 
@@ -124,8 +114,8 @@ void AST_push_node(AST_NODE_PTR owner, AST_NODE_PTR child) {
   owner->children[owner->child_count++] = child;
 }
 
-AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, size_t idx) {
-  DEBUG("retrieving node %d from %p", idx, owner);
+struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx) {
+  DEBUG("retrvieng node %d from %p", idx, owner);
 
   if (owner == NULL) {
     PANIC("AST owner node is NULL");
@@ -135,7 +125,7 @@ AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, size_t idx) {
     PANIC("AST owner node has no children");
   }
 
-  AST_NODE_PTR child = owner->children[idx];
+  struct AST_Node_t *child = owner->children[idx];
 
   if (child == NULL) {
     PANIC("child node is NULL");
@@ -144,48 +134,20 @@ AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, size_t idx) {
   return child;
 }
 
-void AST_delete_node(AST_NODE_PTR node) {
-    DEBUG("Deleting AST node: %p", node);
+void AST_delete_node(struct AST_Node_t *node) {
+  DEBUG("Deleting AST node: %p", node);
 
-    if (node == NULL) {
-        PANIC("Node to free is NULL");
-    }
+  if (node == NULL) {
+    PANIC("Node to free is NULL");
+  }
 
-    if (node->parent != NULL) {
-        AST_detach_node(node->parent, node);
-    }
+  if (node->children == NULL) {
+    return;
+  }
 
-    if (node->children == NULL) {
-        return;
-    }
-
-    for (size_t i = 0; i < node->child_count; i++) {
-        if (node->children[i] != node) {
-            AST_delete_node(node->children[i]);
-        } else {
-            WARN("Circular dependency in AST: parent -> child -> parent -> child -> ...");
-        }
-    }
-
-    free(node->children);
-    free(node);
-}
-
-AST_NODE_PTR AST_detach_node(AST_NODE_PTR parent, AST_NODE_PTR child) {
-    assert(parent != NULL);
-    assert(child != NULL);
-
-    for (size_t i = 0; i < parent->child_count; i++) {
-        if (child == parent->children[i]) {
-            memcpy(&parent->children[i], &parent->children[i + 1], parent->child_count - i - 1);
-            parent->child_count--;
-            return child;
-        }
-    }
-
-    WARN("Node not a child of parent");
-
-    return child;
+  for (size_t i = 0; i < node->child_count; i++) {
+    AST_delete_node(node->children[i]);
+  }
 }
 
 static void __AST_visit_nodes_recurse2(struct AST_Node_t *root,
