@@ -98,13 +98,6 @@ IOqualifyier: KeyIn
 
 paramdecl: type ':' Ident { DEBUG("Param-Declaration"); };
 
-
-
-
-
-
-
-
 funcall: Ident argumentlist { DEBUG("Function call"); };
 
 statementlist: statement statementlist
