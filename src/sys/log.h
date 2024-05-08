@@ -2,7 +2,6 @@
 #define _SYS_ERR_H_
 
 #include <stdio.h>
-#include <gc/gc.h>
 
 #define LOG_DEFAULT_STREAM stderr
 
