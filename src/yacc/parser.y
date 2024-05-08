@@ -73,11 +73,10 @@ expr: ValFloat
     | operation;
 
 exprlist: expr ',' exprlist
-        | expr
-        | ;
+        | expr;
 
-paramlist: paramlist '(' exprlist ')'
-    | ;
+paramlist: '(' exprlist ')' paramlist
+    | '(' exprlist ')';
 
 funcall: Ident paramlist { DEBUG("Function call"); };
 
@@ -85,47 +84,54 @@ assign: Ident '=' expr { DEBUG("Assignment"); };
 
 moduleimport: KeyImport ValStr { DEBUG("Module-Import"); };
 
-statementlist: statementlist statement
-    | ;
+statementlist: statement statementlist
+    | statement;
 
 statement: assign
         | decl
         | definition
-        | branch;
+        | branch
+        | funcall;
 
 branchif: KeyIf expr '{' statementlist '}' { DEBUG("if"); };
 branchelse: KeyElse '{' statementlist '}' { DEBUG("if-else"); };
 branchelseif: KeyElse KeyIf expr '{' statementlist '}' { DEBUG("else-if"); };
 
 branchelseifs: branchelseifs branchelseif
-    | ;
+    | branchelseif;
 
 branch: branchif branchelseifs
     | branchif branchelseifs branchelse;
 
 identlist: Ident ',' identlist
-        | Ident
-        | ;
+        | Ident;
 
-decl: type ':' identlist { DEBUG("Declaration"); };
+decl: type ':' identlist;
 
 definition: decl '=' expr { DEBUG("Definition"); };
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
 sign: KeySigned
-    | KeyUnsigned
-    | ;
+    | KeyUnsigned;
 
 scale: scale KeyShort
     | scale KeyHalf
     | scale KeyLong
     | scale KeyDouble
-    | ;
+    | KeyShort
+    | KeyHalf
+    | KeyLong
+    | KeyDouble;
 
-type: sign scale Ident
-    | sign scale KeyInt
-    | sign scale KeyFloat;
+typekind: Ident
+    | KeyInt
+    | KeyFloat;
+
+type: typekind
+    | scale typekind
+    | sign typekind
+    | sign scale typekind;
 
 operation: oparith
     | oplogic
