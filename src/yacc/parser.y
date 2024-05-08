@@ -63,7 +63,8 @@
 %left OpBitand OpBitor OpBitxor OpBitnot
 
 %%
-program: statementlist;
+program: statementlist
+        | fundef;
 
 expr: ValFloat
     | ValInt
@@ -75,10 +76,29 @@ expr: ValFloat
 exprlist: expr ',' exprlist
         | expr;
 
-paramlist: '(' exprlist ')' paramlist
-    | '(' exprlist ')';
+argumentlist: argumentlist '(' exprlist ')'
+    | ;
 
-funcall: Ident paramlist { DEBUG("Function call"); };
+
+fundef: KeyFun Ident paramlist '{' statementlist'}' { DEBUG("Function");};
+
+paramlist: paramlist '(' params ')'
+         |  paramlist '(' ')'
+         | '(' params ')'
+         | '(' ')';
+
+params: IOqualifyier paramdecl ',' params
+      | IOqualifyier paramdecl;
+
+IOqualifyier: KeyIn
+            | KeyOut
+            | KeyIn KeyOut
+            | KeyOut KeyIn
+            | ;
+
+paramdecl: type ':' Ident { DEBUG("Param-Declaration"); };
+
+funcall: Ident argumentlist { DEBUG("Function call"); };
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
