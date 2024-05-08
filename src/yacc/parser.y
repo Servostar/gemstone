@@ -80,6 +80,10 @@ paramlist: '(' exprlist ')' paramlist
 
 funcall: Ident paramlist { DEBUG("Function call"); };
 
+assign: Ident '=' expr { DEBUG("Assignment"); };
+
+moduleimport: KeyImport ValStr { DEBUG("Module-Import"); };
+
 statementlist: statement statementlist
     | statement;
 
