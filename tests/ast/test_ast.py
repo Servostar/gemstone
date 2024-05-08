@@ -71,6 +71,19 @@ def run_check_print_node():
 def run_check_print_graphviz():
     info("started check print graphviz...")
 
+    info("creating temporary folder...")
+
+    if not os.path.exists("tmp"):
+        os.mkdir("tmp")
+
+    info("cleaning temporary folder...")
+
+    if os.path.exists("tmp/graph.gv"):
+        os.remove("tmp/graph.gv")
+
+    if os.path.exists("tmp/graph.svg"):
+        os.remove("tmp/graph.svg")
+
     p = subprocess.run(BIN_DIR + "print_graphviz", capture_output=True, text=True)
 
     info("checking exit code...")
