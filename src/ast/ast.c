@@ -182,6 +182,7 @@ void AST_delete_node(struct AST_Node_t *node) {
     AST_delete_node(node->children[i]);
   }
 
+  free(node->children);
   free(node);
 }
 
