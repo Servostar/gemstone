@@ -134,6 +134,33 @@ struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx) {
   return child;
 }
 
+struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, const size_t idx) {
+
+  struct AST_Node_t* child = owner->children[idx];
+
+  child->parent = NULL;
+
+  owner->child_count--;
+
+  // shift back every following element by one
+  for (size_t i = idx; i < owner->child_count; i++) {
+    owner->children[i] = owner->children[i + 1];
+  }
+
+  return child;
+}
+
+struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_Node_t* child) {
+  for (size_t i = 0; i < owner->child_count; i++) {
+    if (owner->children[i] == child) {
+      return AST_remove_child(owner, i);
+    }
+  }
+
+  PANIC("Child to detach not a child of parent");
+  return NULL;
+}
+
 void AST_delete_node(struct AST_Node_t *node) {
   DEBUG("Deleting AST node: %p", node);
 
@@ -145,9 +172,17 @@ void AST_delete_node(struct AST_Node_t *node) {
     return;
   }
 
+  if (node->parent != NULL) {
+    AST_detach_child(node->parent, node);
+  }
+
   for (size_t i = 0; i < node->child_count; i++) {
+    // prevent detach of children node
+    node->children[i]->parent = NULL;
     AST_delete_node(node->children[i]);
   }
+
+  free(node);
 }
 
 static void __AST_visit_nodes_recurse2(struct AST_Node_t *root,

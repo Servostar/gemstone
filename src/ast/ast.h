@@ -131,6 +131,26 @@ void AST_delete_node(struct AST_Node_t * node);
 void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
 
 /**
+ * @brief Remove the specified child from the owner.
+ * @attention The parent of the removed node is set to NULL.
+ *            The returned pointer is still valid. It must be freed at some pointer later.
+ * @param owner Node to remove the child from
+ * @param idx the index of the child to remove
+ * @return a pointer to the child which was removed
+ */
+struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, size_t idx);
+
+/**
+ * @brief Detach a child from its parent. This involves removing the child from its parent
+ *        and marking the parent of the child as NULL.
+ * @attention The returned pointer is still valid. It must be freed at some pointer later.
+ * @param owner the owner to remove the child from
+ * @param child the child to detach
+ * @return a pointer to child detached
+ */
+struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_Node_t* child);
+
+/**
  * @brief Return a pointer to the n-th child of a node
  * @attention Pointer to childen nodes will never change.
  *            However, the index a node is stored within a parent can change
