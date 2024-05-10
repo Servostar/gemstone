@@ -34,14 +34,14 @@
  *        This macro will print debug information to stderr and call abort() to
  *        performa a ungracefull exit. No clean up possible.
  */
-#define PANIC(format, ...) __panicf(__FILE_NAME__, __LINE__, __func__, format"\n", ##__VA_ARGS__)
+#define PANIC(format, ...) syslog_panicf(__FILE_NAME__, __LINE__, __func__, format"\n", ##__VA_ARGS__)
 
 /**
  * @brief Panic is used in cases where the process is in an invalid or undefined state.
  *        This macro will print debug information to stderr and call exit() to
  *        initiate a gracefull exit, giving the process the opportunity to clean up.
  */
-#define FATAL(format, ...) __fatalf(__FILE_NAME__, __LINE__, __func__, format"\n", ##__VA_ARGS__)
+#define FATAL(format, ...) syslog_fatalf(__FILE_NAME__, __LINE__, __func__, format"\n", ##__VA_ARGS__)
 
 /*
 Standard log macros. These will not terminate the application.
@@ -56,7 +56,7 @@ will not print.
 #define __LOG(level, priority, format, ...) \
     do { \
         if (LOG_LEVEL <= priority) \
-            __logf(level, __FILE_NAME__, __LINE__, __func__, format, ##__VA_ARGS__); \
+            syslog_logf(level, __FILE_NAME__, __LINE__, __func__, format, ##__VA_ARGS__); \
     } while(0)
 
 /**
@@ -69,10 +69,11 @@ will not print.
  * @param format the format to print following args in
  * @param ... 
  */
-void __logf(
+[[gnu::nonnull(1), gnu::nonnull(2), gnu::nonnull(4)]]
+void syslog_logf(
     const char* restrict level,
     const char* restrict file,
-    const unsigned long line,
+    unsigned long line,
     const char* restrict func,
     const char* restrict format,
     ...);
@@ -86,9 +87,11 @@ void __logf(
  * @param format the format to print following args in
  * @param ... 
  */
-void __panicf(
+[[noreturn]]
+[[gnu::nonnull(1), gnu::nonnull(3), gnu::nonnull(4)]]
+void syslog_panicf(
     const char* restrict file,
-    const unsigned long line,
+    unsigned long line,
     const char* restrict func,
     const char* restrict format,
     ...);
@@ -102,9 +105,11 @@ void __panicf(
  * @param format the format to print following args in
  * @param ... 
  */
-void __fatalf(
+[[noreturn]]
+[[gnu::nonnull(1), gnu::nonnull(3), gnu::nonnull(4)]]
+void syslog_fatalf(
     const char* restrict file,
-    const unsigned long line,
+    unsigned long line,
     const char* restrict func,
     const char* restrict format,
     ...);
@@ -120,6 +125,7 @@ void log_init(void);
  * 
  * @param stream 
  */
+[[gnu::nonnull(1)]]
 void log_register_stream(FILE* restrict stream);
 
 #endif /* _SYS_ERR_H_ */

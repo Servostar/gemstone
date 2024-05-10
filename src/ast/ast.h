@@ -102,7 +102,9 @@ void AST_init(void);
  * @param node to return string representation of
  * @return string represenation of the node
  */
-const char* AST_node_to_string(struct AST_Node_t* node);
+[[maybe_unused]]
+[[gnu::nonnull(1)]]
+const char* AST_node_to_string(const struct AST_Node_t* node);
 
 /**
  * @brief Create a new node struct on the system heap. Initializes the struct with the given values.
@@ -112,6 +114,9 @@ const char* AST_node_to_string(struct AST_Node_t* node);
  * @param value an optional value for this node
  * @return
  */
+[[maybe_unused]]
+[[nodiscard("pointer must be freed")]]
+[[gnu::returns_nonnull]]
 struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value);
 
 /**
@@ -120,6 +125,8 @@ struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value
  *            Use of the supplied node after this call is undefined behavior
  * @param node The node to deallocate
  */
+[[maybe_unused]]
+[[gnu::nonnull(1)]]
 void AST_delete_node(struct AST_Node_t * node);
 
 /**
@@ -128,6 +135,8 @@ void AST_delete_node(struct AST_Node_t * node);
  * @param owner node to add a child to
  * @param child node to be added as a child
  */
+[[maybe_unused]]
+[[gnu::nonnull(1), gnu::nonnull(2)]]
 void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
 
 /**
@@ -138,6 +147,9 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
  * @param idx the index of the child to remove
  * @return a pointer to the child which was removed
  */
+[[maybe_unused]]
+[[nodiscard("pointer must be freed")]]
+[[gnu::nonnull(1)]]
 struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, size_t idx);
 
 /**
@@ -148,6 +160,8 @@ struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, size_t idx);
  * @param child the child to detach
  * @return a pointer to child detached
  */
+[[nodiscard("pointer must be freed")]]
+[[gnu::nonnull(1), gnu::nonnull(1)]]
 struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_Node_t* child);
 
 /**
@@ -159,6 +173,8 @@ struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_N
  * @param idx the index of the child to get a pointer to
  * @return a pointer to the n-th child of the owner node
  */
+[[maybe_unused]]
+[[gnu::nonnull(1)]]
 struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
 
 /**
@@ -166,6 +182,8 @@ struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
  * @param root the root to recursively execute a function for
  * @param for_each the function to execute
  */
+[[maybe_unused]]
+[[gnu::nonnull(1), gnu::nonnull(2)]]
 void AST_visit_nodes_recurse(struct AST_Node_t *root,
                              void (*for_each)(struct AST_Node_t *node,
                                               size_t depth));
@@ -175,6 +193,8 @@ void AST_visit_nodes_recurse(struct AST_Node_t *root,
  * @param stream The stream to print to. Can be a file, stdout, ...
  * @param node the topmost ancestor
  */
-void AST_fprint_graphviz(FILE* stream, struct AST_Node_t* node);
+[[maybe_unused]]
+[[gnu::nonnull(1), gnu::nonnull(2)]]
+void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* node);
 
 #endif
