@@ -4,7 +4,12 @@
 
 #include <stdio.h>
 
-// Syntax elements which are stored in a syntax tree
+/**
+ * @brief The type of a AST node
+ * @attention The last element is not to be used in the AST
+ *            as it is used as a lazy way to get the total number of available
+ *            variants of this enum.
+ */
 enum AST_SyntaxElement_t {
   AST_Stmt = 0,
   AST_Expr,
@@ -57,6 +62,13 @@ enum AST_SyntaxElement_t {
   AST_ELEMENT_COUNT
 };
 
+/**
+ * @brief A single node which can be joined with other nodes like a graph.
+ * Every node can have one ancestor (parent) but multiple (also none) children.
+ * Nodes have two properties:
+ *  - kind: The type of the node. Such as AST_Expr, AST_Add, ...
+ *  - value: A string representing an optional value. Can be a integer literal for kind AST_int
+ */
 struct AST_Node_t {
   // parent node that owns this node
   struct AST_Node_t *parent;
@@ -73,33 +85,76 @@ struct AST_Node_t {
   struct AST_Node_t **children;
 };
 
+/**
+ * Shorthand type for a single AST node
+ */
 typedef struct AST_Node_t* AST_NODE_PTR;
 
-// initialize the global AST state
+/**
+ * @brief Initalize the global state of this module. Required for some functionality to work correctly.
+ */
 void AST_init(void);
 
-// return a string representation of the nodes type and its value
-// does not take into account its children or parent
+/**
+ * @brief Returns the string representation of the supplied node
+ * @attention The retuned pointer is not to be freed as it may either be a statically stored string or
+ *            used by the node after this function call.
+ * @param node to return string representation of
+ * @return string represenation of the node
+ */
 const char* AST_node_to_string(struct AST_Node_t* node);
 
-// create a new initialized (empty) node
+/**
+ * @brief Create a new node struct on the system heap. Initializes the struct with the given values.
+ *        All other fields are set to either NULL or 0. No allocation for children array is preformed.
+*  @attention parameter value can be NULL in case no value can be provided for the node
+ * @param kind the type of this node
+ * @param value an optional value for this node
+ * @return
+ */
 struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value);
 
-void AST_delete_node(struct AST_Node_t *);
+/**
+ * @brief Deallocate this node and all of its children.
+ * @attention This function will detach this node from its parent if one is present
+ *            Use of the supplied node after this call is undefined behavior
+ * @param node The node to deallocate
+ */
+void AST_delete_node(struct AST_Node_t * node);
 
-// add a new child node
+/**
+ * @brief Add a new child node to a parent node
+ * @attention This can reallocate the children array
+ * @param owner node to add a child to
+ * @param child node to be added as a child
+ */
 void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
 
-// get a specific child node
+/**
+ * @brief Return a pointer to the n-th child of a node
+ * @attention Pointer to childen nodes will never change.
+ *            However, the index a node is stored within a parent can change
+ *            if a child of lower index is removed, thus reducing the childrens index by one.
+ * @param owner the parent node which owns the children
+ * @param idx the index of the child to get a pointer to
+ * @return a pointer to the n-th child of the owner node
+ */
 struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
 
-// visit this and all of its child nodes calling the given function
-// for every node
+/**
+ * @brief Execute a function for every child, grandchild, ... and the supplied node as topmost ancestor
+ * @param root the root to recursively execute a function for
+ * @param for_each the function to execute
+ */
 void AST_visit_nodes_recurse(struct AST_Node_t *root,
                              void (*for_each)(struct AST_Node_t *node,
                                               size_t depth));
 
-// print a graphviz diagram of the supplied node (as root node) into stream
+/**
+ * @brief Prints a graphviz graph of the node and all its ancestors.
+ * @param stream The stream to print to. Can be a file, stdout, ...
+ * @param node the topmost ancestor
+ */
 void AST_fprint_graphviz(FILE* stream, struct AST_Node_t* node);
 
 #endif
