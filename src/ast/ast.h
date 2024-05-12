@@ -12,6 +12,7 @@
  */
 enum AST_SyntaxElement_t {
   AST_Stmt = 0,
+  AST_Module,
   AST_Expr,
   // Literals
   AST_Int,
