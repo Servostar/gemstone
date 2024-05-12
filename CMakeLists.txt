@@ -21,6 +21,9 @@ project(gemstone
     DESCRIPTION "programming language compiler"
     LANGUAGES C)
 
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED TRUE)
+
 set(GEMSTONE_TEST_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(GEMSTONE_BINARY_DIR ${PROJECT_SOURCE_DIR}/bin)
 

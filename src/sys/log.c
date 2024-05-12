@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/log.h>
+#include <assert.h>
 
 static struct Logger_t {
     FILE** streams;
@@ -11,13 +12,15 @@ static struct Logger_t {
 
 void log_init(void)
 {
+    assert(LOG_DEFAULT_STREAM != NULL);
     log_register_stream(LOG_DEFAULT_STREAM);
 }
 
 void log_register_stream(FILE* restrict stream)
 {
-    if (stream == NULL)
-        PANIC("stream to register is NULL");
+    // replace runtime check with assertion
+    // only to be used in debug target
+    assert(stream != NULL);
 
     if (GlobalLogger.stream_count == 0)
     {
@@ -57,7 +60,7 @@ static void vflogf(
     vfprintf(stream, format, args);
 }
 
-void __logf(
+void syslog_logf(
     const char* restrict level,
     const char* restrict file,
     const unsigned long line,
@@ -78,7 +81,7 @@ void __logf(
     va_end(args);
 }
 
-void __panicf(
+void syslog_panicf(
     const char* restrict file,
     const unsigned long line,
     const char* restrict func,
@@ -95,7 +98,7 @@ void __panicf(
     exit(EXIT_FAILURE);
 }
 
-void __fatalf(
+void syslog_fatalf(
     const char* restrict file,
     const unsigned long line,
     const char* restrict func,
