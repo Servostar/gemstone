@@ -96,6 +96,10 @@ IOqualifyier: KeyIn
             | KeyOut KeyIn
             | ;
 
+typecast: expr KeyAs type { DEBUG("Type-Cast"); };
+
+reinterpretcast: '(' type ')' expr { DEBUG("Reinterpret-Cast"); };
+
 paramdecl: type ':' Ident { DEBUG("Param-Declaration"); };
 
 funcall: Ident argumentlist { DEBUG("Function call"); };
@@ -131,7 +135,9 @@ identlist: Ident ',' identlist
 
 decl: type ':' identlist;
 
-definition: decl '=' expr { DEBUG("Definition"); };
+definition: decl '=' expr { DEBUG("Definition"); }
+         | decl '=' typecast { DEBUG("Definition"); };
+         | decl '=' reinterpretcast { DEBUG("Definition"); };
 
 assign: Ident '=' expr { DEBUG("Assignment"); };
 
