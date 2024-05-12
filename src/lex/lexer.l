@@ -38,6 +38,7 @@
 
 "int" {DEBUG("\"%s\" tokenized with \'KeyInt'", yytext); return(KeyInt);};
 "float" {DEBUG("\"%s\" tokenized with \'KeyFloat\'", yytext); return(KeyFloat);};
+"self" {DEBUG("\"%s\" tokenized with \'KeySelf\'", yytext); return(KeySelf);};
 "as" {DEBUG("\"%s\" tokenized with \'KeyAs'", yytext); return (KeyAs);};
 "short" {DEBUG("\"%s\" tokenized with \'KeyShort\'", yytext); return(KeyShort);};
 "long" {DEBUG("\"%s\" tokenized with \'KeyLong\'", yytext); return(KeyLong);};
