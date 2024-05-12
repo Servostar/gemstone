@@ -13,6 +13,7 @@
 
 %token KeyInt
 %token KeyFloat
+%token KeySelf
 %token KeyAs
 %token <string> ValInt
 %token <string> Ident
@@ -63,15 +64,26 @@
 %left OpBitand OpBitor OpBitxor OpBitnot
 
 %%
-program: statementlist
-        | fundef;
+program: program programbody
+       | programbody;
+
+programbody: moduleimport
+       | fundef
+       | box
+       | definition
+       | decl
+       | typedef;
+
+
 
 expr: ValFloat
     | ValInt
     | ValMultistr
     | ValStr
     | Ident
-    | operation;
+    | operation
+    | boxaccess
+    | boxselfaccess;
 
 exprlist: expr ',' exprlist
         | expr;
@@ -98,9 +110,26 @@ IOqualifyier: KeyIn
 
 paramdecl: type ':' Ident { DEBUG("Param-Declaration"); };
 
-funcall: Ident argumentlist { DEBUG("Function call"); };
+box: KeyType KeyBox ':' Ident '{' boxbody '}' { DEBUG("Box"); }
+   | KeyType KeyBox ':' Ident '{' '}';
 
-assign: Ident '=' expr { DEBUG("Assignment"); };
+boxbody: boxbody boxcontent
+       | boxcontent;
+
+boxcontent: decl { DEBUG("Box decl Content"); }
+          | definition { DEBUG("Box def Content"); }
+          | fundef { DEBUG("Box fun Content"); };
+
+boxselfaccess: KeySelf '.' Ident
+             | KeySelf '.' boxaccess;
+
+boxaccess: Ident '.' Ident
+         | Ident '.' boxaccess;
+
+boxcall: boxaccess argumentlist
+       | boxselfaccess argumentlist;
+
+funcall: Ident argumentlist { DEBUG("Function call"); };
 
 moduleimport: KeyImport ValStr { DEBUG("Module-Import"); };
 
@@ -112,7 +141,8 @@ statement: assign
         | definition
         | while
         | branch
-        | funcall;
+        | funcall
+        | boxcall;
 
 branchif: KeyIf expr '{' statementlist '}' { DEBUG("if"); };
 branchelse: KeyElse '{' statementlist '}' { DEBUG("if-else"); };
@@ -129,14 +159,24 @@ while: KeyWhile expr '{' statementlist '}' { DEBUG("while"); };
 identlist: Ident ',' identlist
         | Ident;
 
-decl: type ':' identlist;
+decl: type ':' identlist
+    | storagequalifier type ':' identlist
+
 
 definition: decl '=' expr { DEBUG("Definition"); };
 
-assign: Ident '=' expr { DEBUG("Assignment"); };
+storagequalifier: KeyGlobal
+        | KeyStatic
+        | KeyLocal;
+
+assign: Ident '=' expr { DEBUG("Assignment"); }
+      | boxaccess '=' expr 
+      | boxselfaccess '=' expr ;
 
 sign: KeySigned
     | KeyUnsigned;
+
+typedef: KeyType type':' Ident;
 
 scale: scale KeyShort
     | scale KeyHalf

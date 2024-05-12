@@ -21,6 +21,18 @@ project(gemstone
     DESCRIPTION "programming language compiler"
     LANGUAGES C)
 
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED TRUE)
+
+set(GEMSTONE_TEST_DIR ${PROJECT_SOURCE_DIR}/tests)
+set(GEMSTONE_BINARY_DIR ${PROJECT_SOURCE_DIR}/bin)
+
+include(CTest)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ------------------------------------------------ #
@@ -79,7 +91,7 @@ add_executable(release
 set_target_properties(release
         PROPERTIES
         OUTPUT_NAME "gsc"
-        RUNTIME_OUTPUT_DIRECTORY "bin/release")
+        RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
 
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
@@ -111,7 +123,7 @@ add_executable(debug
 set_target_properties(debug
         PROPERTIES
         OUTPUT_NAME "gsc"
-        RUNTIME_OUTPUT_DIRECTORY "bin/debug")
+        RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
@@ -140,7 +152,7 @@ add_executable(check
 set_target_properties(check
         PROPERTIES
         OUTPUT_NAME "gsc"
-        RUNTIME_OUTPUT_DIRECTORY "bin/check")
+        RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)
