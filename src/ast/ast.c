@@ -73,6 +73,8 @@ void AST_init() {
   lookup_table[AST_Typecast] = "cast";
   lookup_table[AST_Transmute] = "as";
   lookup_table[AST_Condition] = "condition";
+  lookup_table[AST_List] = "list";
+  lookup_table[AST_Type] = "type";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {
@@ -89,6 +91,10 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
     case AST_Macro:
     case AST_Import:
     case AST_Call:
+    case AST_Storage:
+    case AST_Typekind:
+    case AST_Sign:
+    case AST_Scale:
       string = node->value;
       break;
     default:

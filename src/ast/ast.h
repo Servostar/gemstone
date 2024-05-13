@@ -60,7 +60,13 @@ enum AST_SyntaxElement_t {
   AST_Import,
   // amount of variants
   // in this enum
-  AST_ELEMENT_COUNT
+  AST_ELEMENT_COUNT,
+  AST_List,
+  AST_Storage,
+  AST_Type,
+  AST_Typekind,
+  AST_Sign,
+  AST_Scale
 };
 
 /**

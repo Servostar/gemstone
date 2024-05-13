@@ -33,6 +33,12 @@
 %type <AST_NODE_PTR> type
 %type <AST_NODE_PTR> identlist
 %type <AST_NODE_PTR> storagequalifier
+%type <AST_NODE_PTR> typekind
+%type <AST_NODE_PTR> scale
+%type <AST_NODE_PTR> sign
+%type <AST_NODE_PTR> oplogic
+%type <AST_NODE_PTR> opbool
+%type <AST_NODE_PTR> opbit
 
 
 %token KeyInt
@@ -89,8 +95,8 @@
 
 %%
 program: program programbody
-       | programbody {AST_NODE_PTR daineMudda = AST_new_node(AST_Module, NULL);
-                      AST_fprint_graphviz(stdout, daineMudda);  };
+       | programbody {AST_NODE_PTR program = AST_new_node(AST_Module, NULL);
+                      AST_fprint_graphviz(stdout, program);  };
 
 programbody: moduleimport
        | fundef
@@ -190,7 +196,9 @@ while: KeyWhile expr '{' statementlist '}' { DEBUG("while"); };
 
 identlist: Ident ',' identlist {AST_push_node($3, $1);
                                 $$ = $3;}
-        | Ident;               
+        | Ident {AST_NODE_PTR list = AST_new_node(AST_List, NULL);
+                 AST_push_node(list, $1);
+                 $$ = list;};               
 
 decl: type ':' identlist {AST_NODE_PTR decl = AST_new_node(AST_Decl, NULL);
                           AST_push_node(decl, $1);
@@ -205,9 +213,9 @@ decl: type ':' identlist {AST_NODE_PTR decl = AST_new_node(AST_Decl, NULL);
 
 definition: decl '=' expr { DEBUG("Definition"); };
 
-storagequalifier: KeyGlobal
-        | KeyStatic
-        | KeyLocal;
+storagequalifier: KeyGlobal {$$ = AST_new_node(AST_Storage, "global");}
+        | KeyStatic {$$ = AST_new_node(AST_Storage, "static");}
+        | KeyLocal {$$ = AST_new_node(AST_Storage, "local");};
 
 assign: Ident '=' expr { AST_NODE_PTR assign = AST_new_node(AST_Assign, NULL);
                          AST_NODE_PTR ident = AST_new_node(AST_Ident, $1);
@@ -218,41 +226,82 @@ assign: Ident '=' expr { AST_NODE_PTR assign = AST_new_node(AST_Assign, NULL);
       | boxaccess '=' expr 
       | boxselfaccess '=' expr ;
 
-sign: KeySigned
-    | KeyUnsigned;
+sign: KeySigned {$$ = AST_new_node(AST_Sign, "signed");}
+    | KeyUnsigned{$$ = AST_new_node(AST_Sign, "unsigned");};
 
 typedef: KeyType type':' Ident;
 
-scale: scale KeyShort
-    | scale KeyHalf
-    | scale KeyLong
-    | scale KeyDouble
-    | KeyShort
-    | KeyHalf
-    | KeyLong
-    | KeyDouble;
+scale: scale KeyShort {AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "short");
+                       AST_push_node($1, shortnode);
+                       $$ = $1;}
+    | scale KeyHalf {AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "half");
+                       AST_push_node($1, shortnode);
+                       $$ = $1;}
+    | scale KeyLong {AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "long");
+                       AST_push_node($1, shortnode);
+                       $$ = $1;}
+    | scale KeyDouble {AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "double");
+                       AST_push_node($1, shortnode);
+                       $$ = $1;}
+    | KeyShort {AST_NODE_PTR scale = AST_new_node(AST_List, NULL);
+                AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "short");
+                AST_push_node(scale, shortnode);
+                $$ = scale;}
+    | KeyHalf {AST_NODE_PTR scale = AST_new_node(AST_List, NULL);
+                AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "half");
+                AST_push_node(scale, shortnode);
+                $$ = scale;}
+    | KeyLong {AST_NODE_PTR scale = AST_new_node(AST_List, NULL);
+                AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "long");
+                AST_push_node(scale, shortnode);
+                $$ = scale;}
+    | KeyDouble {AST_NODE_PTR scale = AST_new_node(AST_List, NULL);
+                AST_NODE_PTR shortnode = AST_new_node(AST_Scale, "double");
+                AST_push_node(scale, shortnode);
+                $$ = scale;};
 
-typekind: Ident
-    | KeyInt
-    | KeyFloat;
+typekind: Ident {$$ = AST_new_node(AST_Typekind, $1);}
+    | KeyInt {$$ = AST_new_node(AST_Typekind, "int");}
+    | KeyFloat {$$ = AST_new_node(AST_Typekind, "float");};
 
-type: typekind
-    | scale typekind
-    | sign typekind
-    | sign scale typekind;
+type: typekind {AST_NODE_PTR type = AST_new_node(AST_type, NULL);
+                AST_push_node(type, $1);
+                $$ = type;}
+    | scale typekind {AST_NODE_PTR type = AST_new_node(AST_type, NULL);
+                AST_push_node(type, $1);
+                AST_push_node(type, $2);
+                $$ = type;}
+    | sign typekind {AST_NODE_PTR type = AST_new_node(AST_type, NULL);
+                AST_push_node(type, $1);
+                AST_push_node(type, $2);
+                $$ = type;}
+    | sign scale typekind {AST_NODE_PTR type = AST_new_node(AST_type, NULL);
+                AST_push_node(type, $1);
+                AST_push_node(type, $2);
+                AST_push_node(type, $3);
+                $$ = type;};
 
 operation: oparith {$$ = $1;}
-    | oplogic
-    | opbool
-    | opbit;
+    | oplogic {$$ = $1;}
+    | opbool {$$ = $1;}
+    | opbit {$$ = $1;};
 
-oparith: expr '+' expr {AST_NODE_PTR add = AST_new_node{AST_add, NULL};
+oparith: expr '+' expr {AST_NODE_PTR add = AST_new_node{AST_Add, NULL};
                         AST_push_node(add, $1);
                         AST_push_node(add, $3);
                         $$ = add;}
-    | expr '-' expr
-    | expr '*' expr
-    | expr '/' expr
+    | expr '-' expr    {AST_NODE_PTR subtract = AST_new_node{AST_Sub, NULL};
+                        AST_push_node(subtract, $1);
+                        AST_push_node(subtract, $3);
+                        $$ = subtract;}
+    | expr '*' expr     {AST_NODE_PTR mul = AST_new_node{AST_Mul, NULL};
+                        AST_push_node(mul, $1);
+                        AST_push_node(mul, $3);
+                        $$ = mul;}
+    | expr '/' expr     {AST_NODE_PTR div = AST_new_node{AST_Div, NULL};
+                        AST_push_node(div, $1);
+                        AST_push_node(div, $3);
+                        $$ = div;}
     | '-' expr %prec '*';
 
 oplogic: expr OpEquals expr

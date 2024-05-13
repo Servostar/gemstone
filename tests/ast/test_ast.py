@@ -66,6 +66,8 @@ def run_check_print_node():
 35 box
 36 fun
 37 value
+38 list
+39 storage
 """ == p.stdout
 
 
