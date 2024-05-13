@@ -62,6 +62,7 @@
 %left OpEquals OpNot '<' '>'
 %left OpAnd OpOr OpXor
 %left OpBitand OpBitor OpBitxor OpBitnot
+%nonassoc KeyAs '(' ')'
 
 %%
 program: program programbody
@@ -74,8 +75,6 @@ programbody: moduleimport
        | decl
        | typedef;
 
-
-
 expr: ValFloat
     | ValInt
     | ValMultistr
@@ -83,7 +82,9 @@ expr: ValFloat
     | Ident
     | operation
     | boxaccess
-    | boxselfaccess;
+    | boxselfaccess
+    | typecast
+    | reinterpretcast;
 
 exprlist: expr ',' exprlist
         | expr;
@@ -166,10 +167,7 @@ identlist: Ident ',' identlist
 decl: type ':' identlist
     | storagequalifier type ':' identlist
 
-
-definition: decl '=' expr { DEBUG("Definition"); }
-         | decl '=' typecast { DEBUG("Definition"); };
-         | decl '=' reinterpretcast { DEBUG("Definition"); };
+definition: decl '=' expr { DEBUG("Definition"); };
 
 storagequalifier: KeyGlobal
         | KeyStatic
