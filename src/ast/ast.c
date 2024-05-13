@@ -70,11 +70,15 @@ void AST_init() {
   lookup_table[AST_Box] = "box";
   lookup_table[AST_Fun] = "fun";
 
+  lookup_table[AST_Call] = "funcall";
   lookup_table[AST_Typecast] = "cast";
   lookup_table[AST_Transmute] = "as";
   lookup_table[AST_Condition] = "condition";
   lookup_table[AST_List] = "list";
   lookup_table[AST_Type] = "type";
+  lookup_table[AST_Negate] = "-";
+  lookup_table[AST_Parameter] = "parameter";
+  lookup_table[AST_ParamDecl] = "parameter-declaration";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {
@@ -90,11 +94,11 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
     case AST_Ident:
     case AST_Macro:
     case AST_Import:
-    case AST_Call:
     case AST_Storage:
     case AST_Typekind:
     case AST_Sign:
     case AST_Scale:
+    case AST_Qualifyier:
       string = node->value;
       break;
     default:
