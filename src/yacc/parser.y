@@ -1,9 +1,15 @@
+%locations
+%define parse.error verbose
+
 %{
     #include <sys/log.h>
-    extern int yylineno;
+    #include <sys/col.h>
 
     int yyerror(char*);
 
+    extern char* buffer;
+    extern int yylineno;
+    
     extern int yylex();
 %}
 
@@ -55,6 +61,7 @@
 %token FunFunname
 %token FunLineno
 %token FunExtsupport
+%token Invalid
 
 /* Operator associativity */
 %right '='
@@ -222,7 +229,69 @@ opbit: expr OpBitand expr
     | OpBitnot expr %prec OpBitand;
 %%
 
+ 
+const char* ERROR = "error";
+const char* WARNING = "warning";
+const char* NOTE = "note";
+
+int print_message(const char* kind, char* message) {
+    // number of characters written
+    int char_count = 0;
+    // highlight to use
+    char* HIGHLIGHT = CYAN;
+
+    // convert message kind into color
+    if (kind == ERROR) {
+        HIGHLIGHT = RED;
+    } else if (kind == WARNING) {
+        HIGHLIGHT = YELLOW;
+    }
+
+    // print message
+    char_count += printf("%sfilename:%d:%d%s:%s%s %s: %s%s\n", BOLD, yylloc.first_line, yylloc.first_column, RESET, HIGHLIGHT, BOLD, kind, RESET, message);
+    
+    // print line in which error occurred
+    
+    char_count += printf(" %4d | ", yylloc.first_line);
+
+    for (int i = 0; i < yylloc.first_column - 1; i++) {
+        if (buffer[i] == '\n') {
+            break;
+        }
+        printf("%c", buffer[i]);
+    }
+
+    char_count += printf("%s%s", BOLD, HIGHLIGHT);
+
+    for (int i = yylloc.first_column - 1; i < yylloc.last_column; i++) {
+        if (buffer[i] == '\n') {
+            break;
+        }
+        char_count += printf("%c", buffer[i]);
+    }
+
+    char_count += printf("%s", RESET);
+
+    for (int i = yylloc.last_column; buffer[i] != '\0' && buffer[i] != '\n'; i++) {
+        printf("%c", buffer[i]);
+    }
+
+    char_count += printf("\n      | ");
+
+    for (int i = 0; i < yylloc.first_column - 1; i++) {
+        char_count += printf(" ");
+    }
+
+    char_count += printf("%s^", HIGHLIGHT);
+
+    for (int i = 0; i < yylloc.last_column - yylloc.first_column; i++) {
+        printf("~");
+    }
+    
+    char_count += printf("%s\n\n", RESET);
+}
+
 int yyerror(char *s) {
-    ERROR("%s", s);
+    print_message(ERROR, s);
     return 0;
 }

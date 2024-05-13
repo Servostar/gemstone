@@ -2,9 +2,21 @@
 %{
     #include <yacc/parser.tab.h>
     #include <sys/log.h>
+    #include <lex/util.h>
 
     int yyLineNumber = 1;
+  
     int yylex();
+
+    extern int yyerror(char* s);
+  
+    #define YY_USER_ACTION beginToken(yytext);
+
+    #define YY_INPUT(buf,result,max_size)  {\
+        result = nextChar(buf); \
+        if (  result <= 0  ) \
+          result = YY_NULL; \
+        }
 %}
 
 /* disable the following functions */
@@ -81,5 +93,6 @@
 [a-zA-Z_0-9]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = strdup(yytext); return(Ident); };
 \"([^\"\n])*\" {DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
 \"\"\"([^\"\n]|\\\n)*\"\"\" {DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = strdup(yytext); return(ValMultistr);};
-.;
+[ \r\t] { /* ignore whitespace */ };
+. { };
 %%
