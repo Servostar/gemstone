@@ -75,6 +75,11 @@ void AST_init() {
   lookup_table[AST_Transmute] = "as";
   lookup_table[AST_Condition] = "condition";
   lookup_table[AST_List] = "list";
+  lookup_table[AST_ExprList] = "expr list";
+  lookup_table[AST_ArgList] = "arg list";
+  lookup_table[AST_ParamList] = "param list";
+  lookup_table[AST_StmtList] = "stmt list";
+  lookup_table[AST_IdentList] = "ident list";
   lookup_table[AST_Type] = "type";
   lookup_table[AST_Negate] = "-";
   lookup_table[AST_Parameter] = "parameter";

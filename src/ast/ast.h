@@ -61,6 +61,11 @@ enum AST_SyntaxElement_t {
   // amount of variants
   // in this enums
   AST_List,
+  AST_ExprList,
+  AST_ArgList,
+  AST_ParamList,
+  AST_StmtList,
+  AST_IdentList,
   AST_Storage,
   AST_Type,
   AST_Typekind,
