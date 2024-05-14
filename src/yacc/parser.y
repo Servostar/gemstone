@@ -105,7 +105,8 @@
 
 /* Operator associativity */
 %right '='
-%left '+' '-' '*' '/'
+%left '+' '-'
+%left '*' '/'
 %left OpEquals OpNot '<' '>'
 %left OpAnd OpOr OpXor
 %left OpBitand OpBitor OpBitxor OpBitnot
