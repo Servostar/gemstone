@@ -134,15 +134,18 @@ expr: ValFloat {$$ = AST_new_node(AST_Float, $1);}
 
 exprlist: expr ',' exprlist {AST_push_node($3, $1);
                              $$ = $3;}
-        | expr {AST_NODE_PTR list = AST_new_node(AST_List, NULL);
+        | expr {AST_NODE_PTR list = AST_new_node(AST_ExprList, NULL);
                 AST_push_node(list, $1);
                 $$ = list;};
 
 argumentlist: argumentlist '(' exprlist ')' {AST_push_node($1, $3);
                                              $$ = $1;}
-    | '(' exprlist ')'{AST_NODE_PTR list = AST_new_node(AST_List, NULL);
+    | '(' exprlist ')'{AST_NODE_PTR list = AST_new_node(AST_ArgList, NULL);
                 AST_push_node(list, $2);
-                $$ = list;};
+                $$ = list;}
+    | argumentlist '(' ')'
+    | '(' ')'{AST_NODE_PTR list = AST_new_node(AST_ArgList, NULL);
+              $$ = list;};
 
 
 fundef: KeyFun Ident paramlist '{' statementlist'}' {AST_NODE_PTR fun = AST_new_node(AST_Fun, NULL);
@@ -158,14 +161,14 @@ paramlist: paramlist '(' params ')' {AST_push_node($1, $3);
          |  paramlist '(' ')'{$$ = $1;}
          | '(' params ')' {AST_NODE_PTR list = AST_new_node(AST_List, NULL);
                            AST_push_node(list, $2);}
-         | '(' ')' {$$ = AST_new_node(AST_List, NULL);};
+         | '(' ')' {$$ = AST_new_node(AST_ParamList, NULL);};
 
 params: IOqualifyier paramdecl ',' params {AST_NODE_PTR parameter = AST_new_node(AST_Parameter, NULL);
                                 AST_push_node(parameter, $1);
                                 AST_push_node(parameter, $2);
                                 AST_push_node($4, parameter);
                                 $$ = $4;}
-      | IOqualifyier paramdecl {AST_NODE_PTR list = AST_new_node(AST_List, NULL);
+      | IOqualifyier paramdecl {AST_NODE_PTR list = AST_new_node(AST_ParamList, NULL);
                                 AST_NODE_PTR parameter = AST_new_node(AST_Parameter, NULL);
                                 AST_push_node(parameter, $1);
                                 AST_push_node(parameter, $2);
@@ -225,7 +228,7 @@ boxcontent: decl { $$ = $1;DEBUG("Box decl Content"); }
 boxselfaccess: KeySelf '.' Ident {AST_NODE_PTR boxselfaccess = AST_new_node(AST_List, NULL);
                                       AST_NODE_PTR self = AST_new_node(AST_Ident, "self");
                                       AST_push_node(boxselfaccess, self);
-                                      AST_NODE_PTR identlist = AST_new_node(AST_List, NULL);
+                                      AST_NODE_PTR identlist = AST_new_node(AST_IdentList, NULL);
                                       AST_NODE_PTR ident = AST_new_node(AST_Ident, $3);
                                       AST_push_node(identlist,ident);
                                       AST_push_node(boxselfaccess, identlist);
@@ -236,7 +239,7 @@ boxselfaccess: KeySelf '.' Ident {AST_NODE_PTR boxselfaccess = AST_new_node(AST_
                                       AST_push_node(boxselfaccess, $3);
                                       $$ = boxselfaccess;};
 
-boxaccess: Ident '.' Ident {AST_NODE_PTR identlist = AST_new_node(AST_List, NULL);
+boxaccess: Ident '.' Ident {AST_NODE_PTR identlist = AST_new_node(AST_IdentList, NULL);
                                       AST_NODE_PTR ident1 = AST_new_node(AST_Ident, $1);
                                       AST_NODE_PTR ident2 = AST_new_node(AST_Ident, $3);
                                       AST_push_node(identlist,ident1);
@@ -267,7 +270,7 @@ moduleimport: KeyImport ValStr {$$ = AST_new_node(AST_Import, $2);
 
 statementlist: statementlist statement  {AST_push_node($1, $2);
                                         $$ = $1;}
-    | statement {AST_NODE_PTR list = AST_new_node(AST_List, NULL);
+    | statement {AST_NODE_PTR list = AST_new_node(AST_StmtList, NULL);
                  AST_push_node(list, $1);
         $$ = list;};
 
@@ -305,7 +308,7 @@ while: KeyWhile expr '{' statementlist '}' { DEBUG("while"); };
 identlist: Ident ',' identlist {AST_NODE_PTR ident = AST_new_node(AST_Ident, $1);
                                 AST_push_node($3, ident);
                                 $$ = $3;}
-        | Ident {AST_NODE_PTR list = AST_new_node(AST_List, NULL);
+        | Ident {AST_NODE_PTR list = AST_new_node(AST_IdentList, NULL);
                  AST_NODE_PTR ident = AST_new_node(AST_Ident, $1);
                  AST_push_node(list, ident);
                  $$ = list;};               
