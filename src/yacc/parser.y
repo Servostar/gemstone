@@ -104,12 +104,19 @@
 %token FunExtsupport
 
 /* Operator associativity */
+/* Operators at lower line number have lower precedence */
+/* Operators in same line have same precedence */
 %right '='
+%left OpOr
+%left OpXor
+%left OpAnd
+%left OpBitor
+%left OpBitxor
+%left OpBitand
+%left OpEquals '<' '>'
 %left '+' '-'
 %left '*' '/'
-%left OpEquals OpNot '<' '>'
-%left OpAnd OpOr OpXor
-%left OpBitand OpBitor OpBitxor OpBitnot
+%left OpNot OpBitnot
 
 %%
 program: program programbody {AST_push_node(root, $2);}
