@@ -94,5 +94,5 @@
 \"([^\"\n])*\" {DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
 \"\"\"([^\"\n]|\\\n)*\"\"\" {DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = strdup(yytext); return(ValMultistr);};
 [ \r\t] { /* ignore whitespace */ };
-. { };
+. { return yytext[0]; /* passthrough unknown token, let parser handle the error */ };
 %%
