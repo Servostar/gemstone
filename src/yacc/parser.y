@@ -290,26 +290,40 @@ statement: assign {$$ = $1;}
         | funcall {$$ = $1;}
         | boxcall{$$ = $1;};
 
-branchif: KeyIf expr '{' statementlist '}' { DEBUG("if"); };
-branchelse: KeyElse '{' statementlist '}' { DEBUG("if-else"); };
-branchelseif: KeyElse KeyIf expr '{' statementlist '}' { DEBUG("else-if"); };
+branchif: KeyIf expr '{' statementlist '}' { AST_NODE_PTR branch = AST_new_node(AST_If, NULL);
+                                            AST_push_node(branch, $2);
+                                            AST_push_node(branch, $4);
+                                            $$ = branch; };
 
-branchelseifs: branchelseifs branchelseif {AST_NODE_PTR ifelse = AST_new_node(AST_IfElse, NULL);
-                                           AST_push_node(ifelse, $1);
-                                           AST_push_node(ifelse, $2);
-                                           $$ = ifelse;}
-    | branchelseif {$$ = $1;};
+branchelse: KeyElse '{' statementlist '}' { AST_NODE_PTR branch = AST_new_node(AST_Else, NULL);
+                                            AST_push_node(branch, $3);
+                                            $$ = branch; };
 
-branch: branchif branchelseifs {AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
+branchelseif: KeyElse KeyIf expr '{' statementlist '}' { AST_NODE_PTR branch = AST_new_node(AST_IfElse, NULL);
+                                            AST_push_node(branch, $3);
+                                            AST_push_node(branch, $5);
+                                            $$ = branch; };
+
+branchelseifs: branchelseifs branchelseif { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
+                                            AST_push_node(branch, $1);
+                                            AST_push_node(branch, $2);
+                                            $$ = branch; }
+            | branchelseif { $$ = $1; };
+
+branch: branchif { $$ = $1; }
+        | branchif branchelseifs { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
                                 AST_push_node(branch, $1);
                                 AST_push_node(branch, $2);
-                                $$ = branch;}
-
-    | branchif branchelseifs branchelse { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
-                                          AST_push_node(branch, $1);
-                                          AST_push_node(branch, $2);
-                                          AST_push_node(branch, $3);
-                                          $$ = branch;};
+                                $$ = branch; }
+        | branchif branchelseifs branchelse { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
+                                AST_push_node(branch, $1);
+                                AST_push_node(branch, $2);
+                                AST_push_node(branch, $3);
+                                $$ = branch; }
+        | branchif branchelse { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
+                                AST_push_node(branch, $1);
+                                AST_push_node(branch, $2);
+                                $$ = branch; };
 
 while: KeyWhile expr '{' statementlist '}' { DEBUG("while"); };
 
