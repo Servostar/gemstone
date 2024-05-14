@@ -13,6 +13,14 @@ extern FILE *yyin;
  */
 void notify_exit(void) { DEBUG("Exiting gemstone..."); }
 
+size_t check_option(const char* name) {
+if (0 != name){
+   return 1;
+} else {
+   return 0;
+};  
+};
+
 /**
  * @brief Closes File after compiling.
  *
