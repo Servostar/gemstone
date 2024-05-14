@@ -8,7 +8,7 @@
   
     int yylex();
 
-    extern int yyerror(char* s);
+    extern int yyerror(const char* s);
   
     #define YY_USER_ACTION beginToken(yytext);
 

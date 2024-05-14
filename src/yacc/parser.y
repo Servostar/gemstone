@@ -5,7 +5,7 @@
     #include <sys/log.h>
     #include <sys/col.h>
 
-    int yyerror(char*);
+    int yyerror(const char*);
 
     extern char* buffer;
     extern int yylineno;
@@ -234,7 +234,7 @@ const char* ERROR = "error";
 const char* WARNING = "warning";
 const char* NOTE = "note";
 
-int print_message(const char* kind, char* message) {
+int print_message(const char* kind, const char* message) {
     // number of characters written
     int char_count = 0;
     // highlight to use
@@ -289,9 +289,10 @@ int print_message(const char* kind, char* message) {
     }
     
     char_count += printf("%s\n\n", RESET);
+
+    return char_count;
 }
 
-int yyerror(char *s) {
-    print_message(ERROR, s);
-    return 0;
+int yyerror(const char *s) {
+    return print_message(ERROR, s);
 }
