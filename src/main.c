@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
   yyparse();
 
   FILE *output = fopen("test.txt", "w");
-  AST_fprint_graphviz(file, root);
+  AST_fprint_graphviz(output, root);
   fclose(output);
   return 0;
 }
