@@ -6,7 +6,7 @@
     int yyerror(char*);
 
     extern int yylex();
-
+    extern AST_NODE_PTR root;
     
 }
 
@@ -111,15 +111,8 @@
 %left OpBitand OpBitor OpBitxor OpBitnot
 
 %%
-program: program programbody {AST_push_node($1, $2);
-                              FILE *file = fopen("test.txt", "w");
-                              AST_fprint_graphviz(file, $1);
-                              fclose(file);}
-       | programbody {AST_NODE_PTR program = AST_new_node(AST_Module, NULL);
-                      AST_push_node(program, $1);
-                      FILE *file = fopen("test.txt", "w");
-                      AST_fprint_graphviz(file, program);
-                      fclose(file); };
+program: program programbody {AST_push_node(root, $2);}
+       | programbody {AST_push_node(root, $1);};
 
 programbody: moduleimport {$$ = $1;}
        | fundef{$$ = $1;}

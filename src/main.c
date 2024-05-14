@@ -6,6 +6,7 @@
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
 extern FILE *yyin;
+AST_NODE_PTR root;
 
 /**
  * @brief Log a debug message to inform about beginning exit procedures
@@ -65,7 +66,11 @@ int main(int argc, char *argv[]) {
   }
   yyin = file;
 
+  root = AST_new_node(AST_Module, NULL);
   yyparse();
 
+  FILE *output = fopen("test.txt", "w");
+  AST_fprint_graphviz(file, root);
+  fclose(output);
   return 0;
 }

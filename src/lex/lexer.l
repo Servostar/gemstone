@@ -79,7 +79,15 @@
 [0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = strdup(yytext); return(ValInt); };
 [0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = strdup(yytext); return(ValFloat);};
 [a-zA-Z_0-9]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = strdup(yytext); return(Ident); };
-\"([^\"\n])*\" {DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
-\"\"\"([^\"\n]|\\\n)*\"\"\" {DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = strdup(yytext); return(ValMultistr);};
+\"([^\"\n])*\" {
+    yytext = yytext +1;
+    yytext[yyleng - 2] = 0;
+    
+    DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
+\"\"\"([^\"\n]|\\\n)*\"\"\" {
+    yytext = yytext +3;
+    yytext[yyleng - 4] = 0;
+
+    DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = strdup(yytext); return(ValMultistr);};
 .;
 %%
