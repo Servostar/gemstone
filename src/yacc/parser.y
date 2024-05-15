@@ -58,11 +58,18 @@
 
 /* Operator associativity */
 %right '='
-%left '+' '-' '*' '/'
-%left OpEquals OpNot '<' '>'
-%left OpAnd OpOr OpXor
-%left OpBitand OpBitor OpBitxor OpBitnot
-%nonassoc KeyAs '(' ')'
+%left OpOr
+%left OpXor
+%left OpAnd
+%left OpBitor
+%left OpBitxor
+%left OpBitand
+%left OpEquals '<' '>'
+%left '+' '-'
+%left '*' '/'
+%left OpNot OpBitnot
+%left KeyAs
+%left '(' ')'
 
 %%
 program: program programbody
@@ -109,7 +116,7 @@ IOqualifyier: KeyIn
             | KeyOut KeyIn
             | ;
 
-typecast: expr KeyAs type { DEBUG("Type-Cast"); };
+typecast: expr KeyAs type %prec KeyAs { DEBUG("Type-Cast"); };
 
 reinterpretcast: '(' type ')' expr { DEBUG("Reinterpret-Cast"); };
 
