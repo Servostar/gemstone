@@ -72,5 +72,6 @@ int main(int argc, char *argv[]) {
   FILE *output = fopen("test.txt", "w");
   AST_fprint_graphviz(output, root);
   fclose(output);
+  AST_delete_node(root);
   return 0;
 }
