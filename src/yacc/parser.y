@@ -314,7 +314,10 @@ branchhalf:  branchif  { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
                                 $$ = $1; }
 
 
-while: KeyWhile expr '{' statementlist '}' { DEBUG("while"); };
+while: KeyWhile expr '{' statementlist '}' {AST_NODE_PTR whilenode = AST_new_node(AST_While, NULL);
+                                AST_push_node(whilenode, $2);
+                                AST_push_node(whilenode, $4);
+                                $$ = whilenode;};
 
 identlist: Ident ',' identlist {AST_NODE_PTR ident = AST_new_node(AST_Ident, $1);
                                 AST_push_node($3, ident);
