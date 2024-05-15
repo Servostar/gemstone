@@ -168,8 +168,9 @@ paramlist: paramlist '(' params ')' {AST_push_node($1, $3);
                                      $$ = $1;}
          |  paramlist '(' ')'{$$ = $1;}
          | '(' params ')' {AST_NODE_PTR list = AST_new_node(AST_List, NULL);
-                           AST_push_node(list, $2);}
-         | '(' ')' {$$ = AST_new_node(AST_ParamList, NULL);};
+                           AST_push_node(list, $2);
+                           $$ = list;}
+         | '(' ')' {$$ = AST_new_node(AST_List, NULL);};
 
 params: IOqualifyier paramdecl ',' params {AST_NODE_PTR parameter = AST_new_node(AST_Parameter, NULL);
                                 AST_push_node(parameter, $1);
@@ -311,7 +312,7 @@ branchhalf:  branchif  { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
                                 AST_push_node(branch, $1);
                                 $$ = branch; }
         | branchhalf branchelseif { AST_push_node($1 , $2);
-                                $$ = $1; }
+                                $$ = $1; };
 
 
 while: KeyWhile expr '{' statementlist '}' {AST_NODE_PTR whilenode = AST_new_node(AST_While, NULL);
