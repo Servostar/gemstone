@@ -25,10 +25,10 @@
 %type <node_ptr> decl
 %type <node_ptr> definition
 %type <node_ptr> while
-%type <node_ptr> branch
 %type <node_ptr> funcall
 %type <node_ptr> boxcall
-%type <node_ptr> branchelseifs
+%type <node_ptr> branchhalf
+%type <node_ptr> branchfull
 %type <node_ptr> branchelse
 %type <node_ptr> branchelseif
 %type <node_ptr> branchif
@@ -286,7 +286,7 @@ statement: assign {$$ = $1;}
         | decl {$$ = $1;}
         | definition {$$ = $1;}
         | while {$$ = $1;}
-        | branch {$$ = $1;}
+        | branchfull {$$ = $1;}
         | funcall {$$ = $1;}
         | boxcall{$$ = $1;};
 
@@ -304,26 +304,15 @@ branchelseif: KeyElse KeyIf expr '{' statementlist '}' { AST_NODE_PTR branch = A
                                             AST_push_node(branch, $5);
                                             $$ = branch; };
 
-branchelseifs: branchelseifs branchelseif { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
-                                            AST_push_node(branch, $1);
-                                            AST_push_node(branch, $2);
-                                            $$ = branch; }
-            | branchelseif { $$ = $1; };
+branchfull:  branchhalf { $$ = $1;};
+            |branchhalf branchelse {   AST_push_node($1 , $2);
+                                $$ = $1; }
+branchhalf:  branchif  { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
+                                AST_push_node(branch, $1);
+                                $$ = branch; }
+        | branchhalf branchelseif { AST_push_node($1 , $2);
+                                $$ = $1; }
 
-branch: branchif { $$ = $1; }
-        | branchif branchelseifs { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
-                                AST_push_node(branch, $1);
-                                AST_push_node(branch, $2);
-                                $$ = branch; }
-        | branchif branchelseifs branchelse { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
-                                AST_push_node(branch, $1);
-                                AST_push_node(branch, $2);
-                                AST_push_node(branch, $3);
-                                $$ = branch; }
-        | branchif branchelse { AST_NODE_PTR branch = AST_new_node(AST_Stmt, NULL);
-                                AST_push_node(branch, $1);
-                                AST_push_node(branch, $2);
-                                $$ = branch; };
 
 while: KeyWhile expr '{' statementlist '}' { DEBUG("while"); };
 
