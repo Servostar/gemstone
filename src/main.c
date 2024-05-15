@@ -4,6 +4,7 @@
 #include <yacc/parser.tab.h>
 #include <sys/col.h>
 #include <lex/util.h>
+#include <codegen/backend.h>
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
@@ -74,6 +75,14 @@ int main(int argc, char *argv[]) {
 
   root = AST_new_node(AST_Module, NULL);
   yyparse();
+
+  set_backend(NULL, NULL, NULL, "LLVM");
+
+  init_backend();
+
+  generate_code(root, NULL);
+
+  deinit_backend();
 
   FILE *output = fopen("test.txt", "w");
   AST_fprint_graphviz(output, root);
