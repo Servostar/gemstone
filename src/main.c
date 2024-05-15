@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <sys/log.h>
 #include <yacc/parser.tab.h>
+#include <sys/col.h>
+#include <lex/util.h>
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
@@ -41,6 +43,10 @@ void setup(void) {
 
   // actual setup
   AST_init();
+
+  col_init();
+
+  lex_init();
 
   DEBUG("finished starting up gemstone...");
 }

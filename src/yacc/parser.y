@@ -1,10 +1,17 @@
+%locations
+%define parse.error verbose
+
 %code requires {
     #include <sys/log.h>
     #include <ast/ast.h>
     extern int yylineno;
 
-    int yyerror(char*);
 
+    int yyerror(const char*);
+
+    extern char* buffer;
+    extern int yylineno;
+    
     extern int yylex();
     extern AST_NODE_PTR root;
     
@@ -102,6 +109,7 @@
 %token FunFunname
 %token FunLineno
 %token FunExtsupport
+%token Invalid
 
 /* Operator associativity */
 /* Operators at lower line number have lower precedence */
@@ -488,7 +496,70 @@ opbit: expr OpBitand expr {AST_NODE_PTR and = AST_new_node(AST_BitAnd, NULL);
                              $$ = not;};
 %%
 
-int yyerror(char *s) {
-    ERROR("%s", s);
-    return 0;
+ 
+const char* ERROR = "error";
+const char* WARNING = "warning";
+const char* NOTE = "note";
+
+int print_message(const char* kind, const char* message) {
+    // number of characters written
+    int char_count = 0;
+    // highlight to use
+    char* HIGHLIGHT = CYAN;
+
+    // convert message kind into color
+    if (kind == ERROR) {
+        HIGHLIGHT = RED;
+    } else if (kind == WARNING) {
+        HIGHLIGHT = YELLOW;
+    }
+
+    // print message
+    char_count += printf("%sfilename:%d:%d%s:%s%s %s: %s%s\n", BOLD, yylloc.first_line, yylloc.first_column, RESET, HIGHLIGHT, BOLD, kind, RESET, message);
+    
+    // print line in which error occurred
+    
+    char_count += printf(" %4d | ", yylloc.first_line);
+
+    for (int i = 0; i < yylloc.first_column - 1; i++) {
+        if (buffer[i] == '\n') {
+            break;
+        }
+        printf("%c", buffer[i]);
+    }
+
+    char_count += printf("%s%s", BOLD, HIGHLIGHT);
+
+    for (int i = yylloc.first_column - 1; i < yylloc.last_column; i++) {
+        if (buffer[i] == '\n') {
+            break;
+        }
+        char_count += printf("%c", buffer[i]);
+    }
+
+    char_count += printf("%s", RESET);
+
+    for (int i = yylloc.last_column; buffer[i] != '\0' && buffer[i] != '\n'; i++) {
+        printf("%c", buffer[i]);
+    }
+
+    char_count += printf("\n      | ");
+
+    for (int i = 0; i < yylloc.first_column - 1; i++) {
+        char_count += printf(" ");
+    }
+
+    char_count += printf("%s^", HIGHLIGHT);
+
+    for (int i = 0; i < yylloc.last_column - yylloc.first_column; i++) {
+        printf("~");
+    }
+    
+    char_count += printf("%s\n\n", RESET);
+
+    return char_count;
+}
+
+int yyerror(const char *s) {
+    return print_message(ERROR, s);
 }

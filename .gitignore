@@ -15,3 +15,6 @@ parser.tab.c
 parser.tab.h
 build
 /Testing/
+CTestTestfile.cmake
+DartConfiguration.tcl
+*.cmake
