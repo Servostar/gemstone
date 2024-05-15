@@ -4,6 +4,7 @@
 %code requires {
     #include <sys/log.h>
     #include <ast/ast.h>
+    #include <sys/col.h>
     extern int yylineno;
 
 
