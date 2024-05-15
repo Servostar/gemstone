@@ -33,7 +33,6 @@ void AST_init() {
   DEBUG("initializing global syntax tree...");
 
   INFO("filling lookup table...");
-
   lookup_table[AST_Stmt] = "stmt";
   lookup_table[AST_Module] = "module";
   lookup_table[AST_Expr] = "expr";

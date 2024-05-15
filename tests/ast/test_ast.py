@@ -60,14 +60,27 @@ def run_check_print_node():
 29 <
 30 cast
 31 as
-32 value
+32 funcall
 33 value
 34 typedef
 35 box
 36 fun
 37 value
 38 list
-39 storage
+39 expr list
+40 arg list
+41 param list
+42 stmt list
+43 ident list
+44 value
+45 type
+46 value
+47 value
+48 value
+49 -
+50 parameter
+51 value
+52 parameter-declaration
 """ == p.stdout
 
 
