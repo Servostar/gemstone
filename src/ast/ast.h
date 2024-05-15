@@ -12,6 +12,7 @@
  */
 enum AST_SyntaxElement_t {
   AST_Stmt = 0,
+  AST_Module,
   AST_Expr,
   // Literals
   AST_Int,
@@ -58,7 +59,22 @@ enum AST_SyntaxElement_t {
   AST_Fun,
   AST_Import,
   // amount of variants
-  // in this enum
+  // in this enums
+  AST_List,
+  AST_ExprList,
+  AST_ArgList,
+  AST_ParamList,
+  AST_StmtList,
+  AST_IdentList,
+  AST_Storage,
+  AST_Type,
+  AST_Typekind,
+  AST_Sign,
+  AST_Scale,
+  AST_Negate,
+  AST_Parameter,
+  AST_Qualifyier,
+  AST_ParamDecl,
   AST_ELEMENT_COUNT
 };
 
