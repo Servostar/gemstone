@@ -29,42 +29,58 @@ def run_check_print_node():
     assert p.returncode == 0
 
     assert """0 stmt
-1 expr
-2 value
+1 module
+2 expr
 3 value
 4 value
-5 while
-6 if
-7 else if
-8 else
-9 condition
-10 decl
-11 assign
-12 def
-13 value
-14 +
-15 -
-16 *
-17 /
-18 &
-19 |
-20 ^
-21 !
-22 &&
-23 ||
-24 ^^
-25 !!
-26 ==
-27 >
-28 <
-29 cast
-30 as
-31 value
-32 value
-33 typedef
-34 box
-35 fun
-36 value
+5 value
+6 while
+7 if
+8 else if
+9 else
+10 condition
+11 decl
+12 assign
+13 def
+14 value
+15 +
+16 -
+17 *
+18 /
+19 &
+20 |
+21 ^
+22 !
+23 &&
+24 ||
+25 ^^
+26 !!
+27 ==
+28 >
+29 <
+30 cast
+31 as
+32 funcall
+33 value
+34 typedef
+35 box
+36 fun
+37 value
+38 list
+39 expr list
+40 arg list
+41 param list
+42 stmt list
+43 ident list
+44 value
+45 type
+46 value
+47 value
+48 value
+49 -
+50 parameter
+51 value
+52 parameter-declaration
 """ == p.stdout
 
 

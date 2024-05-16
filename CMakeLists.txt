@@ -61,8 +61,10 @@ set(YACC_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.y)
 set(YACC_GENERATED_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.tab.c)
 
 add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
-        COMMAND yacc
-        ARGS -Wcounterexamples -d -o ${YACC_GENERATED_SOURCE_FILE} ${YACC_SOURCE_FILE}
+
+        COMMAND bison
+        ARGS -Wno-yacc -Wcounterexamples -d -o ${YACC_GENERATED_SOURCE_FILE} ${YACC_SOURCE_FILE}
+
         COMMENT "generate C source file for parser"
         VERBATIM)
 

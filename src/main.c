@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <sys/log.h>
 #include <yacc/parser.tab.h>
+#include <sys/col.h>
+#include <lex/util.h>
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 
 extern FILE *yyin;
+AST_NODE_PTR root;
 
 /**
  * @brief Log a debug message to inform about beginning exit procedures
@@ -41,6 +44,10 @@ void setup(void) {
   // actual setup
   AST_init();
 
+  col_init();
+
+  lex_init();
+
   DEBUG("finished starting up gemstone...");
 }
 
@@ -65,7 +72,12 @@ int main(int argc, char *argv[]) {
   }
   yyin = file;
 
+  root = AST_new_node(AST_Module, NULL);
   yyparse();
 
+  FILE *output = fopen("test.txt", "w");
+  AST_fprint_graphviz(output, root);
+  fclose(output);
+  AST_delete_node(root);
   return 0;
 }
