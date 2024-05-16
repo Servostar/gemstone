@@ -4,6 +4,7 @@
 #include <yacc/parser.tab.h>
 #include <sys/col.h>
 #include <lex/util.h>
+#include <llvm/backend.h>
 #include <codegen/backend.h>
 
 #define LOG_LEVEL LOG_LEVEL_DEBUG
@@ -76,11 +77,12 @@ int main(int argc, char *argv[]) {
   root = AST_new_node(AST_Module, NULL);
   yyparse();
 
-  set_backend(NULL, NULL, NULL, "LLVM");
+  llvm_backend_init();
 
   init_backend();
 
-  generate_code(root, NULL);
+  void* code = NULL;
+  generate_code(root, &code);
 
   deinit_backend();
 

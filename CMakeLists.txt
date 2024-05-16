@@ -69,6 +69,18 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
         VERBATIM)
 
 # ------------------------------------------------ #
+#  LLVM backend                                    #
+# ------------------------------------------------ #
+
+# Fetch LLVM link configuration
+execute_process(COMMAND llvm-config --libs all
+                OUTPUT_VARIABLE LLVM_LIBS)
+# Strip whitespace from output
+string(STRIP "${LLVM_LIBS}" LLVM_LIBS)
+# Link all targets to LLVM
+link_libraries(${LLVM_LIBS})
+
+# ------------------------------------------------ #
 #  Source                                          #
 # ------------------------------------------------ #
 
