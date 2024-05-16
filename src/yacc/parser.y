@@ -283,10 +283,16 @@ boxcall: boxaccess argumentlist {AST_NODE_PTR boxcall = AST_new_node(AST_Call, N
                                  $$ = boxcall;};
                                  
 
-typecast: expr KeyAs type %prec KeyAs  {$$ = AST_new_node(AST_Typecast, $1);
+typecast: expr KeyAs type %prec KeyAs  {AST_NODE_PTR cast = AST_new_node(AST_Typecast, NULL);
+                                        AST_push_node(cast, $1);
+                                        AST_push_node(cast, $3);
+                                        $$ = cast;
                                          DEBUG("Type-Cast"); };
 
-reinterpretcast: '(' type ')' expr {$$ = AST_new_node(AST_Transmute, $4);
+reinterpretcast: '(' type ')' expr { AST_NODE_PTR cast = AST_new_node(AST_Transmute, NULL);
+                                      AST_push_node(cast, $4);
+                                        AST_push_node(cast, $2);
+                                        $$ = cast;
                                     DEBUG("Reinterpret-Cast"); };
 
 
