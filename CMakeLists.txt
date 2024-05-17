@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.15...3.25)
 # Header must be included this way: #include <module/header.h>
 #
 # ├─ res
+# ├─ dep
+# │  └─ klib
 # ├─ src
 # │  ├─ lex
 # │  │  └─ lexer.l
@@ -69,8 +71,25 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
         VERBATIM)
 
 # ------------------------------------------------ #
+# Klib                                             #
+# ------------------------------------------------ #
+
+file(GLOB KLIB_SOURCE_FILES ${PROJECT_SOURCE_DIR}/dep/klib/*.c)
+
+add_library(klib
+            STATIC
+            ${KLIB_SOURCE_FILES})
+
+set_target_properties(klib
+            PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/dep)
+    
+# ------------------------------------------------ #
 #  Source                                          #
 # ------------------------------------------------ #
+
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/dep)
 
 file(GLOB_RECURSE SOURCE_FILES src/*.c)
 
@@ -78,7 +97,7 @@ file(GLOB_RECURSE SOURCE_FILES src/*.c)
 if (MSVC)
     set(FLAGS /Wall /W3 /permissive)
 else()
-    set(FLAGS -Wall -Wextra -Wconversion -Wpedantic)
+    set(FLAGS -Wall -Wextra -Wpedantic)
 endif()
 
 # ------------------------------------------------ #
@@ -94,6 +113,8 @@ set_target_properties(release
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
+
+target_link_libraries(release klib)
 
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
@@ -127,6 +148,8 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
+target_link_libraries(debug klib)
+
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
 else()
@@ -155,6 +178,8 @@ set_target_properties(check
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
+
+target_link_libraries(check klib)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)
