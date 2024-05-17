@@ -10,6 +10,6 @@ COPY --chown=lorang tests /home/lorang/tests
 COPY --chown=lorang CMakeLists.txt /home/lorang/
 COPY --chown=lorang run-check-test.sh /home/lorang/
 COPY --chown=lorang .env /home/lorang/
-COPY --chown=lorang run-docker-build /home/lorang/
+COPY --chown=lorang run-docker-build.sh /home/lorang/
 
 RUN cmake .

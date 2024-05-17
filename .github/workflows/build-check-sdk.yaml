@@ -9,4 +9,4 @@ jobs:
     - name: Setup SDK
       run: source ./.env && docker pull servostar/gemstone:sdk-"$SDK"
     - name: Compile
-      run: source ./.env && sh run-docker-build.sh
+      run: set -a && source ./.env && sh run-docker-build.sh

@@ -11,11 +11,16 @@ echo "+--------------------------------------+"
 if [ -z "$SDK" ]; then
   echo "no SDK specified, sourcing .env"
   source ./.env
-fi
 
-if [ -z "$SDK" ]; then
-  echo "no SDK specified"
-  exit 1
+  if [ -z "$SDK" ]; then
+    echo "no SDK specified"
+    exit 1
+  else
+    echo "using SDK $SDK"
+  fi
+
+else
+  echo "using SDK $SDK"
 fi
 
 echo "+--------------------------------------+"
