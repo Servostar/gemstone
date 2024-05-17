@@ -8,7 +8,10 @@ echo "+--------------------------------------+"
 echo "| CHECKING prelude                     |"
 echo "+--------------------------------------+"
 
-source ./.env
+if [ -z "$SDK" ]; then
+  echo "no SDK specified, sourcing .env"
+  source ./.env
+fi
 
 if [ -z "$SDK" ]; then
   echo "no SDK specified"
