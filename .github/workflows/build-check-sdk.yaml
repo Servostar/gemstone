@@ -6,6 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Setup environment
+      run: source ./.env
     - name: Setup SDK
       run: docker pull servostar/gemstone:sdk-"$SDK"
     - name: Compile
