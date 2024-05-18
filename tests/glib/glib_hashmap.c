@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 
         *index = i;
 
-        g_hash_table_insert(map, argv[i], &index);
+        g_hash_table_insert(map, argv[i], index);
     }
 
     for (int i = 0; i < argc; i++) {
