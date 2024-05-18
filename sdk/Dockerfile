@@ -5,7 +5,7 @@ LABEL description="base image for building the gemstone programming language com
 LABEL website="https://github.com/Servostar/gemstone"
 
 # install dependencies
-RUN apk add build-base gcc make cmake bison flex git python3 graphviz zlib zlib-dev curl-dev
+RUN apk add build-base gcc make cmake bison flex git python3 graphviz glib glib-dev
 
 # create user for build
 RUN adduser --disabled-password lorang

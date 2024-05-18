@@ -9,6 +9,8 @@ echo "+--------------------------------------+"
 echo "| BUILDING all TARGETS                 |"
 echo "+--------------------------------------+"
 
+cmake .
+
 make -B
 if [ ! $? -eq 0 ]; then
   echo "===> failed to build targets"

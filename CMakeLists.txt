@@ -71,25 +71,18 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
         VERBATIM)
 
 # ------------------------------------------------ #
-# Klib                                             #
+# Setup Glib 2.0                                   #
 # ------------------------------------------------ #
 
-file(GLOB KLIB_SOURCE_FILES ${PROJECT_SOURCE_DIR}/dep/klib/*.c)
-
-add_library(klib
-            STATIC
-            ${KLIB_SOURCE_FILES})
-
-set_target_properties(klib
-            PROPERTIES
-            ARCHIVE_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/dep)
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
     
 # ------------------------------------------------ #
 #  Source                                          #
 # ------------------------------------------------ #
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
-include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/dep)
+include_directories(PRIVATE ${GLIB_INCLUDE_DIRS})
 
 file(GLOB_RECURSE SOURCE_FILES src/*.c)
 
@@ -114,7 +107,7 @@ set_target_properties(release
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
 
-target_link_libraries(release klib)
+target_link_libraries(release PkgConfig::GLIB)
 
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
@@ -148,7 +141,7 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
-target_link_libraries(debug klib)
+target_link_libraries(debug PkgConfig::GLIB)
 
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
@@ -179,7 +172,7 @@ set_target_properties(check
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
 
-target_link_libraries(check klib)
+target_link_libraries(check PkgConfig::GLIB)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)

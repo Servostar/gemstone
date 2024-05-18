@@ -5,7 +5,6 @@ LABEL description="docker image for setting up the build pipeline on SDK"
 LABEL website="https://github.com/Servostar/gemstone"
 
 COPY --chown=lorang src /home/lorang/src
-COPY --chown=lorang dep /home/lorang/dep
 COPY --chown=lorang tests /home/lorang/tests
 COPY --chown=lorang CMakeLists.txt /home/lorang/
 COPY --chown=lorang run-check-test.sh /home/lorang/
