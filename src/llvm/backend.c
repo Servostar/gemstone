@@ -10,7 +10,7 @@ typedef enum LLVMBackendError_t {
     UnresolvedImport
 } LLVMBackendError;
 
-static size_t llvm_backend_codegen(const AST_NODE_PTR, void**) {
+static BackendError llvm_backend_codegen(const AST_NODE_PTR, void**) {
     // we start with a LLVM module
     LLVMContextRef context = LLVMContextCreate();
     LLVMModuleRef module = LLVMModuleCreateWithNameInContext("gemstone application", context);
@@ -20,21 +20,21 @@ static size_t llvm_backend_codegen(const AST_NODE_PTR, void**) {
     LLVMDisposeModule(module);
     LLVMContextDispose(context);
 
-    return Success;
+    return new_backend_error(Success);
 }
 
-static size_t llvm_backend_codegen_init(void) {
-    return Success;
+static BackendError llvm_backend_codegen_init(void) {
+    return new_backend_error(Success);
 }
 
-static size_t llvm_backend_codegen_deinit(void) {
-    return Success;
+static BackendError llvm_backend_codegen_deinit(void) {
+    return new_backend_error(Success);
 }
 
 void llvm_backend_init() {
     BackendError err = set_backend(&llvm_backend_codegen_init, &llvm_backend_codegen_deinit, &llvm_backend_codegen, "LLVM");
 
-    if (err != Success) {
+    if (err.kind != Success) {
         PANIC("unable to init llvm backend: %ld", err);
     }
 }

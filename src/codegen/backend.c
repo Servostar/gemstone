@@ -9,22 +9,35 @@ static struct CodegenBackend_t {
     const char* name;
 } CodegenBackend;
 
+BackendError new_backend_error(BackendErrorKind kind) {
+    return new_backend_impl_error(kind, NULL, NULL);
+}
+
+BackendError new_backend_impl_error(BackendErrorKind kind, AST_NODE_PTR node, const char* message) {
+    BackendError error;
+    error.kind = kind;
+    error.impl.ast_node = node;
+    error.impl.message = message;
+
+    return error;
+}
+
 BackendError init_backend(void) {
     DEBUG("initializing backend: %s", CodegenBackend.name);
 
     if (CodegenBackend.init_func == NULL) {
         ERROR("backend: %s is not properly initialized", CodegenBackend.name);
-        return NoBackend;
+        return new_backend_error(NoBackend);
     }
 
-    size_t code = CodegenBackend.init_func();
+    BackendError code = CodegenBackend.init_func();
 
-    if (code) {
+    if (code.kind != Success) {
         ERROR("failed to initialize backend: %s with code: %ld", CodegenBackend.name, code);
-        return Other;
+        return code;
     }
 
-    return Success;
+    return new_backend_error(Success);
 }
 
 BackendError deinit_backend(void) {
@@ -32,17 +45,17 @@ BackendError deinit_backend(void) {
 
     if (CodegenBackend.deinit_func == NULL) {
         ERROR("backend: %s is not properly initialized", CodegenBackend.name);
-        return NoBackend;
+        return new_backend_error(NoBackend);
     }
 
-    size_t code = CodegenBackend.deinit_func();
+    BackendError code = CodegenBackend.deinit_func();
 
-    if (code) {
+    if (code.kind != Success) {
         ERROR("failed to undo initialization of backend: %s with code: %ld", CodegenBackend.name, code);
-        return Other;
+        return code;
     }
 
-    return Success;
+    return new_backend_error(Success);
 }
 
 BackendError set_backend(const codegen_init init_func, const codegen_deinit deinit_func, const codegen codegen_func, const char* name) {
@@ -51,7 +64,7 @@ BackendError set_backend(const codegen_init init_func, const codegen_deinit dein
     CodegenBackend.codegen_func = codegen_func;
     CodegenBackend.name = name;
 
-    return Success;
+    return new_backend_error(Success);
 }
 
 BackendError generate_code(const AST_NODE_PTR root, void** output) {
@@ -59,14 +72,14 @@ BackendError generate_code(const AST_NODE_PTR root, void** output) {
 
     if (CodegenBackend.codegen_func == NULL) {
         ERROR("backend: %s is not properly initialized", CodegenBackend.name);
-        return NoBackend;
+        return new_backend_error(NoBackend);
     }
 
-    size_t code = CodegenBackend.codegen_func(root, output);
-    if (code) {
+    BackendError code = CodegenBackend.codegen_func(root, output);
+    if (code.kind) {
         ERROR("code generation of backend: %s failed with code: %ld", CodegenBackend.name, code);
-        return Other;
+        return code;
     }
 
-    return Success;
+    return new_backend_error(Success);
 }

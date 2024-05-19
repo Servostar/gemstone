@@ -4,28 +4,42 @@
 
 #include <ast/ast.h>
 
-typedef enum BackendError_t {
+typedef struct BackendImplError_t {
+    // faulty AST node
+    AST_NODE_PTR ast_node;
+    // error message
+    const char* message;
+} BackendImplError;
+
+typedef enum BackendErrorKind_t {
     Success,
     NoBackend,
     BackendAlreadySet,
-    Other
+    Unimplemented,
+    // some error occurred in the backend implementation
+    Implementation
+} BackendErrorKind;
+
+typedef struct BackendError_t {
+    BackendErrorKind kind;
+    BackendImplError impl;
 } BackendError;
 
 /**
  * @brief Function called by the compiler backend to generate an intermediate format
  *        from AST. Returns a custom container for its intermediate language.
  */
-typedef size_t (*codegen)(const AST_NODE_PTR, void**);
+typedef BackendError (*codegen)(const AST_NODE_PTR, void**);
 
 /**
  * @brief Initialize the code generation backend.
  */
-typedef size_t (*codegen_init)(void);
+typedef BackendError (*codegen_init)(void);
 
 /**
  * @brief Undo initialization of code generation backend.
  */
-typedef size_t (*codegen_deinit)(void);
+typedef BackendError (*codegen_deinit)(void);
 
 /**
  * @brief Set the backend functions to use
@@ -64,5 +78,15 @@ BackendError deinit_backend(void);
  */
 [[nodiscard]]
 BackendError generate_code(const AST_NODE_PTR root, void** code);
+
+/**
+ * @brief Create a new backend error
+ * 
+ * @param kind must ne != Implementation
+ * @return BackendError 
+ */
+BackendError new_backend_error(BackendErrorKind kind);
+
+BackendError new_backend_impl_error(BackendErrorKind kind, AST_NODE_PTR node, const char* message);
 
 #endif // CODEGN_BACKEND_H_

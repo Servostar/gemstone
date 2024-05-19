@@ -53,6 +53,24 @@ void setup(void) {
   DEBUG("finished starting up gemstone...");
 }
 
+void run_backend_codegen() {
+  llvm_backend_init();
+
+  BackendError err;
+  err = init_backend();
+  if (err.kind != Success) {
+    return;
+  }
+
+  void* code = NULL;
+  err = generate_code(root, &code);
+  if (err.kind != Success) {
+    return;
+  }
+
+  err = deinit_backend();
+}
+
 int main(int argc, char *argv[]) {
 
   setup();
@@ -77,16 +95,9 @@ int main(int argc, char *argv[]) {
   root = AST_new_node(AST_Module, NULL);
   yyparse();
 
-  llvm_backend_init();
+  run_backend_codegen();
 
-  init_backend();
-
-  void* code = NULL;
-  generate_code(root, &code);
-
-  deinit_backend();
-
-  FILE *output = fopen("test.txt", "w");
+  FILE *output = fopen("test.gv", "w");
   AST_fprint_graphviz(output, root);
   fclose(output);
   AST_delete_node(root);

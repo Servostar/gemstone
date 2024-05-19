@@ -1,52 +1,8 @@
 
-#include <ast/ast.h>
+#include <llvm/types/composite.h>
 #include <string.h>
-#include <sys/log.h>
-#include <llvm-c/Core.h>
-#include <llvm-c/Types.h>
 
-#define BITS_PER_BYTE 8
-
-enum Sign_t {
-    Signed,
-    Unsigned
-};
-
-enum Precision_t {
-    ATOM = 1,
-    HALF = 2,
-    SINGLE = 4,
-    DOUBLE = 8,
-    QUAD = 16,
-    OCTO = 32
-};
-
-enum Primitive_t {
-    Int,
-    Float
-};
-
-typedef struct CompositeType_t {
-    const char* name;
-    enum Sign_t sign;
-    enum Precision_t scale;
-    enum Primitive_t prim;
-} Composite;
-
-typedef struct TypeScope_t {
-    // vector of composite data types
-    Composite* composites;
-    size_t composite_len;
-    size_t composite_cap;
-} TypeScope;
-
-Composite* get_composite_type(const char* name);
-
-typedef struct CompositeType_t* COMPOSITE_REF;
-
-#define INVALID_COMPOSITE NULL
-
-LLVMTypeRef llvm_type_from_composite(LLVMContextRef context, const COMPOSITE_REF composite) {
+LLVMTypeRef llvm_type_from_composite(LLVMContextRef context, const CompositeRef composite) {
     DEBUG("converting composite to LLVM type...");
 
     LLVMTypeRef type = INVALID_COMPOSITE;
@@ -61,6 +17,7 @@ LLVMTypeRef llvm_type_from_composite(LLVMContextRef context, const COMPOSITE_REF
         switch (composite->scale) {
             case HALF:
                 type = LLVMHalfTypeInContext(context);
+                break;
             case SINGLE:
                 type = LLVMDoubleTypeInContext(context);
                 break;
@@ -89,7 +46,7 @@ double get_scale_factor(const char* keyword) {
     PANIC("invalid scale factor: %s", keyword);
 }
 
-enum Precision_t collapse_scale_list(const AST_NODE_PTR list) {
+enum Scale_t collapse_scale_list(const AST_NODE_PTR list) {
     double sum = 1.0;
 
     for (size_t i = 0; i < list->child_count; i++) {
@@ -99,7 +56,7 @@ enum Precision_t collapse_scale_list(const AST_NODE_PTR list) {
     }
 
     if (sum >= 1.0 && sum <= 32) {
-        return (enum Precision_t) sum;
+        return (enum Scale_t) sum;
     }
 
     PANIC("invalid combination of scale factors");
@@ -113,6 +70,18 @@ enum Sign_t string_to_sign(const char* keyword) {
     }
 
     PANIC("invalid sign: %s", keyword);
+}
+
+static enum Primitive_t resolve_primitive(const char* typename) {
+
+    if (strcmp(typename, "int") == 0) {
+        return Int;
+    } else if (strcmp(typename, "float") == 0) {
+        return Float;
+    }
+
+    // TODO: implement lookup of ident type
+    return Int;
 }
 
 struct CompositeType_t ast_type_to_composite(AST_NODE_PTR type) {
@@ -152,8 +121,7 @@ struct CompositeType_t ast_type_to_composite(AST_NODE_PTR type) {
         composite.scale = collapse_scale_list(AST_get_node(type, 0));
         composite.prim = resolve_primitive(AST_get_node(type, 2)->value);
     }
+
+    return composite;
 }
 
-void generate_builtin_types(LLVMContextRef context) {
-    
-}
