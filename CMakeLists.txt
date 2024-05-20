@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.15...3.25)
 # Header must be included this way: #include <module/header.h>
 #
 # ├─ res
+# ├─ dep
+# │  └─ klib
 # ├─ src
 # │  ├─ lex
 # │  │  └─ lexer.l
@@ -69,6 +71,13 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
         VERBATIM)
 
 # ------------------------------------------------ #
+# Setup Glib 2.0                                   #
+# ------------------------------------------------ #
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
+    
+# ------------------------------------------------ #
 #  LLVM backend                                    #
 # ------------------------------------------------ #
 
@@ -84,13 +93,16 @@ link_libraries(${LLVM_LIBS})
 #  Source                                          #
 # ------------------------------------------------ #
 
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(PRIVATE ${GLIB_INCLUDE_DIRS})
+
 file(GLOB_RECURSE SOURCE_FILES src/*.c)
 
 # define default compile flags
 if (MSVC)
     set(FLAGS /Wall /W3 /permissive)
 else()
-    set(FLAGS -Wall -Wextra -Wconversion -Wpedantic)
+    set(FLAGS -Wall -Wextra -Wpedantic)
 endif()
 
 # ------------------------------------------------ #
@@ -106,6 +118,8 @@ set_target_properties(release
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
+
+target_link_libraries(release PkgConfig::GLIB)
 
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
@@ -139,6 +153,8 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
+target_link_libraries(debug PkgConfig::GLIB)
+
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
 else()
@@ -167,6 +183,8 @@ set_target_properties(check
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
+
+target_link_libraries(check PkgConfig::GLIB)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)

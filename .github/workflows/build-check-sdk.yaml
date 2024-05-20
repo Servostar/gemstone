@@ -1,14 +1,14 @@
 name: "Build check gemstone in SDK"
 run-name: SDK build check to ${{ inputs.deploy_target }} by @${{ github.actor }}
 on: [push, pull_request]
-env:
-  SDK: 0.2.3-alpine-3.19.1
 jobs:
   build-check-sdk:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Setup repository
+      run: git submodule init && git submodule update
     - name: Setup SDK
-      run: docker pull servostar/gemstone:sdk-"$SDK" && docker build --tag gemstone:devkit-"$SDK" .
+      run:  source ./.env && docker pull servostar/gemstone:sdk-"$SDK"
     - name: Compile
-      run: docker run gemstone:devkit-"$SDK" sh run-check-test.sh
+      run: set -a && source ./.env && sh run-docker-build.sh
