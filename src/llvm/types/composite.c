@@ -68,7 +68,7 @@ enum Scale_t collapse_scale_list(const AST_NODE_PTR list, double base) {
 enum Sign_t string_to_sign(const char* keyword) {
     if (strcmp(keyword, "signed") == 0) {
         return Signed;
-    } else if (strcmp(keyword, "signed") == 0) {
+    } else if (strcmp(keyword, "unsigned") == 0) {
         return Unsigned;
     }
 
@@ -139,7 +139,7 @@ struct CompositeType_t ast_type_to_composite(const TypeScopeRef scope, AST_NODE_
         }
 
     } else if (count == 3) {
-        const char* typename = AST_get_node(type, 3)->value;
+        const char* typename = AST_get_node(type, 2)->value;
         GemstoneTypedefRef known_type = type_scope_get_type_from_name(scope, typename);
 
         if (known_type == NULL) {
@@ -156,7 +156,6 @@ struct CompositeType_t ast_type_to_composite(const TypeScopeRef scope, AST_NODE_
         // sign, scale and type
         composite.sign = string_to_sign(AST_get_node(type, 0)->value);
         composite.scale = collapse_scale_list(AST_get_node(type, 1), (double) composite.scale);
-        composite.prim = resolve_primitive(AST_get_node(type, 2)->value);
     }
 
     return composite;

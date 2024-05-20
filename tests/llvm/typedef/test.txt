@@ -1,0 +1,6 @@
+
+type unsigned half half int: u8
+type unsigned half int: u16
+type unsigned int: u32
+type unsigned double int: u64
+type unsigned double double int: u128
