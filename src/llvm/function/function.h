@@ -15,7 +15,7 @@ enum IO_Qualifier_t {
 typedef struct GemstoneParam_t {
     const char* name;
     enum IO_Qualifier_t qualifier;
-    GemstoneType typename;
+    GemstoneTypeRef typename;
 } GemstoneParam;
 
 typedef struct GemstoneFun_t {
@@ -29,7 +29,7 @@ typedef struct GemstoneFun_t {
  * @param node the node starting a function parameter
  * @return GemstoneParam 
  */
-GemstoneParam param_from_ast(const AST_NODE_PTR node);
+GemstoneParam param_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node);
 
 /**
  * @brief Convert an AST node into a function
@@ -37,6 +37,6 @@ GemstoneParam param_from_ast(const AST_NODE_PTR node);
  * @param node the node starting a function
  * @return GemstoneFun 
  */
-GemstoneFun fun_from_ast(const AST_NODE_PTR node);
+GemstoneFun fun_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node);
 
 #endif // LLVM_FUNCTION_H_

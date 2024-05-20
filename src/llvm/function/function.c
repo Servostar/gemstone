@@ -1,5 +1,6 @@
 
 #include "ast/ast.h"
+#include "llvm/types/scope.h"
 #include <llvm/function/function.h>
 #include <llvm/types/type.h>
 #include <string.h>
@@ -55,7 +56,7 @@ static enum IO_Qualifier_t io_qualifier_from_ast_list(const AST_NODE_PTR node) {
     return qualifier;
 }
 
-GemstoneParam param_from_ast(const AST_NODE_PTR node) {
+GemstoneParam param_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node) {
     GemstoneParam param;
 
     // node is expected to be a parameter
@@ -68,7 +69,7 @@ GemstoneParam param_from_ast(const AST_NODE_PTR node) {
 
     AST_NODE_PTR param_decl = AST_get_node(node, 1);
     AST_NODE_PTR param_type = AST_get_node(param_decl, 0);
-    param.typename = get_type_from_ast(param_type);
+    param.typename = get_type_from_ast(scope, param_type);
     param.name = AST_get_node(param_decl, 1)->value;
 
     return param;
