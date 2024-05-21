@@ -6,6 +6,21 @@
 #include <glib.h>
 #include <llvm/types/structs.h>
 
+typedef enum StorageQualifier_t {
+    StorageQualifierLocal,
+    StorageQualifierStatic,
+    StorageQualifierGlobal
+} StorageQualifier;
+
+// Varaible declaration
+typedef struct GemstoneDecl_t {
+    const char* name;
+    StorageQualifier storageQualifier;
+    GemstoneTypeRef type;
+} GemstoneDecl;
+
+typedef GemstoneDecl* GemstoneDeclRef;
+
 typedef struct TypeScope_t TypeScope;
 
 typedef TypeScope* TypeScopeRef;
@@ -98,5 +113,7 @@ void type_scope_add_fun(TypeScopeRef scope, GemstoneFunRef function);
  */
 [[gnu::nonnull(1), gnu::nonnull(2)]]
 GemstoneFunRef type_scope_get_fun_from_name(TypeScopeRef scope, const char* name);
+
+void type_scope_add_variable(TypeScopeRef scope, GemstoneDeclRef decl);
 
 #endif // LLVM_TYPE_SCOPE_H_

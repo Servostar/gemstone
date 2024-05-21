@@ -1,4 +1,5 @@
 
+#include <llvm/decl/variable.h>
 #include <llvm/function/function-types.h>
 #include <llvm/function/function.h>
 #include <llvm/types/scope.h>
@@ -30,6 +31,7 @@ static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**)
 
         GemstoneTypedefRef typedefref;
         GemstoneFunRef funref;
+        GArray* decls;
 
         switch (global_node->kind) {
             case AST_Typedef:
@@ -39,6 +41,13 @@ static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**)
             case AST_Fun:
                 funref = fun_from_ast(global_scope, global_node);
                 type_scope_add_fun(global_scope, funref);
+                break;
+            case AST_Decl:
+                decls = declaration_from_ast(global_scope, global_node);
+                for (size_t i = 0; i < decls->len; i++) {
+                    GemstoneDeclRef decl = ((GemstoneDeclRef*) decls->data)[i];
+                    type_scope_add_variable(global_scope, decl);
+                }
                 break;
             default:
                 PANIC("NOT IMPLEMENTED");

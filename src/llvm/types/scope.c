@@ -1,4 +1,5 @@
 
+#include <llvm/decl/variable.h>
 #include <llvm/function/function-types.h>
 #include <llvm/types/type.h>
 #include <llvm/types/scope.h>
@@ -8,6 +9,7 @@ struct TypeScope_t {
     GArray* types;
     GArray* scopes;
     GArray* funcs;
+    GHashTable* vars;
     TypeScopeRef parent;
 };
 
@@ -18,6 +20,7 @@ TypeScopeRef type_scope_new() {
     scope->scopes = g_array_new(FALSE, FALSE, sizeof(TypeScopeRef));
     scope->types = g_array_new(FALSE, FALSE, sizeof(GemstoneTypedefRef));
     scope->funcs = g_array_new(FALSE, FALSE, sizeof(GemstoneFunRef));
+    scope->vars = g_hash_table_new(g_str_hash, g_str_equal);
     scope->parent = NULL;
 
     return scope;
@@ -74,8 +77,21 @@ void type_scope_delete(TypeScopeRef scope) {
     g_array_free(scope->scopes, TRUE);
     g_array_free(scope->types, TRUE);
     g_array_free(scope->funcs, TRUE);
+    g_hash_table_destroy(scope->vars);
 
     free(scope);
+}
+
+void type_scope_add_variable(TypeScopeRef scope, GemstoneDeclRef decl) {
+    g_hash_table_insert(scope->vars, (gpointer) decl->name, decl);
+}
+
+GemstoneDeclRef type_scope_get_variable(TypeScopeRef scope, const char* name) {
+    if (g_hash_table_contains(scope->vars, name)) {
+        return g_hash_table_lookup(scope->vars, name);
+    }
+
+    return NULL;
 }
 
 void type_scope_add_fun(TypeScopeRef scope, GemstoneFunRef function) {
