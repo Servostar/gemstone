@@ -70,8 +70,8 @@ void AST_init() {
   lookup_table[AST_Fun] = "fun";
 
   lookup_table[AST_Call] = "funcall";
-  lookup_table[AST_Typecast] = "cast";
-  lookup_table[AST_Transmute] = "as";
+  lookup_table[AST_Typecast] = "typecast";
+  lookup_table[AST_Transmute] = "transmute";
   lookup_table[AST_Condition] = "condition";
   lookup_table[AST_List] = "list";
   lookup_table[AST_ExprList] = "expr list";
