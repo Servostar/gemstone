@@ -1,5 +1,8 @@
 
+#include "llvm/types/composite-types.h"
 #include "llvm/types/structs.h"
+#include <llvm-c/Core.h>
+#include <llvm-c/Types.h>
 #include <llvm/types/scope.h>
 #include <llvm/types/composite.h>
 #include <ast/ast.h>
@@ -84,4 +87,34 @@ LLVMTypeRef llvm_type_from_gemstone_type(LLVMContextRef context, GemstoneTypeRef
     }
 
     return llvmTypeRef;
+}
+
+LLVMValueRef llvm_default_value_of_composite(LLVMContextRef context, CompositeRef composite) {
+    LLVMTypeRef type = llvm_type_from_composite(context, composite);
+    LLVMValueRef value;
+
+    if (composite->prim == Int) {
+        value = LLVMConstInt(type, 0, 0);
+    } else if (composite->prim == Float) {
+        value = LLVMConstReal(type, 0.0);
+    } else {
+        PANIC("Invalid composite type: %d", composite->prim);
+    }
+
+    return value;
+}
+
+LLVMValueRef llvm_default_value_of_type(LLVMContextRef context, GemstoneTypeRef ref) {
+    LLVMValueRef value = NULL;
+
+    switch (ref->kind) {
+        case TypeComposite:
+            value = llvm_default_value_of_composite(context, &ref->specs.composite);
+            break;
+        default:
+            PANIC("type not implemented");
+            break;
+    }
+
+    return value;
 }

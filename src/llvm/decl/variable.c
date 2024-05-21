@@ -1,9 +1,12 @@
+#include "llvm/types/scope.h"
 #include "llvm/types/structs.h"
+#include <llvm-c/Types.h>
 #include <llvm/types/type.h>
 #include <ast/ast.h>
 #include <llvm/decl/variable.h>
 #include <sys/log.h>
 #include <stdlib.h>
+#include <llvm-c/Core.h>
 
 static StorageQualifier get_storage_qualifier_from_ast(AST_NODE_PTR storageQualifierNode) {
     if (storageQualifierNode->kind != AST_Storage) {
@@ -34,7 +37,7 @@ GArray* declaration_from_ast(TypeScopeRef scope, const AST_NODE_PTR node) {
 
     AST_NODE_PTR first_child = AST_get_node(node, 0);
     
-    StorageQualifier qualifier = StorageQualifierLocal;
+    StorageQualifier qualifier = StorageQualifierStatic;
     GemstoneTypeRef type = NULL;
     AST_NODE_PTR list = NULL;
 
@@ -62,4 +65,28 @@ GArray* declaration_from_ast(TypeScopeRef scope, const AST_NODE_PTR node) {
     }
 
     return decls;
+}
+
+LLVMValueRef create_declaration_reference(LLVMModuleRef module, LLVMBuilderRef builder, GemstoneDeclRef decl) {
+    LLVMContextRef context = LLVMGetModuleContext(module);
+    LLVMTypeRef llvmTypeRef = llvm_type_from_gemstone_type(context, decl->type);
+    LLVMValueRef defaultValue = llvm_default_value_of_type(context, decl->type);
+    LLVMValueRef variable = NULL;
+
+    switch(decl->storageQualifier) {
+        case StorageQualifierLocal:
+            variable = LLVMBuildAlloca(builder, llvmTypeRef, decl->name);
+            LLVMBuildStore(builder, defaultValue, variable);
+            break;
+        case StorageQualifierStatic:
+            // add global
+            variable = LLVMAddGlobal(module, llvmTypeRef, decl->name);
+            LLVMSetInitializer(variable, defaultValue);
+            break;
+        case StorageQualifierGlobal:
+            PANIC("Global not implemented");
+            break;
+    }
+
+    return variable;
 }

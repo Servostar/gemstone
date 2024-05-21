@@ -49,4 +49,6 @@ LLVMTypeRef llvm_type_from_gemstone_type(LLVMContextRef context, GemstoneTypeRef
  */
 void delete_typedefref(GemstoneTypedefRef ref);
 
+LLVMValueRef llvm_default_value_of_type(LLVMContextRef context, GemstoneTypeRef ref);
+
 #endif // GEMSTONE_TYPE_H_

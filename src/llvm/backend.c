@@ -48,6 +48,8 @@ static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**)
                     GemstoneDeclRef decl = ((GemstoneDeclRef*) decls->data)[i];
                     type_scope_add_variable(global_scope, decl);
                 }
+                // TODO: create LLVMValueRef of global/static variables
+
                 break;
             default:
                 PANIC("NOT IMPLEMENTED");
