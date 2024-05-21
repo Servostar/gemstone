@@ -3,6 +3,7 @@
 #define GEMSTONE_TYPE_H_
 
 #include <ast/ast.h>
+#include <llvm-c/Types.h>
 #include <llvm/types/composite.h>
 #include <llvm/types/structs.h>
 #include <llvm/types/scope.h>
@@ -31,6 +32,15 @@ GemstoneTypedefRef get_type_def_from_ast(const TypeScopeRef scope, const AST_NOD
  * @return GemstoneTypedefRef 
  */
 GemstoneTypedefRef new_typedefref(GemstoneTypeRef type, const char* name);
+
+/**
+ * @brief Create the LLVM function signature
+ * 
+ * @param context 
+ * @param type 
+ * @return LLVMTypeRef 
+ */
+LLVMTypeRef llvm_type_from_gemstone_type(LLVMContextRef context, GemstoneTypeRef type);
 
 /**
  * @brief Free the type definition reference and its underlying type

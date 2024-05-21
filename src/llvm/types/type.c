@@ -71,3 +71,17 @@ GemstoneTypedefRef get_type_def_from_ast(const TypeScopeRef scope, const AST_NOD
 
     return new_typedefref(type, name);
 }
+
+LLVMTypeRef llvm_type_from_gemstone_type(LLVMContextRef context, GemstoneTypeRef type) {
+    LLVMTypeRef llvmTypeRef = NULL;
+
+    switch (type->kind) {
+        case TypeComposite:
+            llvmTypeRef = llvm_type_from_composite(context, &type->specs.composite);
+            break;
+        default:
+            PANIC("NOT IMPLEMENTED");
+    }
+
+    return llvmTypeRef;
+}

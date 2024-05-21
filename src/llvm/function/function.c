@@ -1,5 +1,7 @@
 
+#include "llvm/function/function-types.h"
 #include <ast/ast.h>
+#include <llvm-c/Core.h>
 #include <llvm/types/scope.h>
 #include <llvm/function/function.h>
 #include <llvm/types/type.h>
@@ -104,4 +106,17 @@ GemstoneFunRef fun_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node) {
 void fun_delete(const GemstoneFunRef fun) {
     g_array_free(fun->params, TRUE);
     free(fun);
+}
+
+LLVMTypeRef get_gemstone_function_llvm_signature(LLVMContextRef context, GemstoneFunRef function) {
+    unsigned int param_count = function->params->len;
+
+    LLVMTypeRef* params = malloc(sizeof(LLVMTypeRef));
+
+    for (size_t i = 0; i < param_count; i++) {
+        GemstoneParam* gem_param = ((GemstoneParam*) function->params->data) + i;
+        params[i] = llvm_type_from_gemstone_type(context, gem_param->typename);
+    }
+
+    return LLVMFunctionType(LLVMVoidType(), params, param_count, 0);
 }

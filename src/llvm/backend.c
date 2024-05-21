@@ -1,4 +1,9 @@
 
+#include <llvm/function/function-types.h>
+#include <llvm/function/function.h>
+#include <llvm/types/scope.h>
+#include <llvm/types/structs.h>
+#include <llvm/types/type.h>
 #include <codegen/backend.h>
 #include <sys/log.h>
 #include <ast/ast.h>
@@ -10,12 +15,37 @@ typedef enum LLVMBackendError_t {
     UnresolvedImport
 } LLVMBackendError;
 
-static BackendError llvm_backend_codegen(const AST_NODE_PTR, void**) {
+static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**) {
     // we start with a LLVM module
     LLVMContextRef context = LLVMContextCreate();
     LLVMModuleRef module = LLVMModuleCreateWithNameInContext("gemstone application", context);
 
-    
+    TypeScopeRef global_scope = type_scope_new();
+
+    for (size_t i = 0; i < module_node->child_count; i++) {
+        // iterate over all nodes in module
+        // can either be a function, box, definition, declaration or typedefine
+
+        AST_NODE_PTR global_node = AST_get_node(module_node, i);
+
+        GemstoneTypedefRef typedefref;
+        GemstoneFunRef funref;
+
+        switch (global_node->kind) {
+            case AST_Typedef:
+                typedefref = get_type_def_from_ast(global_scope, global_node);
+                type_scope_append_type(global_scope, typedefref);
+                break;
+            case AST_Fun:
+                funref = fun_from_ast(global_scope, global_node);
+                type_scope_add_fun(global_scope, funref);
+                break;
+            default:
+                PANIC("NOT IMPLEMENTED");
+        }
+    }
+
+    type_scope_delete(global_scope);
 
     LLVMDisposeModule(module);
     LLVMContextDispose(context);
