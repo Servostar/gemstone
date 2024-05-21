@@ -1,4 +1,4 @@
 
-fun a(in int: a, in float: b) {
+fun a(in out int: a, in float: b)(out float: c) {
     a = 0
 }

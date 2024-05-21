@@ -2,6 +2,7 @@
 #ifndef LLVM_TYPE_SCOPE_H_
 #define LLVM_TYPE_SCOPE_H_
 
+#include <llvm/function/function-types.h>
 #include <glib.h>
 #include <llvm/types/structs.h>
 
@@ -79,5 +80,23 @@ GemstoneTypedefRef type_scope_get_type_from_name(TypeScopeRef scope, const char*
  */
 [[gnu::nonnull(1)]]
 void type_scope_delete(TypeScopeRef scope);
+
+/**
+ * @brief Add a function ot the type scope
+ * 
+ * @param scope 
+ * @param function 
+ */
+void type_scope_add_fun(TypeScopeRef scope, GemstoneFunRef function);
+
+/**
+ * @brief Attempts to find a function by its name in the current scope
+ * 
+ * @param scope 
+ * @param name 
+ * @return GemstoneFunRef 
+ */
+[[gnu::nonnull(1), gnu::nonnull(2)]]
+GemstoneFunRef type_scope_get_fun_from_name(TypeScopeRef scope, const char* name);
 
 #endif // LLVM_TYPE_SCOPE_H_

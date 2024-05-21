@@ -1,4 +1,5 @@
 
+#include <llvm/function/function-types.h>
 #include <llvm/types/type.h>
 #include <llvm/types/scope.h>
 #include <string.h>
@@ -6,6 +7,7 @@
 struct TypeScope_t {
     GArray* types;
     GArray* scopes;
+    GArray* funcs;
     TypeScopeRef parent;
 };
 
@@ -15,6 +17,7 @@ TypeScopeRef type_scope_new() {
     // neither zero termination no initialisazion to zero needed
     scope->scopes = g_array_new(FALSE, FALSE, sizeof(TypeScopeRef));
     scope->types = g_array_new(FALSE, FALSE, sizeof(GemstoneTypedefRef));
+    scope->funcs = g_array_new(FALSE, FALSE, sizeof(GemstoneFunRef));
     scope->parent = NULL;
 
     return scope;
@@ -70,6 +73,27 @@ void type_scope_delete(TypeScopeRef scope) {
 
     g_array_free(scope->scopes, TRUE);
     g_array_free(scope->types, TRUE);
+    g_array_free(scope->funcs, TRUE);
 
     free(scope);
+}
+
+void type_scope_add_fun(TypeScopeRef scope, GemstoneFunRef function) {
+    g_array_append_val(scope->funcs, function);
+}
+
+GemstoneFunRef type_scope_get_fun_from_name(TypeScopeRef scope, const char* name) {
+    for (guint i = 0; i < scope->funcs->len; i++)  {
+        GemstoneFunRef funref = ((GemstoneFunRef*) scope->funcs->data)[i];
+
+        if (strcmp(funref->name, name) == 0) {
+            return funref;
+        }
+    }
+
+    if (scope->parent == NULL) {
+        return NULL;
+    }
+
+    return type_scope_get_fun_from_name(scope->parent, name);
 }

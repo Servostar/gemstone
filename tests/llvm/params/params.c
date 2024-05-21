@@ -102,17 +102,10 @@ int main(int argc, char *argv[]) {
   TypeScopeRef scope = type_scope_new();
 
   AST_NODE_PTR fun = AST_get_node(root, 0);
-  AST_NODE_PTR list = AST_get_node(fun, 1);
-
-  for (size_t i = 0; i < list->child_count; i++) {
-    AST_NODE_PTR param_list = AST_get_node(list, i);
-
-    for (size_t k = 0; k < param_list->child_count; k++) {
-      AST_NODE_PTR param = AST_get_node(param_list, i);
-
-      GemstoneParam par = param_from_ast(scope, param);
-    }
-  }
+  
+  GemstoneFunRef function = fun_from_ast(scope, fun);
+  type_scope_add_fun(scope, function);
+  assert(function->params->len == 3);
   
   type_scope_delete(scope);
 

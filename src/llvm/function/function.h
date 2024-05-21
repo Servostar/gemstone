@@ -3,25 +3,8 @@
 #define LLVM_FUNCTION_H_
 
 #include <ast/ast.h>
-#include <llvm/types/type.h>
-
-enum IO_Qualifier_t {
-    Unspec,
-    In,
-    Out,
-    InOut
-};
-
-typedef struct GemstoneParam_t {
-    const char* name;
-    enum IO_Qualifier_t qualifier;
-    GemstoneTypeRef typename;
-} GemstoneParam;
-
-typedef struct GemstoneFun_t {
-    const char* name;
-    // TODO: add array of parameters
-} GemstoneFun;
+#include <llvm/function/function-types.h>
+#include <llvm/types/scope.h>
 
 /**
  * @brief Convert an AST node into a function parameter struct
@@ -35,8 +18,15 @@ GemstoneParam param_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node);
  * @brief Convert an AST node into a function
  * 
  * @param node the node starting a function
- * @return GemstoneFun 
+ * @return GemstoneFunRef
  */
-GemstoneFun fun_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node);
+GemstoneFunRef fun_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node);
+
+/**
+ * @brief Delete the given function
+ * 
+ * @param fun 
+ */
+void fun_delete(const GemstoneFunRef fun);
 
 #endif // LLVM_FUNCTION_H_

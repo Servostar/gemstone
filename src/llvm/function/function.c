@@ -1,6 +1,6 @@
 
-#include "ast/ast.h"
-#include "llvm/types/scope.h"
+#include <ast/ast.h>
+#include <llvm/types/scope.h>
 #include <llvm/function/function.h>
 #include <llvm/types/type.h>
 #include <string.h>
@@ -73,4 +73,35 @@ GemstoneParam param_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node) 
     param.name = AST_get_node(param_decl, 1)->value;
 
     return param;
+}
+
+GemstoneFunRef fun_from_ast(const TypeScopeRef scope, const AST_NODE_PTR node) {
+    if (node->kind != AST_Fun) {
+        PANIC("Node must be of type AST_Fun: %s", AST_node_to_string(node));
+    }
+
+    GemstoneFunRef function = malloc(sizeof(GemstoneFun));
+    function->name = AST_get_node(node, 0)->value;
+    function->params = g_array_new(FALSE, FALSE, sizeof(GemstoneParam));
+
+    AST_NODE_PTR list = AST_get_node(node, 1);
+    for (size_t i = 0; i < list->child_count; i++) {
+        AST_NODE_PTR param_list = AST_get_node(list, i);
+
+        for (size_t k = 0; k < param_list->child_count; k++) {
+            AST_NODE_PTR param = AST_get_node(param_list, k);
+
+            GemstoneParam par = param_from_ast(scope, param);
+
+            g_array_append_val(function->params, par);
+        }
+    }
+
+    // TODO: parse function body
+    return function;
+}
+
+void fun_delete(const GemstoneFunRef fun) {
+    g_array_free(fun->params, TRUE);
+    free(fun);
 }
