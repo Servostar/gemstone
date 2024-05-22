@@ -21,6 +21,8 @@ static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**)
     LLVMContextRef context = LLVMContextCreate();
     LLVMModuleRef module = LLVMModuleCreateWithNameInContext("gemstone application", context);
 
+    BackendError err;
+
     TypeScopeRef global_scope = type_scope_new();
 
     for (size_t i = 0; i < module_node->child_count; i++) {
@@ -47,8 +49,13 @@ static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**)
                 for (size_t i = 0; i < decls->len; i++) {
                     GemstoneDeclRef decl = ((GemstoneDeclRef*) decls->data)[i];
                     type_scope_add_variable(global_scope, decl);
+                    
+                    LLVMValueRef llvm_decl = NULL;
+                    err = llvm_create_declaration(module, NULL, decl, &llvm_decl);
+
+                    if (err.kind != Success)
+                        break;
                 }
-                // TODO: create LLVMValueRef of global/static variables
 
                 break;
             default:

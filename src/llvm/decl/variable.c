@@ -1,12 +1,12 @@
-#include "llvm/types/scope.h"
-#include "llvm/types/structs.h"
+#include <codegen/backend.h>
+#include <llvm/types/scope.h>
+#include <llvm/types/structs.h>
 #include <llvm-c/Types.h>
 #include <llvm/types/type.h>
 #include <ast/ast.h>
 #include <llvm/decl/variable.h>
 #include <sys/log.h>
 #include <stdlib.h>
-#include <llvm-c/Core.h>
 
 static StorageQualifier get_storage_qualifier_from_ast(AST_NODE_PTR storageQualifierNode) {
     if (storageQualifierNode->kind != AST_Storage) {
@@ -67,26 +67,28 @@ GArray* declaration_from_ast(TypeScopeRef scope, const AST_NODE_PTR node) {
     return decls;
 }
 
-LLVMValueRef create_declaration_reference(LLVMModuleRef module, LLVMBuilderRef builder, GemstoneDeclRef decl) {
-    LLVMContextRef context = LLVMGetModuleContext(module);
-    LLVMTypeRef llvmTypeRef = llvm_type_from_gemstone_type(context, decl->type);
-    LLVMValueRef defaultValue = llvm_default_value_of_type(context, decl->type);
-    LLVMValueRef variable = NULL;
+BackendError llvm_create_declaration(LLVMModuleRef llvm_module, LLVMBuilderRef llvm_builder, GemstoneDeclRef gem_decl, LLVMValueRef* llvm_decl) {
+    LLVMContextRef context = LLVMGetModuleContext(llvm_module);
+    LLVMTypeRef llvmTypeRef = llvm_type_from_gemstone_type(context, gem_decl->type);
+    LLVMValueRef defaultValue = llvm_default_value_of_type(context, gem_decl->type);
 
-    switch(decl->storageQualifier) {
+    switch(gem_decl->storageQualifier) {
         case StorageQualifierLocal:
-            variable = LLVMBuildAlloca(builder, llvmTypeRef, decl->name);
-            LLVMBuildStore(builder, defaultValue, variable);
+            if (llvm_builder == NULL) {
+                return new_backend_impl_error(Implementation, NULL, "initializing a local variable on non-local scope");
+            }
+            *llvm_decl = LLVMBuildAlloca(llvm_builder, llvmTypeRef, gem_decl->name);
+            LLVMBuildStore(llvm_builder, defaultValue, *llvm_decl);
             break;
         case StorageQualifierStatic:
             // add global
-            variable = LLVMAddGlobal(module, llvmTypeRef, decl->name);
-            LLVMSetInitializer(variable, defaultValue);
+            *llvm_decl = LLVMAddGlobal(llvm_module, llvmTypeRef, gem_decl->name);
+            LLVMSetInitializer(*llvm_decl, defaultValue);
             break;
         case StorageQualifierGlobal:
             PANIC("Global not implemented");
             break;
     }
 
-    return variable;
+    return SUCCESS;
 }

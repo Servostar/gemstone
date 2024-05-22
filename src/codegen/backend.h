@@ -89,4 +89,6 @@ BackendError new_backend_error(BackendErrorKind kind);
 
 BackendError new_backend_impl_error(BackendErrorKind kind, AST_NODE_PTR node, const char* message);
 
+#define SUCCESS new_backend_error(Success)
+
 #endif // CODEGN_BACKEND_H_
