@@ -213,4 +213,6 @@ void AST_visit_nodes_recurse(struct AST_Node_t *root,
 [[gnu::nonnull(1), gnu::nonnull(2)]]
 void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* node);
 
+AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t kind);
+
 #endif

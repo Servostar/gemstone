@@ -2,6 +2,7 @@
 #ifndef LLVM_TYPES_FUNCTION_TYPES_H_
 #define LLVM_TYPES_FUNCTION_TYPES_H_
 
+#include <llvm-c/Types.h>
 #include <llvm/types/structs.h>
 #include <glib.h>
 
@@ -21,6 +22,8 @@ typedef struct GemstoneParam_t {
 typedef struct GemstoneFun_t {
     const char* name;
     GArray* params;
+    LLVMTypeRef llvm_signature;
+    LLVMValueRef llvm_function;
 } GemstoneFun;
 
 typedef GemstoneFun* GemstoneFunRef;

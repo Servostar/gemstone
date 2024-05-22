@@ -30,9 +30,15 @@ void type_scope_append_type(TypeScopeRef scope, GemstoneTypedefRef type) {
   g_array_append_val(scope->types, type);
 }
 
-void type_scope_append_scope(TypeScopeRef scope, TypeScopeRef child_scope) {
-  g_array_append_val(scope->scopes, child_scope);
-  child_scope->parent = scope;
+size_t type_scope_append_scope(TypeScopeRef scope, TypeScopeRef child) {
+  child->parent = scope;
+  g_array_append_val(scope->scopes, child);
+
+  return scope->scopes->len - 1;
+}
+
+void type_scope_remove_scope(TypeScopeRef scope, size_t index) {
+  g_array_remove_index(scope->scopes, index);
 }
 
 GemstoneTypedefRef type_scope_get_type(TypeScopeRef scope, size_t index) {

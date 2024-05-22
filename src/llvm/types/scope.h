@@ -2,6 +2,7 @@
 #ifndef LLVM_TYPE_SCOPE_H_
 #define LLVM_TYPE_SCOPE_H_
 
+#include <llvm-c/Types.h>
 #include <llvm/function/function-types.h>
 #include <glib.h>
 #include <llvm/types/structs.h>
@@ -17,6 +18,7 @@ typedef struct GemstoneDecl_t {
     const char* name;
     StorageQualifier storageQualifier;
     GemstoneTypeRef type;
+    LLVMValueRef llvm_value;
 } GemstoneDecl;
 
 typedef GemstoneDecl* GemstoneDeclRef;
@@ -49,7 +51,16 @@ void type_scope_append_type(TypeScopeRef scope, GemstoneTypedefRef type);
  * @param child_scope
  */
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void type_scope_append_scope(TypeScopeRef scope, TypeScopeRef child_scope);
+size_t type_scope_append_scope(TypeScopeRef scope, TypeScopeRef child_scope);
+
+/**
+ * @brief Remove a new child scope to this scope
+ * 
+ * @param scope 
+ * @param child_scope
+ */
+[[gnu::nonnull(1)]]
+void type_scope_remove_scope(TypeScopeRef scope, size_t index);
 
 /**
  * @brief Get the type at the specified index in this scope level
@@ -115,5 +126,7 @@ void type_scope_add_fun(TypeScopeRef scope, GemstoneFunRef function);
 GemstoneFunRef type_scope_get_fun_from_name(TypeScopeRef scope, const char* name);
 
 void type_scope_add_variable(TypeScopeRef scope, GemstoneDeclRef decl);
+
+GemstoneDeclRef type_scope_get_variable(TypeScopeRef scope, const char *name);
 
 #endif // LLVM_TYPE_SCOPE_H_

@@ -1,7 +1,10 @@
 
+#include "codegen/backend.h"
 #include "llvm/function/function-types.h"
+#include "llvm/stmt/build.h"
 #include <ast/ast.h>
 #include <llvm-c/Core.h>
+#include <llvm-c/Types.h>
 #include <llvm/types/scope.h>
 #include <llvm/function/function.h>
 #include <llvm/types/type.h>
@@ -108,7 +111,7 @@ void fun_delete(const GemstoneFunRef fun) {
     free(fun);
 }
 
-LLVMTypeRef get_gemstone_function_llvm_signature(LLVMContextRef context, GemstoneFunRef function) {
+LLVMTypeRef llvm_generate_function_signature(LLVMContextRef context, GemstoneFunRef function) {
     unsigned int param_count = function->params->len;
 
     LLVMTypeRef* params = malloc(sizeof(LLVMTypeRef));
@@ -119,4 +122,38 @@ LLVMTypeRef get_gemstone_function_llvm_signature(LLVMContextRef context, Gemston
     }
 
     return LLVMFunctionType(LLVMVoidType(), params, param_count, 0);
+}
+
+BackendError llvm_generate_function_implementation(TypeScopeRef scope, LLVMModuleRef module, AST_NODE_PTR node) {
+    LLVMContextRef context = LLVMGetModuleContext(module);
+    GemstoneFunRef gemstone_signature = fun_from_ast(scope, node);
+
+    gemstone_signature->llvm_signature = llvm_generate_function_signature(context, gemstone_signature);
+    gemstone_signature->llvm_function = LLVMAddFunction(module, gemstone_signature->name, gemstone_signature->llvm_signature);
+
+    type_scope_add_fun(scope, gemstone_signature);
+
+    LLVMBasicBlockRef llvm_body = LLVMAppendBasicBlock(gemstone_signature->llvm_function, "body");
+    LLVMBuilderRef llvm_builder = LLVMCreateBuilderInContext(context);
+    LLVMPositionBuilderAtEnd(llvm_builder, llvm_body);
+
+    // create new function local scope
+    TypeScopeRef local_scope = type_scope_new();
+    size_t local_scope_idx = type_scope_append_scope(scope, local_scope);
+
+    for (size_t i = 0; i < node->child_count; i++) {
+        AST_NODE_PTR child_node = AST_get_node(node, i);
+        if (child_node->kind == AST_StmtList) {
+            llvm_build_statement_list(llvm_builder, local_scope, module, child_node);
+        }
+    }
+
+    // automatic return at end of function
+    LLVMBuildRetVoid(llvm_builder);
+
+    // dispose function local scope
+    type_scope_remove_scope(scope, local_scope_idx);
+    type_scope_delete(local_scope);
+
+    return SUCCESS;
 }

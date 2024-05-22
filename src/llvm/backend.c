@@ -32,7 +32,6 @@ static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**)
         AST_NODE_PTR global_node = AST_get_node(module_node, i);
 
         GemstoneTypedefRef typedefref;
-        GemstoneFunRef funref;
         GArray* decls;
 
         switch (global_node->kind) {
@@ -41,20 +40,19 @@ static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**)
                 type_scope_append_type(global_scope, typedefref);
                 break;
             case AST_Fun:
-                funref = fun_from_ast(global_scope, global_node);
-                type_scope_add_fun(global_scope, funref);
+                llvm_generate_function_implementation(global_scope, module, global_node);
                 break;
             case AST_Decl:
                 decls = declaration_from_ast(global_scope, global_node);
                 for (size_t i = 0; i < decls->len; i++) {
                     GemstoneDeclRef decl = ((GemstoneDeclRef*) decls->data)[i];
-                    type_scope_add_variable(global_scope, decl);
                     
-                    LLVMValueRef llvm_decl = NULL;
-                    err = llvm_create_declaration(module, NULL, decl, &llvm_decl);
+                    err = llvm_create_declaration(module, NULL, decl, &decl->llvm_value);
 
                     if (err.kind != Success)
                         break;
+                    
+                    type_scope_add_variable(global_scope, decl);
                 }
 
                 break;

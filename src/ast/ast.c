@@ -287,3 +287,15 @@ void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* root) {
 
   fprintf(stream, "}\n");
 }
+
+AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t kind) {
+  for (size_t i = 0; i < owner->child_count; i++) {
+    AST_NODE_PTR child = AST_get_node(owner, i);
+
+    if (child->kind == kind) {
+      return child;
+    }
+  }
+
+  return NULL;
+}
