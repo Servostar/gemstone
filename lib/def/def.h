@@ -22,4 +22,6 @@ typedef double f64;
 
 typedef u8* str;
 
+typedef u8* ptr;
+
 #endif // GEMSTONE_STD_LIB_DEF_H_
