@@ -2,7 +2,7 @@
 #ifndef GEMSTONE_STD_LIB_IO_H_
 #define GEMSTONE_STD_LIB_IO_H_
 
-#include <def/def.h>
+#include <def/api.h>
 
 typedef ptr handle;
 

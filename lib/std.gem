@@ -9,4 +9,8 @@
 # standard type definitions
 import "def.gem"
 
+# I/O operations
+import "io.gem"
 
+# memory management
+import "mem.gem"
