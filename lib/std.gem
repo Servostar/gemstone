@@ -7,6 +7,6 @@
 # `----------------------------------------`
 
 # standard type definitions
-import "def/mod.gem"
+import "def.gem"
 
 
