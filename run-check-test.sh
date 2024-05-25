@@ -17,6 +17,8 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi
 
+sh -c ./run-lib-build.sh
+
 echo "+--------------------------------------+"
 echo "| RUNNING CODE CHECK                   |"
 echo "+--------------------------------------+"
