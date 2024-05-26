@@ -27,6 +27,11 @@ BackendError parse_module(const Module* module, void**) {
 
     err = impl_global_variables(unit, global_scope, module->variables);
 
+    char* err_msg = NULL;
+    if (LLVMPrintModuleToFile(unit->module, "out.s", &err_msg)) {
+        err = new_backend_impl_error(Implementation, NULL, err_msg);
+    }
+
     delete_global_scope(global_scope);
 
     LLVMDisposeModule(unit->module);
