@@ -44,6 +44,7 @@ typedef struct CompositeType_t {
     Sign sign;
     Scale scale;
     PrimitiveType primitive;
+    AST_NODE_PTR nodePtr;
 } CompositeType;
 
 /**
@@ -72,6 +73,7 @@ typedef struct BoxMember_t {
     const char* name;
     Type* type;
     BoxType* box;
+    AST_NODE_PTR nodePtr;
 } BoxMember;
 
 /**
@@ -82,6 +84,7 @@ typedef struct BoxType_t {
     // hashtable of members.
     // Associates the memebers name (const char*) with its type (BoxMember) 
     GHashTable* member;
+    AST_NODE_PTR nodePtr;
 } BoxType;
 
 typedef struct Variable_t Variable;
@@ -90,6 +93,7 @@ typedef struct BoxAccess_t {
     // list of recursive box accesses
     // contains a list of BoxMembers (each specifying their own type, name and box type)
     GArray* member;
+    AST_NODE_PTR nodePtr;
 } BoxAccess;
 
 typedef struct Type_t {
@@ -103,30 +107,16 @@ typedef struct Type_t {
         BoxType box;
         ReferenceType reference;
     } impl;
+    AST_NODE_PTR nodePtr;
 } Type;
 
 typedef struct Typedefine_t {
     const char* name;
     Type type;
+    AST_NODE_PTR nodePtr;
 } Typedefine;
 
-const Type ShortShortUnsingedIntType = {
-    .kind = TypeKindComposite,
-    .impl = {
-        .composite = {
-            .sign = Unsigned,
-            .scale = 0.25,
-            .primitive = Int
-        }
-    }
-};
 
-const Type StringLiteralType = {
-    .kind = TypeKindReference,
-    .impl = {
-        .reference = (ReferenceType) &ShortShortUnsingedIntType,
-    }
-};
 
 /**
  * @brief Reprents the value of type. Can be used to definitons, initialization and for expressions contants.
@@ -137,6 +127,7 @@ typedef struct TypeValue_t {
     Type type;
     // UTF-8 representation of the type's value
     const char* value;
+    AST_NODE_PTR nodePtr;
 } TypeValue;
 
 // .------------------------------------------------.
@@ -166,6 +157,7 @@ typedef enum IO_Qualifier_t {
 typedef struct ParameterDeclaration_t {
     Type type;
     IO_Qualifier qualifier;
+    AST_NODE_PTR nodePtr;
 } ParameterDeclaration;
 
 /**
@@ -177,6 +169,7 @@ typedef struct ParameterDefinition_t {
     // value to initalize the declaration with
     // NOTE: type of initializer and declaration MUST be equal
     TypeValue initializer;
+    AST_NODE_PTR nodePtr;
 } ParameterDefinition;
 
 typedef enum ParameterKind_t {
@@ -195,12 +188,14 @@ typedef struct Parameter_t {
         ParameterDeclaration declaration;
         ParameterDefinition definiton;
     } impl;
+    AST_NODE_PTR nodePtr;
 } Paramer; 
 
 typedef struct FunctionDefinition_t {
     // hashtable of parameters
     // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
     GArray* parameter;
+    AST_NODE_PTR nodePtr;
 } FunctionDefinition;
 
 // .------------------------------------------------.
@@ -216,6 +211,7 @@ typedef enum StorageQualifier_t {
 typedef struct VariableDeclaration_t {
     StorageQualifier qualifier;
     Type type;
+    AST_NODE_PTR nodePtr;
 } VariableDeclaration;
 
 /**
@@ -227,6 +223,7 @@ typedef struct VariableDeclaration_t {
 typedef struct VariableDefiniton_t {
     VariableDeclaration declaration;
     TypeValue initializer;
+    AST_NODE_PTR nodePtr;
 } VariableDefiniton;
 
 typedef enum VariableKind_t {
@@ -243,6 +240,7 @@ typedef struct Variable_t {
         VariableDefiniton definiton;
         BoxMember member;
     } impl;
+    AST_NODE_PTR nodePtr;
 } Variable;
 
 // .------------------------------------------------.
@@ -260,6 +258,7 @@ typedef struct Variable_t {
  */
 typedef struct TypeCast_t {
     Type targetType;
+    AST_NODE_PTR nodePtr;
 } TypeCast;
 
 /**
@@ -271,6 +270,7 @@ typedef struct TypeCast_t {
  */
 typedef struct Transmute_t {
     Type targetType;
+    AST_NODE_PTR nodePtr;
 } Transmute;
 
 // .------------------------------------------------.
@@ -358,6 +358,7 @@ typedef struct Operation_t {
         LogicalOperator logical;
         BitwiseOperator bitwise;
     } impl;
+    AST_NODE_PTR nodePtr;
 } Operation;
 
 // .------------------------------------------------.
@@ -380,6 +381,7 @@ typedef struct Expression_t {
         TypeValue constant;
         Variable variable;
     } impl;
+    AST_NODE_PTR nodePtr;
 } Expression;
 
 // .------------------------------------------------.
@@ -391,6 +393,7 @@ typedef struct FunctionCall_t {
     FunctionDefinition* function;
     // list of expression arguments
     GArray* expressions;
+    AST_NODE_PTR nodePtr;
 } FunctionCall;
 
 typedef struct FunctionBoxCall_t {
@@ -401,11 +404,13 @@ typedef struct FunctionBoxCall_t {
     // box which has the function defined for it
     // NOTE: must be of TypeKind: Box
     Variable selfArgument;
+    AST_NODE_PTR nodePtr;
 } FunctionBoxCall;
 
 typedef struct Block_t {
     // array of statements
     GArray* statemnts;
+    AST_NODE_PTR nodePtr;
 } Block;
 
 // .------------------------------------------------.
@@ -415,6 +420,7 @@ typedef struct Block_t {
 typedef struct While_t {
     Expression conditon;
     Block block;
+    AST_NODE_PTR nodePtr;
 } While;
 
 // .------------------------------------------------.
@@ -424,15 +430,18 @@ typedef struct While_t {
 typedef struct If_t {
     Expression conditon;
     Block block;
+    AST_NODE_PTR nodePtr;
 } If;
 
 typedef struct ElseIf_t {
     Expression conditon;
     Block block;
+    AST_NODE_PTR nodePtr;
 } ElseIf;
 
 typedef struct Else_t {
     Block block;
+    AST_NODE_PTR nodePtr;
 } Else;
 
 typedef struct Branch_t {
@@ -440,6 +449,7 @@ typedef struct Branch_t {
     // list of else-ifs (can be empty/NULL)
     GArray* elseIfBranches;
     Else elseBranch;
+    AST_NODE_PTR nodePtr;
 } Branch;
 
 // .------------------------------------------------.
@@ -449,6 +459,7 @@ typedef struct Branch_t {
 typedef struct Assignment_t {
     Variable* variable;
     Expression value;
+    AST_NODE_PTR nodePtr;
 } Assignment;
 
 typedef enum StatementKind_t {
@@ -467,6 +478,7 @@ typedef struct Statement_t {
         Branch branch;
         Assignment assignment;
     } impl;
+    AST_NODE_PTR nodePtr;
 } Statement;
 
 // .------------------------------------------------.
