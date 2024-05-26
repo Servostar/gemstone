@@ -63,6 +63,8 @@
 %type <node_ptr> paramdecl 
 %type <node_ptr> boxbody
 %type <node_ptr> boxcontent
+%type <node_ptr> typecast
+%type <node_ptr> reinterpretcast
 %type <node_ptr> program
 
 
@@ -126,6 +128,8 @@
 %left '+' '-'
 %left '*' '/'
 %left OpNot OpBitnot
+%left KeyAs
+%left '(' ')'
 
 %%
 program: program programbody {AST_push_node(root, $2);}
@@ -147,7 +151,9 @@ expr: ValFloat {$$ = AST_new_node(AST_Float, $1);}
     | Ident     {$$ = AST_new_node(AST_Ident, $1);}
     | operation {$$ = $1;}
     | boxaccess {$$ = $1;}
-    | boxselfaccess{$$ = $1;};
+    | boxselfaccess{$$ = $1;}
+    | typecast{$$ = $1;}
+    | reinterpretcast{$$ = $1;}
 
 exprlist: expr ',' exprlist {AST_push_node($3, $1);
                              $$ = $3;}
@@ -275,6 +281,20 @@ boxcall: boxaccess argumentlist {AST_NODE_PTR boxcall = AST_new_node(AST_Call, N
                                  AST_push_node(boxcall, $1);
                                  AST_push_node(boxcall, $2);
                                  $$ = boxcall;};
+                                 
+
+typecast: expr KeyAs type %prec KeyAs  {AST_NODE_PTR cast = AST_new_node(AST_Typecast, NULL);
+                                        AST_push_node(cast, $1);
+                                        AST_push_node(cast, $3);
+                                        $$ = cast;
+                                         DEBUG("Type-Cast"); };
+
+reinterpretcast: '(' type ')' expr { AST_NODE_PTR cast = AST_new_node(AST_Transmute, NULL);
+                                      AST_push_node(cast, $4);
+                                        AST_push_node(cast, $2);
+                                        $$ = cast;
+                                    DEBUG("Reinterpret-Cast"); };
+
 
 funcall: Ident argumentlist {AST_NODE_PTR funcall = AST_new_node(AST_Call, NULL);
                              AST_NODE_PTR ident = AST_new_node(AST_Ident, $1);
@@ -364,6 +384,7 @@ assign: Ident '=' expr { AST_NODE_PTR assign = AST_new_node(AST_Assign, NULL);
                          AST_push_node(assign, $3);
                          $$ = assign;
     DEBUG("Assignment"); }
+    
       | boxaccess '=' expr 
       | boxselfaccess '=' expr ;
 

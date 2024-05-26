@@ -58,8 +58,8 @@ def run_check_print_node():
 27 ==
 28 >
 29 <
-30 cast
-31 as
+30 typecast
+31 transmute
 32 funcall
 33 value
 34 typedef
