@@ -3,24 +3,14 @@
 #include <sys/log.h>
 #include <ast/ast.h>
 #include <llvm/backend.h>
-#include <llvm-c/Types.h>
-#include <llvm-c/Core.h>
+#include <llvm/parser.h>
 
 typedef enum LLVMBackendError_t {
     UnresolvedImport
 } LLVMBackendError;
 
-static BackendError llvm_backend_codegen(const Module* unit, void**) {
-    // we start with a LLVM module
-    LLVMContextRef context = LLVMContextCreate();
-    LLVMModuleRef module = LLVMModuleCreateWithNameInContext("gemstone application", context);
-
-    BackendError err;
-
-    LLVMDisposeModule(module);
-    LLVMContextDispose(context);
-
-    return new_backend_error(Success);
+static BackendError llvm_backend_codegen(const Module* unit, void** output) {
+    return parse_module(unit, output);
 }
 
 static BackendError llvm_backend_codegen_init(void) {
