@@ -1,4 +1,5 @@
 
+#include "set/types.h"
 #include <codegen/backend.h>
 #include <sys/log.h>
 
@@ -67,7 +68,7 @@ BackendError set_backend(const codegen_init init_func, const codegen_deinit dein
     return new_backend_error(Success);
 }
 
-BackendError generate_code(const AST_NODE_PTR root, void** output) {
+BackendError generate_code(const Module* root, void** output) {
     DEBUG("generating code with backend: %s", CodegenBackend.name);
 
     if (CodegenBackend.codegen_func == NULL) {

@@ -2,6 +2,7 @@
 #ifndef CODEGN_BACKEND_H_
 #define CODEGN_BACKEND_H_
 
+#include <set/types.h>
 #include <ast/ast.h>
 
 typedef struct BackendImplError_t {
@@ -29,7 +30,7 @@ typedef struct BackendError_t {
  * @brief Function called by the compiler backend to generate an intermediate format
  *        from AST. Returns a custom container for its intermediate language.
  */
-typedef BackendError (*codegen)(const AST_NODE_PTR, void**);
+typedef BackendError (*codegen)(const Module*, void**);
 
 /**
  * @brief Initialize the code generation backend.
@@ -77,7 +78,7 @@ BackendError deinit_backend(void);
  * @return BackendError 
  */
 [[nodiscard]]
-BackendError generate_code(const AST_NODE_PTR root, void** code);
+BackendError generate_code(const Module* root, void** code);
 
 /**
  * @brief Create a new backend error

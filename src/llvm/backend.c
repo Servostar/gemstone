@@ -10,7 +10,7 @@ typedef enum LLVMBackendError_t {
     UnresolvedImport
 } LLVMBackendError;
 
-static BackendError llvm_backend_codegen(const AST_NODE_PTR module_node, void**) {
+static BackendError llvm_backend_codegen(const Module* unit, void**) {
     // we start with a LLVM module
     LLVMContextRef context = LLVMContextCreate();
     LLVMModuleRef module = LLVMModuleCreateWithNameInContext("gemstone application", context);
