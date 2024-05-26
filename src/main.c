@@ -63,7 +63,7 @@ void run_backend_codegen() {
   }
 
   void* code = NULL;
-  err = generate_code(root, &code);
+  err = generate_code(NULL, &code);
   if (err.kind != Success) {
     return;
   }
