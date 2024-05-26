@@ -481,4 +481,17 @@ typedef struct Statement_t {
     AST_NODE_PTR nodePtr;
 } Statement;
 
+// .------------------------------------------------.
+// |                   Module                       |
+// '------------------------------------------------'
+
+typedef struct Module_t {
+    GHashTable* boxes;
+    GHashTable* types;
+    GHashTable* functions;
+    GHashTable* variables;
+    // to be resolved after the module has been parsed completely
+    GArray* imports;
+} Module;
+
 #endif // SET_TYPES_H_
