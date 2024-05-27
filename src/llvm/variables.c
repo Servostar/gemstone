@@ -11,7 +11,7 @@ BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
                                      LLVMGlobalScope* scope,
                                      VariableDeclaration* decl,
                                      const char* name) {
-    DEBUG("implementing global declaration: ", name);
+    DEBUG("implementing global declaration: %s", name);
     BackendError err = SUCCESS;
     LLVMTypeRef llvm_type = NULL;
     err = get_type_impl(unit, scope, &decl->type, &llvm_type);
@@ -30,6 +30,8 @@ BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
         DEBUG("setting default value...");
         LLVMSetInitializer(global, initial_value);
         g_hash_table_insert(scope->variables, (gpointer)name, global);
+    } else {
+        ERROR("unable to initialize global variable: %s", err.impl.message);
     }
 
     return err;
@@ -67,6 +69,7 @@ BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
 BackendError impl_global_variable(LLVMBackendCompileUnit* unit,
                                   Variable* gemstone_var, const char* alias,
                                   LLVMGlobalScope* scope) {
+    DEBUG("implementing global variable: %s", alias);
     BackendError err = SUCCESS;
 
     switch (gemstone_var->kind) {

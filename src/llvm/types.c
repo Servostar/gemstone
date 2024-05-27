@@ -333,7 +333,7 @@ BackendError get_type_default_value(LLVMBackendCompileUnit* unit,
         Implementation, gemstone_type->nodePtr, "No default value for type");
 
     LLVMTypeRef llvm_type = NULL;
-    get_type_impl(unit, scope, gemstone_type, &llvm_type);
+    err = get_type_impl(unit, scope, gemstone_type, &llvm_type);
     if (err.kind != Success) {
         return err;
     }

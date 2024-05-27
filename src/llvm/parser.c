@@ -136,6 +136,29 @@ BackendError export_module(LLVMBackendCompileUnit* unit, const Target* target) {
     return err;
 }
 
+static BackendError build_module(LLVMBackendCompileUnit* unit, LLVMGlobalScope* global_scope, const Module* module) {
+    BackendError err = SUCCESS;
+
+    err = impl_types(unit, global_scope, module->types);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    // NOTE: functions of boxes are not stored in the box itself,
+    //       thus for a box we only implement the type
+    err = impl_types(unit, global_scope, module->boxes);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    err = impl_global_variables(unit, global_scope, module->variables);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    return err;
+}
+
 BackendError parse_module(const Module* module, void**) {
     DEBUG("generating code for module %p", module);
     if (module == NULL) {
@@ -157,18 +180,14 @@ BackendError parse_module(const Module* module, void**) {
 
     DEBUG("generating code...");
 
-    err = impl_types(unit, global_scope, module->types);
-    // NOTE: functions of boxes are not stored in the box itself,
-    //       thus for a box we only implement the type
-    err = impl_types(unit, global_scope, module->boxes);
+    err = build_module(unit, global_scope, module);
+    if (err.kind == Success) {
+        Target target = create_native_target();
 
-    err = impl_global_variables(unit, global_scope, module->variables);
+        export_module(unit, &target);
 
-    Target target = create_native_target();
-
-    export_module(unit, &target);
-
-    delete_target(target);
+        delete_target(target);
+    }
 
     delete_global_scope(global_scope);
 
