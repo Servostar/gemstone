@@ -4,6 +4,7 @@
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
 #include <llvm-c/Types.h>
+#include <llvm/backend.h>
 #include <llvm/parser.h>
 #include <llvm/types.h>
 #include <llvm/variables.h>
@@ -11,52 +12,81 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/log.h>
 
-#include "llvm/backend.h"
+#define EXPORT_IR 1
 
-BackendError export_IR(LLVMBackendCompileUnit* unit) {
+BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target) {
+    DEBUG("exporting module to LLVM-IR...");
+
     BackendError err = SUCCESS;
 
+    // convert module to LLVM-IR
     char* ir = LLVMPrintModuleToString(unit->module);
 
-    FILE* output = fopen("module.ll", "w");
+    // construct file name
+    char* filename = alloca(strlen(target->name.str) + 2);
+    sprintf(filename, "%s.ll", target->name.str);
+
+    INFO("Writing LLVM-IR to %s", filename);
+
+    DEBUG("opening file...");
+    FILE* output = fopen(filename, "w");
     if (output == NULL) {
+        ERROR("unable to open file: %s", filename);
         err = new_backend_impl_error(Implementation, NULL,
                                      "unable to open file for writing");
         LLVMDisposeMessage(ir);
     }
 
-    fprintf(output, "%s", ir);
+    DEBUG("printing LLVM-IR to file...");
+
+    size_t bytes = fprintf(output, "%s", ir);
+
+    // flush and close output file
     fflush(output);
     fclose(output);
 
+    INFO("%ld bytes written to %s", bytes, filename);
+
+    // clean up LLVM-IR string
     LLVMDisposeMessage(ir);
 
     return err;
 }
 
 BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target) {
+    DEBUG("exporting object file...");
+
+    INFO("Using target (%s): %s with features: %s", target->name.str,
+         target->triple.str, target->features.str);
+
     LLVMTargetRef llvm_target = NULL;
     char* error = NULL;
 
+    DEBUG("creating target...");
     if (LLVMGetTargetFromTriple(target->triple.str, &llvm_target, &error) !=
         0) {
-        BackendError err =
-            new_backend_impl_error(Implementation, NULL, strdup(error));
+        ERROR("failed to create target machine: %s", error);
+        BackendError err = new_backend_impl_error(
+            Implementation, NULL, "unable to create target machine");
         LLVMDisposeMessage(error);
         return err;
     }
 
+    DEBUG("Creating target machine...");
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(
         llvm_target, target->triple.str, target->cpu.str, target->features.str,
         target->opt, target->reloc, target->model);
 
     LLVMCodeGenFileType file_type = LLVMObjectFile;
 
+    DEBUG("Generating code...");
     if (LLVMTargetMachineEmitToFile(target_machine, unit->module, "output",
                                     file_type, &error) != 0) {
+        ERROR("failed to emit code: %s", error);
         BackendError err =
-            new_backend_impl_error(Implementation, NULL, strdup(error));
+            new_backend_impl_error(Implementation, NULL, "failed to emit code");
         LLVMDisposeMessage(error);
         return err;
     }
@@ -65,6 +95,7 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target) {
 }
 
 void list_available_targets() {
+    DEBUG("initializing all available targets...");
     LLVMInitializeAllTargetInfos();
 
     printf("Available targets:\n");
@@ -86,21 +117,32 @@ void list_available_targets() {
 }
 
 BackendError export_module(LLVMBackendCompileUnit* unit, const Target* target) {
+    DEBUG("exporting module...");
+
     BackendError err = SUCCESS;
 
     export_object(unit, target);
+
+    if (EXPORT_IR) {
+        export_IR(unit, target);
+    } else {
+        DEBUG("not exporting LLVM-IR");
+    }
 
     return err;
 }
 
 BackendError parse_module(const Module* module, void**) {
+    DEBUG("generating code for module %p", module);
     if (module == NULL) {
+        ERROR("no module for codegen");
         return new_backend_impl_error(Implementation, NULL, "no module");
     }
 
     LLVMBackendCompileUnit* unit = malloc(sizeof(LLVMBackendCompileUnit));
 
     // we start with a LLVM module
+    DEBUG("creating LLVM context and module");
     unit->context = LLVMContextCreate();
     unit->module = LLVMModuleCreateWithNameInContext("gemstone application",
                                                      unit->context);
@@ -109,17 +151,14 @@ BackendError parse_module(const Module* module, void**) {
 
     BackendError err = new_backend_error(Success);
 
+    DEBUG("generating code...");
+
     err = impl_types(unit, global_scope, module->types);
     // NOTE: functions of boxes are not stored in the box itself,
     //       thus for a box we only implement the type
     err = impl_types(unit, global_scope, module->boxes);
 
     err = impl_global_variables(unit, global_scope, module->variables);
-
-    char* err_msg = NULL;
-    if (LLVMPrintModuleToFile(unit->module, "out.s", &err_msg)) {
-        err = new_backend_impl_error(Implementation, NULL, err_msg);
-    }
 
     Target target = create_native_target();
 
@@ -138,6 +177,7 @@ BackendError parse_module(const Module* module, void**) {
 }
 
 LLVMGlobalScope* new_global_scope() {
+    DEBUG("creating global scope...");
     LLVMGlobalScope* scope = malloc(sizeof(LLVMGlobalScope));
 
     scope->functions = g_hash_table_new(g_str_hash, g_str_equal);
@@ -149,6 +189,7 @@ LLVMGlobalScope* new_global_scope() {
 
 LLVMLocalScope* new_local_scope(LLVMGlobalScope* global_scope,
                                 LLVMLocalScope* parent_scope) {
+    DEBUG("creating local scope...");
     LLVMLocalScope* scope = malloc(sizeof(LLVMLocalScope));
 
     scope->variables = g_hash_table_new(g_str_hash, g_str_equal);
@@ -160,11 +201,13 @@ LLVMLocalScope* new_local_scope(LLVMGlobalScope* global_scope,
 }
 
 void delete_local_scope(LLVMLocalScope* scope) {
+    DEBUG("deleting global scope...");
     g_hash_table_unref(scope->variables);
     free(scope);
 }
 
 void delete_global_scope(LLVMGlobalScope* scope) {
+    DEBUG("deleting global scope...");
     g_hash_table_unref(scope->functions);
     g_hash_table_unref(scope->types);
     g_hash_table_unref(scope->variables);

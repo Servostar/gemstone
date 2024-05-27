@@ -5,11 +5,13 @@
 #include <llvm/types.h>
 #include <llvm/variables.h>
 #include <set/types.h>
+#include <sys/log.h>
 
 BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
                                      LLVMGlobalScope* scope,
                                      VariableDeclaration* decl,
                                      const char* name) {
+    DEBUG("implementing global declaration: ", name);
     BackendError err = SUCCESS;
     LLVMTypeRef llvm_type = NULL;
     err = get_type_impl(unit, scope, &decl->type, &llvm_type);
@@ -18,12 +20,14 @@ BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
         return err;
     }
 
+    DEBUG("creating global variable...");
     LLVMValueRef global = LLVMAddGlobal(unit->module, llvm_type, name);
 
     LLVMValueRef initial_value = NULL;
     err = get_type_default_value(unit, scope, &decl->type, &initial_value);
 
     if (err.kind == Success) {
+        DEBUG("setting default value...");
         LLVMSetInitializer(global, initial_value);
         g_hash_table_insert(scope->variables, (gpointer)name, global);
     }
@@ -32,9 +36,9 @@ BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
 }
 
 BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
-                                     LLVMGlobalScope* scope,
-                                     VariableDefiniton* def,
-                                     const char* name) {
+                                   LLVMGlobalScope* scope,
+                                   VariableDefiniton* def, const char* name) {
+    DEBUG("implementing global definition: %s", name);
     BackendError err = SUCCESS;
     LLVMTypeRef llvm_type = NULL;
     err = get_type_impl(unit, scope, &def->declaration.type, &llvm_type);
@@ -43,13 +47,16 @@ BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
         return err;
     }
 
+    DEBUG("creating global variable...");
     LLVMValueRef global = LLVMAddGlobal(unit->module, llvm_type, name);
 
     // FIXME: resolve initializer expression!
     LLVMValueRef initial_value = NULL;
-    err = get_type_default_value(unit, scope, &def->declaration.type, &initial_value);
+    err = get_type_default_value(unit, scope, &def->declaration.type,
+                                 &initial_value);
 
     if (err.kind == Success) {
+        DEBUG("setting default value");
         LLVMSetInitializer(global, initial_value);
         g_hash_table_insert(scope->variables, (gpointer)name, global);
     }
@@ -68,12 +75,15 @@ BackendError impl_global_variable(LLVMBackendCompileUnit* unit,
                 unit, scope, &gemstone_var->impl.declaration, alias);
             break;
         case VariableKindDefinition:
-            err = impl_global_definiton(
-                unit, scope, &gemstone_var->impl.definiton, alias);
+            err = impl_global_definiton(unit, scope,
+                                        &gemstone_var->impl.definiton, alias);
             break;
         case VariableKindBoxMember:
             err = new_backend_impl_error(Implementation, gemstone_var->nodePtr,
                                          "member variable cannot be ");
+            break;
+        default:
+            PANIC("invalid variable kind: %ld", gemstone_var->kind);
             break;
     }
 
@@ -83,6 +93,7 @@ BackendError impl_global_variable(LLVMBackendCompileUnit* unit,
 BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
                                    LLVMGlobalScope* scope,
                                    GHashTable* variables) {
+    DEBUG("implementing global variables...");
     GHashTableIter iterator;
     g_hash_table_iter_init(&iterator, variables);
 
@@ -91,6 +102,7 @@ BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
 
     BackendError err;
 
+    size_t variable_count = 0;
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
         err =
             impl_global_variable(unit, (Variable*)val, (const char*)key, scope);
@@ -98,7 +110,11 @@ BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
         if (err.kind != Success) {
             break;
         }
+
+        variable_count++;
     }
+
+    DEBUG("implemented %ld global variables", variable_count);
 
     return err;
 }

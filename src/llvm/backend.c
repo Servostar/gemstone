@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <codegen/backend.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/TargetMachine.h>
@@ -8,16 +9,20 @@
 #include <llvm/parser.h>
 
 Target create_native_target() {
+    DEBUG("creating native target...");
     Target target;
 
     target.triple.str = LLVMGetDefaultTargetTriple();
     target.triple.allocation = LLVM;
+    assert(target.triple.str != NULL);
 
     target.cpu.str = LLVMGetHostCPUName();
     target.cpu.allocation = LLVM;
+    assert(target.cpu.str != NULL);
 
     target.features.str = LLVMGetHostCPUFeatures();
     target.features.allocation = LLVM;
+    assert(target.features.str != NULL);
 
     target.opt = LLVMCodeGenLevelDefault;
     target.reloc = LLVMRelocDefault;
@@ -31,6 +36,7 @@ Target create_target_from_config() {
 }
 
 static void delete_string(String string) {
+    DEBUG("deleting string...");
     switch (string.allocation) {
         case LLVM:
             LLVMDisposeMessage(string.str);
