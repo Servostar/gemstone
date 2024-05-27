@@ -1,9 +1,54 @@
 
 #include <codegen/backend.h>
+#include <llvm-c/Core.h>
+#include <llvm-c/TargetMachine.h>
 #include <sys/log.h>
 #include <ast/ast.h>
 #include <llvm/backend.h>
 #include <llvm/parser.h>
+
+Target create_native_target() {
+    Target target;
+
+    target.triple.str = LLVMGetDefaultTargetTriple();
+    target.triple.allocation = LLVM;
+
+    target.cpu.str = LLVMGetHostCPUName();
+    target.cpu.allocation = LLVM;
+
+    target.features.str = LLVMGetHostCPUFeatures();
+    target.features.allocation = LLVM;
+
+    target.opt = LLVMCodeGenLevelDefault;
+    target.reloc = LLVMRelocDefault;
+    target.model = LLVMCodeModelDefault;
+
+    return target;
+}
+
+Target create_target_from_config() {
+    PANIC("NOT IMPLEMENTED");
+}
+
+static void delete_string(String string) {
+    switch (string.allocation) {
+        case LLVM:
+            LLVMDisposeMessage(string.str);
+            break;
+        case LIBC:
+            free(string.str);
+            break;
+        case NONE:
+            break;
+    }
+}
+
+void delete_target(Target target) {
+    delete_string(target.name);
+    delete_string(target.cpu);
+    delete_string(target.features);
+    delete_string(target.triple);
+}
 
 typedef enum LLVMBackendError_t {
     UnresolvedImport
