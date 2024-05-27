@@ -12,6 +12,9 @@ Target create_native_target() {
     DEBUG("creating native target...");
     Target target;
 
+    target.name.str = "tmp";
+    target.name.allocation = NONE;
+
     target.triple.str = LLVMGetDefaultTargetTriple();
     target.triple.allocation = LLVM;
     assert(target.triple.str != NULL);

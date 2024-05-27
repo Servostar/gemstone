@@ -25,7 +25,7 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target) {
     char* ir = LLVMPrintModuleToString(unit->module);
 
     // construct file name
-    char* filename = alloca(strlen(target->name.str) + 2);
+    char* filename = alloca(strlen(target->name.str) + 4);
     sprintf(filename, "%s.ll", target->name.str);
 
     INFO("Writing LLVM-IR to %s", filename);
@@ -63,6 +63,10 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target) {
 
     LLVMTargetRef llvm_target = NULL;
     char* error = NULL;
+
+    LLVMInitializeAllTargets();
+    LLVMInitializeAllTargetInfos();
+    LLVMInitializeAllTargetMCs();
 
     DEBUG("creating target...");
     if (LLVMGetTargetFromTriple(target->triple.str, &llvm_target, &error) !=
