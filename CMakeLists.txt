@@ -81,13 +81,8 @@ pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 #  LLVM backend                                    #
 # ------------------------------------------------ #
 
-# Fetch LLVM link configuration
-execute_process(COMMAND llvm-config --libs all
-                OUTPUT_VARIABLE LLVM_LIBS)
-# Strip whitespace from output
-string(STRIP "${LLVM_LIBS}" LLVM_LIBS)
-# Link all targets to LLVM
-link_libraries(${LLVM_LIBS})
+find_package(PkgConfig REQUIRED)
+pkg_search_module(LLVM REQUIRED IMPORTED_TARGET llvm17)
 
 # ------------------------------------------------ #
 #  Source                                          #
@@ -95,6 +90,7 @@ link_libraries(${LLVM_LIBS})
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(PRIVATE ${GLIB_INCLUDE_DIRS})
+include_directories(PRIVATE ${LLVM_INCLUDE_DIRS})
 
 file(GLOB_RECURSE SOURCE_FILES src/*.c)
 
