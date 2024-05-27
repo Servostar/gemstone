@@ -19,6 +19,11 @@ string(STRIP "${LLVM_LIBS}" LLVM_LIBS)
 # Link all targets to LLVM
 link_libraries(${LLVM_LIBS})
 
+execute_process(COMMAND llvm-config --includedir
+                OUTPUT_VARIABLE LLVM_INCLUDE_DIR)
+string(STRIP "${LLVM_INCLUDE_DIR}" LLVM_INCLUDE_DIR)
+include_directories(${LLVM_INCLUDE_DIR})
+
 # ------------------------------------------------------- #
 # CTEST 1
 # test llvm backend codegen for global variables

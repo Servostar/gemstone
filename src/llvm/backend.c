@@ -1,12 +1,12 @@
 
 #include <assert.h>
+#include <ast/ast.h>
 #include <codegen/backend.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/TargetMachine.h>
-#include <sys/log.h>
-#include <ast/ast.h>
 #include <llvm/backend.h>
 #include <llvm/parser.h>
+#include <sys/log.h>
 
 Target create_native_target() {
     DEBUG("creating native target...");
@@ -34,9 +34,7 @@ Target create_native_target() {
     return target;
 }
 
-Target create_target_from_config() {
-    PANIC("NOT IMPLEMENTED");
-}
+Target create_target_from_config() { PANIC("NOT IMPLEMENTED"); }
 
 static void delete_string(String string) {
     DEBUG("deleting string...");
@@ -59,9 +57,7 @@ void delete_target(Target target) {
     delete_string(target.triple);
 }
 
-typedef enum LLVMBackendError_t {
-    UnresolvedImport
-} LLVMBackendError;
+typedef enum LLVMBackendError_t { UnresolvedImport } LLVMBackendError;
 
 static BackendError llvm_backend_codegen(const Module* unit, void** output) {
     return parse_module(unit, output);
@@ -76,7 +72,9 @@ static BackendError llvm_backend_codegen_deinit(void) {
 }
 
 void llvm_backend_init() {
-    BackendError err = set_backend(&llvm_backend_codegen_init, &llvm_backend_codegen_deinit, &llvm_backend_codegen, "LLVM");
+    BackendError err =
+        set_backend(&llvm_backend_codegen_init, &llvm_backend_codegen_deinit,
+                    &llvm_backend_codegen, "LLVM");
 
     if (err.kind != Success) {
         PANIC("unable to init llvm backend: %ld", err);
