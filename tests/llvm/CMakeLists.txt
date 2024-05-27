@@ -30,6 +30,9 @@ include_directories(${LLVM_INCLUDE_DIR})
 
 file(GLOB_RECURSE SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.c)
 list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/main.c)
+list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/yacc/parser.tab.c)
+list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/lex/lexer.ll.c)
+list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/lex/util.c)
 add_executable(global_vars
 global_vars.c ${SOURCE_FILES})
 set_target_properties(global_vars
