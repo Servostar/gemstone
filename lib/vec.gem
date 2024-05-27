@@ -1,0 +1,79 @@
+
+import "def.gem"
+import "mem.gem"
+
+type box: Vec {
+    type gen: T
+
+    silent ref T: buf
+    silent u32: cap = 0
+    silent u32: len = 0
+
+    silent fun refit(in u32: ext) {
+        if self.cap == 0 {
+            self.cap = ext
+            heap_alloc(self.cap * sizeof(T), self.buf)
+        } else if self.len == self.cap || self.cap - self.len - ext < 0 {
+            # reallocate buffer
+            self.cap = self.cap + ext
+
+            heap_realloc(self.cap * sizeof(T), self.buf)
+        }
+        # TODO: shrink if cap - len > ext
+    }
+
+    fun append(in T: t) {
+        self.refit(1)
+
+        self.buf[self.len] = t
+        self.len = self.len + 1
+    } 
+
+    fun prepend(in T: t) {
+        self.refit(1)
+
+        u32 i = self.len
+        while i > 0 {
+            self.buf[i] = self.buf[i - 1]
+            i = i - 1
+        }
+
+        self.buf[0] = t
+    }
+
+    fun remove(in u32: idx)(out T: t) {
+        t = self.buf[idx]
+
+        u32 i = idx
+        while i < self.len - 1 {
+            self.buf[i] = self.buf[i + 1]
+            i = i + 1
+        }
+
+        self.len = self.len - 1
+
+        self.refit(1)
+    }
+
+    fun get(in u32: idx)(out T: t) {
+        t = self.buf[idx]
+    }
+
+    fun len(out u32: len) {
+        len = self.len
+    }
+
+    fun append_vec(in ref Vec of T: other) {
+        u32: len_other
+        other.len(len_other)
+
+        self.refit(len_other)
+
+        u32: idx = 0
+        while idx < len_other {
+            other.get(self.buf[self.len])
+            self.len = self.len + 1
+            idx = idx + 1
+        }
+    }
+}

@@ -1,0 +1,10 @@
+
+import "vec.gem"
+
+type box: String {
+    silent Vec of u8: buf
+
+    fun append_raw(in str, in u32: bytes) {
+        
+    }
+}
