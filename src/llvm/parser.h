@@ -14,26 +14,15 @@ typedef struct LLVMBackendCompileUnit_t {
 
 typedef struct LLVMGlobalScope_t {
     GHashTable* types;
+    // of type LLVMValueRef
     GHashTable* variables;
+    // of type LLVMTypeRef
     GHashTable* functions;
 } LLVMGlobalScope;
 
 LLVMGlobalScope* new_global_scope();
 
 void delete_global_scope(LLVMGlobalScope* scope);
-
-typedef struct LLVMLocalScope_t LLVMLocalScope;
-
-typedef struct LLVMLocalScope_t {
-    LLVMGlobalScope* global_scope;
-    LLVMLocalScope* parent_scope;
-    GHashTable* params;
-    GHashTable* variables;
-} LLVMLocalScope;
-
-LLVMLocalScope* new_local_scope(LLVMGlobalScope* global_scope, LLVMLocalScope* parent_scope);
-
-void delete_local_scope(LLVMLocalScope* scope);
 
 BackendError parse_module(const Module* module, void**);
 

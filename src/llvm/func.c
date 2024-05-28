@@ -7,6 +7,7 @@
 #include <llvm/types.h>
 #include <set/types.h>
 #include <sys/log.h>
+#include <llvm/func.h>
 
 BackendError impl_param_type(LLVMBackendCompileUnit* unit,
                              LLVMGlobalScope* scope, Paramer* param,
@@ -72,10 +73,42 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
     return err;
 }
 
-BackendError impl_func(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
+BackendError impl_func(LLVMBackendCompileUnit* unit, LLVMGlobalScope* global_scope,
                        FunctionDefinition* fundef, const char* name) {
     BackendError err = SUCCESS;
 
+    LLVMValueRef llvm_func = NULL;
+    err = impl_func_decl(unit, global_scope, fundef, &llvm_func, name);
+
+    if (err.kind == Success) {
+        // create local function scope
+        // NOTE: lives till the end of the function
+        LLVMFuncScope* func_scope = alloca(sizeof(LLVMFuncScope));
+
+        func_scope->llvm_func = llvm_func;
+        func_scope->global_scope = global_scope;
+        func_scope->params = g_hash_table_new(g_str_hash, g_str_equal);
+
+        // store function type in global scope
+        g_hash_table_insert(global_scope->functions, (gpointer) name, llvm_func);
+
+        // create function body builder
+        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(unit->context, llvm_func, "entry");
+        LLVMBuilderRef builder = LLVMCreateBuilderInContext(unit->context);
+        LLVMPositionBuilderAtEnd(builder, body);
+
+        // create value references for parameter
+        const size_t params = fundef->parameter->len;
+        for (size_t i = 0; i < params; i++) {
+            const Paramer* param = ((Paramer*) fundef->parameter) + i;
+            g_hash_table_insert(func_scope->params, (gpointer) param->name, LLVMGetParam(llvm_func, i));
+        }
+
+        // parse function body
+
+        // delete function scope GLib structs
+        g_hash_table_destroy(func_scope->params);
+    }
 
     return err;
 }
