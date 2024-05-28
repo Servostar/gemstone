@@ -5,17 +5,17 @@
 #include <llvm/expr.h>
 #include <llvm/types.h>
 
-BackendError impl_bitwise_operation(LLVMBackendCompileUnit* unit,
-                                    LLVMLocalScope* scope,
+BackendError impl_bitwise_operation(LLVMBackendCompileUnit *unit,
+                                    LLVMLocalScope *scope,
                                     LLVMBuilderRef builder,
-                                    Operation* operation,
-                                    LLVMValueRef* llvm_result) {
+                                    Operation *operation,
+                                    LLVMValueRef *llvm_result) {
     // TODO: resolve lhs and rhs or op
     LLVMValueRef rhs = NULL;
     LLVMValueRef lhs = NULL;
     LLVMValueRef op = NULL;
 
-    if (operation->kind == BitwiseNot) {
+    if (operation->impl.bitwise == BitwiseNot) {
         // single operand
     } else {
         // two operands
@@ -39,11 +39,29 @@ BackendError impl_bitwise_operation(LLVMBackendCompileUnit* unit,
     return SUCCESS;
 }
 
-BackendError impl_logical_operation(LLVMBackendCompileUnit* unit,
-                                    LLVMLocalScope* scope,
+/**
+ * @brief Convert any integral type (integer) to a boolean value.
+ *        A boolean value hereby meaning an integer of the same type as the input
+ *        value but with the value of either 0 or one.
+ * @param builder
+ * @param integral
+ * @return
+ */
+static LLVMValueRef convert_integral_to_boolean(
+        LLVMBuilderRef builder, LLVMValueRef integral) {
+    // type of input
+    LLVMTypeRef valueType = LLVMTypeOf(integral);
+    // zero value of same type as integral
+    LLVMValueRef zero = LLVMConstIntOfString(valueType, "0", 10);
+    // returns 1 if integral is not zero and zero otherwise
+    return LLVMBuildICmp(builder, LLVMIntNE, zero, integral, "to boolean");
+}
+
+BackendError impl_logical_operation(LLVMBackendCompileUnit *unit,
+                                    LLVMLocalScope *scope,
                                     LLVMBuilderRef builder,
-                                    Operation* operation,
-                                    LLVMValueRef* llvm_result) {
+                                    Operation *operation,
+                                    LLVMValueRef *llvm_result) {
     // TODO: resolve lhs and rhs or op
     LLVMValueRef rhs = NULL;
     LLVMValueRef lhs = NULL;
@@ -51,8 +69,11 @@ BackendError impl_logical_operation(LLVMBackendCompileUnit* unit,
 
     if (operation->kind == BitwiseNot) {
         // single operand
+        op = convert_integral_to_boolean(builder, op);
     } else {
         // two operands
+        lhs = convert_integral_to_boolean(builder, lhs);
+        rhs = convert_integral_to_boolean(builder, rhs);
     }
 
     switch (operation->impl.bitwise) {
@@ -74,9 +95,9 @@ BackendError impl_logical_operation(LLVMBackendCompileUnit* unit,
     return SUCCESS;
 }
 
-BackendError impl_operation(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
-                            LLVMBuilderRef builder, Operation* operation,
-                            LLVMValueRef* llvm_result) {
+BackendError impl_operation(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                            LLVMBuilderRef builder, Operation *operation,
+                            LLVMValueRef *llvm_result) {
     switch (operation->kind) {
         case Bitwise:
             impl_bitwise_operation(unit, scope, builder, operation,
@@ -89,9 +110,9 @@ BackendError impl_operation(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
     }
 }
 
-BackendError impl_transmute(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
-                            LLVMBuilderRef builder, Transmute* transmute,
-                            LLVMValueRef* llvm_result) {
+BackendError impl_transmute(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                            LLVMBuilderRef builder, Transmute *transmute,
+                            LLVMValueRef *llvm_result) {
     // TODO: resolve sub expression
     LLVMValueRef operand = NULL;
     LLVMTypeRef target_type = NULL;
@@ -100,13 +121,13 @@ BackendError impl_transmute(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
     // if target type is valid
     if (err.kind == Success) {
         *llvm_result =
-            LLVMBuildBitCast(builder, operand, target_type, "transmute");
+                LLVMBuildBitCast(builder, operand, target_type, "transmute");
     }
 
     return err;
 }
 
-static LLVMBool is_type_signed(const Type* type) {
+static LLVMBool is_type_signed(const Type *type) {
     switch (type->kind) {
         case TypeKindPrimitive:
             return 1;
@@ -117,9 +138,9 @@ static LLVMBool is_type_signed(const Type* type) {
     }
 }
 
-BackendError impl_typecast(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
-                           LLVMBuilderRef builder, TypeCast* typecast,
-                           LLVMValueRef* llvm_result) {
+BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                           LLVMBuilderRef builder, TypeCast *typecast,
+                           LLVMValueRef *llvm_result) {
     // TODO: resolve sub expression
     LLVMValueRef operand = NULL;
     LLVMTypeRef target_type = NULL;
@@ -133,15 +154,16 @@ BackendError impl_typecast(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
     LLVMBool dst_signed = is_type_signed(&typecast->targetType);
     // TODO: derive source type sign
     const LLVMOpcode opcode =
-        LLVMGetCastOpcode(operand, 0, target_type, dst_signed);
+            LLVMGetCastOpcode(operand, 0, target_type, dst_signed);
     *llvm_result =
-        LLVMBuildCast(builder, opcode, operand, target_type, "transmute");
+            LLVMBuildCast(builder, opcode, operand, target_type, "transmute");
 
     return err;
 }
-BackendError impl_expr(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
-                       LLVMBuilderRef builder, Expression* expr,
-                       LLVMValueRef* llvm_result) {
+
+BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                       LLVMBuilderRef builder, Expression *expr,
+                       LLVMValueRef *llvm_result) {
     BackendError err = SUCCESS;
 
     switch (expr->kind) {

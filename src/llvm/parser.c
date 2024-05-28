@@ -210,25 +210,6 @@ LLVMGlobalScope* new_global_scope() {
     return scope;
 }
 
-LLVMLocalScope* new_local_scope(LLVMGlobalScope* global_scope,
-                                LLVMLocalScope* parent_scope) {
-    DEBUG("creating local scope...");
-    LLVMLocalScope* scope = malloc(sizeof(LLVMLocalScope));
-
-    scope->variables = g_hash_table_new(g_str_hash, g_str_equal);
-    scope->params = g_hash_table_new(g_str_hash, g_str_equal);
-    scope->global_scope = global_scope;
-    scope->parent_scope = parent_scope;
-
-    return scope;
-}
-
-void delete_local_scope(LLVMLocalScope* scope) {
-    DEBUG("deleting global scope...");
-    g_hash_table_unref(scope->variables);
-    free(scope);
-}
-
 void delete_global_scope(LLVMGlobalScope* scope) {
     DEBUG("deleting global scope...");
     g_hash_table_unref(scope->functions);
