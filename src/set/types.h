@@ -471,6 +471,7 @@ typedef enum StatementKind_t {
 } StatementKind;
 
 typedef struct Statement_t {
+    StatementKind kind;
     union StatementImplementation {
         FunctionCall call;
         FunctionBoxCall boxCall;
