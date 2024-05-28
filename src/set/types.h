@@ -69,6 +69,8 @@ typedef Type* ReferenceType;
 
 typedef struct BoxType_t BoxType;
 
+typedef struct Block_t Block;
+
 typedef struct BoxMember_t {
     const char* name;
     Type* type;
@@ -88,6 +90,7 @@ typedef struct BoxType_t {
 } BoxType;
 
 typedef struct Variable_t Variable;
+typedef struct Expression_t Expression;
 
 typedef struct BoxAccess_t {
     // list of recursive box accesses
@@ -168,7 +171,7 @@ typedef struct ParameterDefinition_t {
     ParameterDeclaration declaration;
     // value to initalize the declaration with
     // NOTE: type of initializer and declaration MUST be equal
-    TypeValue initializer;
+    Expression initializer;
     AST_NODE_PTR nodePtr;
 } ParameterDefinition;
 
@@ -189,14 +192,36 @@ typedef struct Parameter_t {
         ParameterDefinition definiton;
     } impl;
     AST_NODE_PTR nodePtr;
-} Paramer; 
+} Parameter;    // fix typo
+
+typedef enum FunctionKind_t {
+    FunctionDeclarationKind,
+    FunctionDefinitionKind
+} FunctionKind;
 
 typedef struct FunctionDefinition_t {
     // hashtable of parameters
     // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
     GArray* parameter;
     AST_NODE_PTR nodePtr;
+    // body of function
+    Block body;
 } FunctionDefinition;
+
+typedef struct FunctionDeclaration_t {
+    // hashtable of parameters
+    // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
+    GArray* parameter;
+    AST_NODE_PTR nodePtr;
+} FunctionDeclaration;
+
+typedef struct Function_t {
+    FunctionKind kind;
+    union FunctionImplementation {
+        FunctionDefinition definition;
+        FunctionDeclaration declaration;
+    } impl;
+} Function;
 
 // .------------------------------------------------.
 // |                 Variables                      |
@@ -222,7 +247,7 @@ typedef struct VariableDeclaration_t {
  */
 typedef struct VariableDefiniton_t {
     VariableDeclaration declaration;
-    TypeValue initializer;
+    Expression initializer;
     AST_NODE_PTR nodePtr;
 } VariableDefiniton;
 
@@ -258,6 +283,7 @@ typedef struct Variable_t {
  */
 typedef struct TypeCast_t {
     Type targetType;
+    Expression* operand;
     AST_NODE_PTR nodePtr;
 } TypeCast;
 
@@ -270,6 +296,7 @@ typedef struct TypeCast_t {
  */
 typedef struct Transmute_t {
     Type targetType;
+    Expression* operand;
     AST_NODE_PTR nodePtr;
 } Transmute;
 
@@ -358,6 +385,7 @@ typedef struct Operation_t {
         LogicalOperator logical;
         BitwiseOperator bitwise;
     } impl;
+    Expression* operands;
     AST_NODE_PTR nodePtr;
 } Operation;
 
