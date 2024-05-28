@@ -18,4 +18,8 @@ BackendError get_type_default_value(LLVMBackendCompileUnit* unit,
                                     LLVMGlobalScope* scope, Type* gemstone_type,
                                     LLVMValueRef* llvm_value);
 
+BackendError get_type_value(LLVMBackendCompileUnit* unit,
+                                    LLVMGlobalScope* scope, TypeValue* gemstone_value,
+                                    LLVMValueRef* llvm_value);
+
 #endif  // LLVM_BACKEND_TYPES_H_

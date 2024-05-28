@@ -9,6 +9,71 @@
 #define BASE_BYTES 4
 #define BITS_PER_BYTE 8
 
+static BackendError get_const_primitive_value(PrimitiveType primitive,
+                                              LLVMTypeRef llvm_type,
+                                              const char* value,
+                                              LLVMValueRef* llvm_value) {
+    switch (primitive) {
+        case Int:
+            *llvm_value = LLVMConstIntOfString(llvm_type, value, 10);
+            break;
+        case Float:
+            *llvm_value = LLVMConstRealOfString(llvm_type, value);
+            break;
+    }
+
+    return SUCCESS;
+}
+
+static BackendError get_const_composite_value(CompositeType composite,
+                                              LLVMTypeRef llvm_type,
+                                              const char* value,
+                                              LLVMValueRef* llvm_value) {
+    return get_const_primitive_value(composite.primitive, llvm_type, value,
+                                     llvm_value);
+}
+
+BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
+                                  LLVMGlobalScope* scope,
+                                  TypeValue* gemstone_value,
+                                  LLVMValueRef* llvm_value) {
+    BackendError err = new_backend_impl_error(
+        Implementation, gemstone_value->nodePtr, "No default value for type");
+
+    LLVMTypeRef llvm_type = NULL;
+    err = get_type_impl(unit, scope, &gemstone_value->type, &llvm_type);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    switch (gemstone_value->type.kind) {
+        case TypeKindPrimitive:
+            err = get_const_primitive_value(gemstone_value->type.impl.primitive,
+                                            llvm_type, gemstone_value->value,
+                                            llvm_value);
+            break;
+        case TypeKindComposite:
+            err = get_const_composite_value(gemstone_value->type.impl.composite,
+                                            llvm_type, gemstone_value->value,
+                                            llvm_value);
+            break;
+        case TypeKindReference:
+            err =
+                new_backend_impl_error(Implementation, gemstone_value->nodePtr,
+                                       "reference cannot be constant value");
+            break;
+        case TypeKindBox:
+            err =
+                new_backend_impl_error(Implementation, gemstone_value->nodePtr,
+                                       "boxes cannot be constant value");
+            break;
+        default:
+            PANIC("invalid value kind: %ld", gemstone_value->type.kind);
+    }
+
+    return err;
+}
+
 BackendError impl_primtive_type(LLVMBackendCompileUnit* unit,
                                 PrimitiveType primtive,
                                 LLVMTypeRef* llvm_type) {
