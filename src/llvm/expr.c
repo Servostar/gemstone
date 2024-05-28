@@ -5,6 +5,90 @@
 #include <llvm/expr.h>
 #include <llvm/types.h>
 
+BackendError impl_bitwise_operation(LLVMBackendCompileUnit* unit,
+                                    LLVMLocalScope* scope,
+                                    LLVMBuilderRef builder,
+                                    Operation* operation,
+                                    LLVMValueRef* llvm_result) {
+    // TODO: resolve lhs and rhs or op
+    LLVMValueRef rhs = NULL;
+    LLVMValueRef lhs = NULL;
+    LLVMValueRef op = NULL;
+
+    if (operation->kind == BitwiseNot) {
+        // single operand
+    } else {
+        // two operands
+    }
+
+    switch (operation->impl.bitwise) {
+        case BitwiseAnd:
+            *llvm_result = LLVMBuildAnd(builder, lhs, rhs, "bitwise and");
+            break;
+        case BitwiseOr:
+            *llvm_result = LLVMBuildOr(builder, lhs, rhs, "bitwise or");
+            break;
+        case BitwiseXor:
+            *llvm_result = LLVMBuildXor(builder, lhs, rhs, "bitwise xor");
+            break;
+        case BitwiseNot:
+            *llvm_result = LLVMBuildNot(builder, rhs, "bitwise not");
+            break;
+    }
+
+    return SUCCESS;
+}
+
+BackendError impl_logical_operation(LLVMBackendCompileUnit* unit,
+                                    LLVMLocalScope* scope,
+                                    LLVMBuilderRef builder,
+                                    Operation* operation,
+                                    LLVMValueRef* llvm_result) {
+    // TODO: resolve lhs and rhs or op
+    LLVMValueRef rhs = NULL;
+    LLVMValueRef lhs = NULL;
+    LLVMValueRef op = NULL;
+
+    if (operation->kind == BitwiseNot) {
+        // single operand
+    } else {
+        // two operands
+    }
+
+    switch (operation->impl.bitwise) {
+        case LogicalAnd:
+            // TODO: convert to either 0 or 1
+            *llvm_result = LLVMBuildAnd(builder, lhs, rhs, "logical and");
+            break;
+        case LogicalOr:
+            *llvm_result = LLVMBuildOr(builder, lhs, rhs, "logical or");
+            break;
+        case LogicalXor:
+            *llvm_result = LLVMBuildXor(builder, lhs, rhs, "logical xor");
+            break;
+        case LogicalNot:
+            *llvm_result = LLVMBuildNot(builder, rhs, "logical not");
+            break;
+    }
+
+    return SUCCESS;
+}
+
+BackendError impl_operation(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
+                            LLVMBuilderRef builder, Operation* operation,
+                            LLVMValueRef* llvm_result) {
+    switch (operation->kind) {
+        case Bitwise:
+            impl_bitwise_operation(unit, scope, builder, operation,
+                                   llvm_result);
+            break;
+        case Logical:
+            impl_logical_operation(unit, scope, builder, operation,
+                                   llvm_result);
+            break;
+    }
+}
+
 BackendError impl_transmute(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
                             LLVMBuilderRef builder, Transmute* transmute,
                             LLVMValueRef* llvm_result) {
@@ -74,7 +158,8 @@ BackendError impl_expr(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
                                 llvm_result);
             break;
         case ExpressionKindOperation:
-
+            err = impl_operation(unit, scope, builder, &expr->impl.operation,
+                                 llvm_result);
             break;
     }
 
