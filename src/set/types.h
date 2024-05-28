@@ -96,6 +96,8 @@ typedef struct BoxAccess_t {
     // list of recursive box accesses
     // contains a list of BoxMembers (each specifying their own type, name and box type)
     GArray* member;
+    // box variable to access
+    Variable* variable;
     AST_NODE_PTR nodePtr;
 } BoxAccess;
 
@@ -263,7 +265,7 @@ typedef struct Variable_t {
     union VariableImplementation {
         VariableDeclaration declaration;
         VariableDefiniton definiton;
-        BoxMember member;
+        BoxAccess member;
     } impl;
     AST_NODE_PTR nodePtr;
 } Variable;
@@ -484,22 +486,8 @@ typedef struct Branch_t {
 // |                 Statements                     |
 // '------------------------------------------------'
 
-typedef enum AssignmentKind_t {
-    // direct access to a variable
-    AssignmentKindVariable,
-    // access to a member of a box
-    // can be nested such as: foo.bar.kee
-    AssignmentKindBoxMember
-} AssignmentKind;
-
-// Can either be a direct variable access or
-// a nested box member access
 typedef struct Assignment_t {
     Variable* variable;
-    AssignmentKind kind;
-    union AssignmentImplementation_t {
-        BoxAccess accees;
-    } impl;
     Expression value;
     AST_NODE_PTR nodePtr;
 } Assignment;
