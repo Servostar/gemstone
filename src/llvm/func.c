@@ -9,6 +9,26 @@
 #include <sys/log.h>
 #include <llvm/func.h>
 
+static LLVMValueRef get_parameter(const LLVMFuncScope* scope, const char* name) {
+    if (g_hash_table_contains(scope->params, name)) {
+        return g_hash_table_lookup(scope->params, name);
+    }
+
+    return NULL;
+}
+
+LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name) {
+    if (g_hash_table_contains(scope->vars, name)) {
+        return g_hash_table_lookup(scope->vars, name);
+    }
+
+    if (scope->parent_scope != NULL) {
+        return get_variable(scope->parent_scope, name);
+    }
+
+    return get_parameter(scope->func_scope, name);
+}
+
 BackendError impl_param_type(LLVMBackendCompileUnit* unit,
                              LLVMGlobalScope* scope, Paramer* param,
                              LLVMTypeRef* llvm_type) {
