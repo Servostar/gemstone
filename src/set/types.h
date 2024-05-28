@@ -484,8 +484,22 @@ typedef struct Branch_t {
 // |                 Statements                     |
 // '------------------------------------------------'
 
+typedef enum AssignmentKind_t {
+    // direct access to a variable
+    AssignmentKindVariable,
+    // access to a member of a box
+    // can be nested such as: foo.bar.kee
+    AssignmentKindBoxMember
+} AssignmentKind;
+
+// Can either be a direct variable access or
+// a nested box member access
 typedef struct Assignment_t {
     Variable* variable;
+    AssignmentKind kind;
+    union AssignmentImplementation_t {
+        BoxAccess accees;
+    } impl;
     Expression value;
     AST_NODE_PTR nodePtr;
 } Assignment;
