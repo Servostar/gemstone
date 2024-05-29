@@ -404,6 +404,8 @@ typedef enum ExpressionKind_t {
 
 typedef struct Expression_t {
     ExpressionKind kind;
+    // type of resulting data
+    Type* result;
     union ExpressionImplementation_t {
         Operation operation;
         TypeCast typecast;
