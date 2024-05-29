@@ -206,6 +206,8 @@ typedef struct FunctionDefinition_t {
     AST_NODE_PTR nodePtr;
     // body of function
     Block body;
+    // name of function
+    const char* name;
 } FunctionDefinition;
 
 typedef struct FunctionDeclaration_t {
