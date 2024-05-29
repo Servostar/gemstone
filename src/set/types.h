@@ -96,6 +96,8 @@ typedef struct BoxAccess_t {
     // list of recursive box accesses
     // contains a list of BoxMembers (each specifying their own type, name and box type)
     GArray* member;
+    // box variable to access
+    Variable* variable;
     AST_NODE_PTR nodePtr;
 } BoxAccess;
 
@@ -265,7 +267,7 @@ typedef struct Variable_t {
     union VariableImplementation {
         VariableDeclaration declaration;
         VariableDefiniton definiton;
-        BoxMember member;
+        BoxAccess member;
     } impl;
     AST_NODE_PTR nodePtr;
 } Variable;
@@ -503,6 +505,7 @@ typedef enum StatementKind_t {
 } StatementKind;
 
 typedef struct Statement_t {
+    StatementKind kind;
     union StatementImplementation {
         FunctionCall call;
         FunctionBoxCall boxCall;
