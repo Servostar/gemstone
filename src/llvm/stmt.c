@@ -87,4 +87,49 @@ BackendError impl_while(LLVMBackendCompileUnit *unit,
     return err;
 }
 
+BackendError impl_func_call(LLVMBackendCompileUnit *unit,
+                            LLVMBuilderRef builder, LLVMLocalScope *scope,
+                            const FunctionCall *call) {
+    BackendError err = SUCCESS;
+
+    GArray *arguments = g_array_new(FALSE, FALSE, sizeof(LLVMValueRef));
+
+    for (size_t i = 0; i < call->expressions->len; i++) {
+        Expression *arg = ((Expression *) call->expressions->data) + i;
+
+        LLVMValueRef llvm_arg = NULL;
+        err = impl_expr(unit, scope, builder, arg, &llvm_arg);
+        if (err.kind != Success) {
+            break;
+        }
+
+        g_array_append_vals(arguments, &llvm_arg, 1);
+    }
+
+    if (err.kind == Success) {
+        LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, "");
+        LLVMTypeRef llvm_func_type = LLVMTypeOf(llvm_func);
+        LLVMBuildCall2(builder, llvm_func_type, llvm_func, (LLVMValueRef *) arguments->data, arguments->len,
+                       "stmt.call");
+    }
+
+    g_array_free(arguments, FALSE);
+
+    return err;
+}
+
+BackendError impl_branch(LLVMBackendCompileUnit *unit,
+                         LLVMBuilderRef builder, LLVMLocalScope *scope,
+                         const Branch *branch) {
+    BackendError err = SUCCESS;
+
+    LLVMBasicBlockRef if_cond_block = LLVMAppendBasicBlockInContext(unit->context, scope->func_scope->llvm_func,
+                                                                       "stmt.branch.cond");
+    // Resolve condition in block to a variable
+    LLVMValueRef cond_result = NULL;
+    impl_expr(unit, scope, builder, &branch->ifBranch.conditon, &cond_result);
+
+    return err;
+}
+
 BackendError impl_stmt(LLVMBackendCompileUnit *unit, Statement *stmt) {}
