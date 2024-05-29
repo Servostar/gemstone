@@ -9,6 +9,21 @@
 #include <sys/log.h>
 #include <llvm/func.h>
 
+LLVMLocalScope* new_local_scope(LLVMLocalScope* parent) {
+    LLVMLocalScope* scope = malloc(sizeof(LLVMLocalScope));
+
+    scope->func_scope = parent->func_scope;
+    scope->vars = g_hash_table_new(g_str_hash, g_str_equal);
+    scope->parent_scope = parent;
+
+    return scope;
+}
+
+void delete_local_scope(LLVMLocalScope* scope) {
+    g_hash_table_destroy(scope->vars);
+    free(scope);
+}
+
 static LLVMValueRef get_parameter(const LLVMFuncScope* scope, const char* name) {
     if (g_hash_table_contains(scope->params, name)) {
         return g_hash_table_lookup(scope->params, name);
@@ -124,7 +139,9 @@ BackendError impl_func(LLVMBackendCompileUnit* unit, LLVMGlobalScope* global_sco
             g_hash_table_insert(func_scope->params, (gpointer) param->name, LLVMGetParam(llvm_func, i));
         }
 
-        // parse function body
+        // TODO: parse function body
+
+        LLVMDisposeBuilder(builder);
 
         // delete function scope GLib structs
         g_hash_table_destroy(func_scope->params);

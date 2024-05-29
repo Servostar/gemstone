@@ -22,6 +22,10 @@ typedef struct LLVMLocalScope_t {
     LLVMLocalScope* parent_scope;
 } LLVMLocalScope;
 
+LLVMLocalScope* new_local_scope(LLVMLocalScope* parent);
+
+void delete_local_scope(LLVMLocalScope*);
+
 LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name);
 
 #endif // LLVM_BACKEND_FUNC_H_
