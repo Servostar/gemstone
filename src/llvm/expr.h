@@ -10,7 +10,8 @@
 #include <llvm/func.h>
 #include <llvm/parser.h>
 
-BackendError impl_expr(LLVMBackendCompileUnit* unit, LLVMLocalScope* scope,
-                       Expression* expr, LLVMValueRef* llvm_result);
+BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                       LLVMBuilderRef builder, Expression *expr,
+                       LLVMValueRef *llvm_result);
 
 #endif  // LLVM_BACKEND_EXPR_H
