@@ -122,6 +122,11 @@ int main(int argc, char *argv[]) {
         print_file_statistics(file);
     }
 
+    if (files.files == NULL) {
+        printf("No input files, nothing to do.\n\n");
+        exit(1);
+    }
+
     print_unit_statistics(&files);
 
     delete_files(&files);
