@@ -74,6 +74,7 @@
 %token KeyFloat
 %token KeySelf
 %token KeyAs
+%token KeyTo
 %token <string> ValInt
 %token <string> Ident
 %token <string> ValFloat 
@@ -130,7 +131,7 @@
 %left '+' '-'
 %left '*' '/'
 %left OpNot OpBitnot
-%left KeyAs
+%left KeyAs KeyTo
 %left '(' ')'
 
 %%
@@ -156,6 +157,7 @@ expr: ValFloat {$$ = AST_new_node(new_loc(), AST_Float, $1);}
     | boxselfaccess{$$ = $1;}
     | typecast{$$ = $1;}
     | reinterpretcast{$$ = $1;}
+    | '(' expr ')' {$$=$2;}
 
 exprlist: expr ',' exprlist {AST_push_node($3, $1);
                              $$ = $3;}
@@ -291,9 +293,9 @@ typecast: expr KeyAs type %prec KeyAs  {AST_NODE_PTR cast = AST_new_node(new_loc
                                         $$ = cast;
                                          DEBUG("Type-Cast"); };
 
-reinterpretcast: '(' type ')' expr { AST_NODE_PTR cast = AST_new_node(new_loc(), AST_Transmute, NULL);
-                                      AST_push_node(cast, $4);
-                                        AST_push_node(cast, $2);
+reinterpretcast: expr KeyTo type %prec KeyTo { AST_NODE_PTR cast = AST_new_node(new_loc(), AST_Transmute, NULL);
+                                      AST_push_node(cast, $1);
+                                        AST_push_node(cast, $3);
                                         $$ = cast;
                                     DEBUG("Reinterpret-Cast"); };
 
