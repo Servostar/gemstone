@@ -10,7 +10,7 @@
 #define LOG_LEVEL_INFORMATION   1
 #define LOG_LEVEL_DEBUG         0
 
-#define LOG_LEVEL LOG_LEVEL_DEBUG
+#define LOG_LEVEL LOG_LEVEL_ERROR
 
 #define LOG_STRING_PANIC       "Critical"
 #define LOG_STRING_FATAL       "Fatal"
