@@ -170,6 +170,17 @@ TokenLocation new_location(unsigned long int line_start, unsigned long int col_s
     return location;
 }
 
+TokenLocation empty_location(void) {
+    TokenLocation location;
+
+    location.line_start = 0;
+    location.line_end = 0;
+    location.col_start = 0;
+    location.col_end = 0;
+
+    return location;
+}
+
 void print_file_statistics(ModuleFile *file) {
     if (file->statistics.info_count + file->statistics.warning_count + file->statistics.error_count < 1) {
         return;

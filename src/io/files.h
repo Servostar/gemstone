@@ -65,6 +65,8 @@ void delete_files(ModuleFileStack *stack);
 TokenLocation new_location(unsigned long int line_start, unsigned long int col_start, unsigned long int line_end,
                            unsigned long int col_end);
 
+TokenLocation empty_location(void);
+
 [[gnu::nonnull(1), gnu::nonnull(2)]]
 void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message);
 

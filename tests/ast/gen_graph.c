@@ -7,15 +7,15 @@
 
 int main(void) {
 
-    struct AST_Node_t* node = AST_new_node(AST_If, NULL);
+    struct AST_Node_t* node = AST_new_node(empty_location(), AST_If, NULL);
 
-    struct AST_Node_t* child = AST_new_node(AST_Add, NULL);
-    AST_push_node(child, AST_new_node(AST_Int, "43"));
-    AST_push_node(child, AST_new_node(AST_Int, "9"));
+    struct AST_Node_t* child = AST_new_node(empty_location(), AST_Add, NULL);
+    AST_push_node(child, AST_new_node(empty_location(), AST_Int, "43"));
+    AST_push_node(child, AST_new_node(empty_location(), AST_Int, "9"));
 
     AST_push_node(node, child);
-    AST_push_node(node, AST_new_node(AST_Expr, NULL));
-    AST_push_node(node, AST_new_node(AST_Expr, NULL));
+    AST_push_node(node, AST_new_node(empty_location(), AST_Expr, NULL));
+    AST_push_node(node, AST_new_node(empty_location(), AST_Expr, NULL));
 
     FILE* out = fopen("ast.gv", "w+");
     // convert this file        ^^^^^^

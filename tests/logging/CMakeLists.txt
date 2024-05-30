@@ -2,12 +2,20 @@ include(CTest)
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
+# ------------------------------------------------ #
+# Setup Glib 2.0                                   #
+# ------------------------------------------------ #
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
+
 # ------------------------------------------------------- #
 # CTEST 1
 # test the default output of the logger
 
 add_executable(logging_output
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
+        ${PROJECT_SOURCE_DIR}/src/sys/col.c
         output.c)
 set_target_properties(logging_output
         PROPERTIES
@@ -23,6 +31,7 @@ add_test(NAME logging_output
 
 add_executable(logging_panic
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
+        ${PROJECT_SOURCE_DIR}/src/sys/col.c
         panic.c)
 set_target_properties(logging_panic
         PROPERTIES
@@ -38,6 +47,7 @@ add_test(NAME logging_panic
 
 add_executable(logging_streams
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
+        ${PROJECT_SOURCE_DIR}/src/sys/col.c
         streams.c)
 set_target_properties(logging_streams
         PROPERTIES
@@ -53,6 +63,7 @@ add_test(NAME logging_streams
 
 add_executable(logging_level
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
+        ${PROJECT_SOURCE_DIR}/src/sys/col.c
         level.c)
 set_target_properties(logging_level
         PROPERTIES
