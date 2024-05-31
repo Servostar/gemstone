@@ -12,6 +12,11 @@ TargetConfig default_target_config() {
     config.print_ast = false;
     config.print_asm = false;
     config.print_ir = false;
+    config.mode = Application;
+    config.archive_directory = "archive";
+    config.archive_directory = "bin";
+    config.optimization_level = 1;
+    config.root_module = NULL;
 
     return config;
 }

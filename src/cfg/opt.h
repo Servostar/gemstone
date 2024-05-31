@@ -19,6 +19,7 @@ typedef struct TargetConfig_t {
     bool print_asm;
     bool print_ir;
     // root module file which imports all submodules
+    // if this is NULL use the first commandline argument as root module
     char* root_module;
     // output directory for binaries
     char* output_directory;
