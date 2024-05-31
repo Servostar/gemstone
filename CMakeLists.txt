@@ -82,6 +82,8 @@ set_target_properties(tomlc99
         OUTPUT_NAME "toml"
         ARCHIVE_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/dep)
 
+include_directories(${PROJECT_SOURCE_DIR}/dep/tomlc99)
+
 # ------------------------------------------------ #
 #  Source                                          #
 # ------------------------------------------------ #
