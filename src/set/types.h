@@ -117,7 +117,7 @@ typedef struct Type_t {
 
 typedef struct Typedefine_t {
     const char* name;
-    Type type;
+    Type *type;
     AST_NODE_PTR nodePtr;
 } Typedefine;
 
@@ -129,7 +129,7 @@ typedef struct Typedefine_t {
  */
 typedef struct TypeValue_t {
     // the type
-    Type type;
+    Type *type;
     // UTF-8 representation of the type's value
     const char* value;
     AST_NODE_PTR nodePtr;
@@ -160,7 +160,7 @@ typedef enum IO_Qualifier_t {
  * 
  */
 typedef struct ParameterDeclaration_t {
-    Type type;
+    Type *type;
     IO_Qualifier qualifier;
     AST_NODE_PTR nodePtr;
 } ParameterDeclaration;
@@ -173,7 +173,7 @@ typedef struct ParameterDefinition_t {
     ParameterDeclaration declaration;
     // value to initalize the declaration with
     // NOTE: type of initializer and declaration MUST be equal
-    Expression initializer;
+    Expression *initializer;
     AST_NODE_PTR nodePtr;
 } ParameterDefinition;
 
@@ -207,7 +207,7 @@ typedef struct FunctionDefinition_t {
     GArray* parameter;
     AST_NODE_PTR nodePtr;
     // body of function
-    Block body;
+    Block *body;
     // name of function
     const char* name;
 } FunctionDefinition;
@@ -239,7 +239,7 @@ typedef enum StorageQualifier_t {
 
 typedef struct VariableDeclaration_t {
     StorageQualifier qualifier;
-    Type type;
+    Type *type;
     AST_NODE_PTR nodePtr;
 } VariableDeclaration;
 
@@ -251,7 +251,7 @@ typedef struct VariableDeclaration_t {
  */
 typedef struct VariableDefiniton_t {
     VariableDeclaration declaration;
-    Expression initializer;
+    Expression *initializer;
     AST_NODE_PTR nodePtr;
 } VariableDefiniton;
 
@@ -286,7 +286,7 @@ typedef struct Variable_t {
  *
  */
 typedef struct TypeCast_t {
-    Type targetType;
+    Type *targetType;
     Expression* operand;
     AST_NODE_PTR nodePtr;
 } TypeCast;
@@ -299,7 +299,7 @@ typedef struct TypeCast_t {
  * 
  */
 typedef struct Transmute_t {
-    Type targetType;
+    Type *targetType;
     Expression* operand;
     AST_NODE_PTR nodePtr;
 } Transmute;
