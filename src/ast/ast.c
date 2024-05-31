@@ -5,7 +5,7 @@
 #include <sys/log.h>
 #include <assert.h>
 
-struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
+struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value) {
   DEBUG("creating new AST node: %d \"%s\"", kind, value);
   assert(kind < AST_ELEMENT_COUNT);
 
@@ -23,6 +23,7 @@ struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value
   node->child_count = 0;
   node->kind = kind;
   node->value = value;
+  node->location = location;
 
   return node;
 }
@@ -33,8 +34,8 @@ void AST_init() {
   DEBUG("initializing global syntax tree...");
 
   INFO("filling lookup table...");
-
   lookup_table[AST_Stmt] = "stmt";
+  lookup_table[AST_Module] = "module";
   lookup_table[AST_Expr] = "expr";
 
   lookup_table[AST_Add] = "+";
@@ -69,9 +70,20 @@ void AST_init() {
   lookup_table[AST_Box] = "box";
   lookup_table[AST_Fun] = "fun";
 
-  lookup_table[AST_Typecast] = "cast";
-  lookup_table[AST_Transmute] = "as";
+  lookup_table[AST_Call] = "funcall";
+  lookup_table[AST_Typecast] = "typecast";
+  lookup_table[AST_Transmute] = "transmute";
   lookup_table[AST_Condition] = "condition";
+  lookup_table[AST_List] = "list";
+  lookup_table[AST_ExprList] = "expr list";
+  lookup_table[AST_ArgList] = "arg list";
+  lookup_table[AST_ParamList] = "param list";
+  lookup_table[AST_StmtList] = "stmt list";
+  lookup_table[AST_IdentList] = "ident list";
+  lookup_table[AST_Type] = "type";
+  lookup_table[AST_Negate] = "-";
+  lookup_table[AST_Parameter] = "parameter";
+  lookup_table[AST_ParamDecl] = "parameter-declaration";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {
@@ -87,7 +99,11 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
     case AST_Ident:
     case AST_Macro:
     case AST_Import:
-    case AST_Call:
+    case AST_Storage:
+    case AST_Typekind:
+    case AST_Sign:
+    case AST_Scale:
+    case AST_Qualifyier:
       string = node->value;
       break;
     default:
@@ -97,6 +113,14 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
   assert(string != NULL);
 
   return string;
+}
+
+static inline unsigned long int min(unsigned long int a, unsigned long int b) {
+    return a > b ? b : a;
+}
+
+static inline unsigned long int max(unsigned long int a, unsigned long int b) {
+    return a > b ? a : b;
 }
 
 void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
@@ -118,6 +142,12 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
   if (owner->children == NULL) {
     PANIC("failed to allocate children array of AST node");
   }
+
+  owner->location.col_end = max(owner->location.col_end, child->location.col_end);
+  owner->location.line_end = max(owner->location.line_end, child->location.line_end);
+
+  owner->location.col_start = min(owner->location.col_start, child->location.col_start);
+  owner->location.line_start = min(owner->location.line_start, child->location.line_start);
 
   assert(owner->children != NULL);
 

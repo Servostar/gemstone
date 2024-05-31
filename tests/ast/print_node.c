@@ -8,7 +8,7 @@ int main(void) {
 
     AST_init();
 
-    const AST_NODE_PTR node = AST_new_node(0, "value");
+    const AST_NODE_PTR node = AST_new_node(empty_location(), 0, "value");
 
     for (size_t i = 0; i < AST_ELEMENT_COUNT; i++) {
         // set kind

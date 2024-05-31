@@ -3,9 +3,11 @@
 //
 
 #include "sys/log.h"
+#include <sys/col.h>
 
 int main(void) {
     log_init();
+    col_init();
 
     DEBUG("logging some debug...");
     INFO("logging some info...");

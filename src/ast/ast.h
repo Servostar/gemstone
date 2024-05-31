@@ -3,6 +3,7 @@
 #define _AST_H_
 
 #include <stdio.h>
+#include <io/files.h>
 
 /**
  * @brief The type of a AST node
@@ -12,6 +13,7 @@
  */
 enum AST_SyntaxElement_t {
   AST_Stmt = 0,
+  AST_Module,
   AST_Expr,
   // Literals
   AST_Int,
@@ -58,7 +60,22 @@ enum AST_SyntaxElement_t {
   AST_Fun,
   AST_Import,
   // amount of variants
-  // in this enum
+  // in this enums
+  AST_List,
+  AST_ExprList,
+  AST_ArgList,
+  AST_ParamList,
+  AST_StmtList,
+  AST_IdentList,
+  AST_Storage,
+  AST_Type,
+  AST_Typekind,
+  AST_Sign,
+  AST_Scale,
+  AST_Negate,
+  AST_Parameter,
+  AST_Qualifyier,
+  AST_ParamDecl,
   AST_ELEMENT_COUNT
 };
 
@@ -77,6 +94,8 @@ struct AST_Node_t {
   enum AST_SyntaxElement_t kind;
   // optional value: integer literal, string literal, ...
   const char* value;
+
+  TokenLocation location;
 
   // number of child nodes ownd by this node
   // length of children array
@@ -117,7 +136,7 @@ const char* AST_node_to_string(const struct AST_Node_t* node);
 [[maybe_unused]]
 [[nodiscard("pointer must be freed")]]
 [[gnu::returns_nonnull]]
-struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value);
+struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value);
 
 /**
  * @brief Deallocate this node and all of its children.

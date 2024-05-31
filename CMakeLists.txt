@@ -61,10 +61,17 @@ set(YACC_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.y)
 set(YACC_GENERATED_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.tab.c)
 
 add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
-        COMMAND yacc
+        COMMAND bison
         ARGS -Wno-yacc -Wcounterexamples -d -o ${YACC_GENERATED_SOURCE_FILE} ${YACC_SOURCE_FILE}
         COMMENT "generate C source file for parser"
         VERBATIM)
+
+# ------------------------------------------------ #
+# Setup Glib 2.0                                   #
+# ------------------------------------------------ #
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 
 # ------------------------------------------------ #
 #  TOML-C99                                        #
@@ -84,9 +91,13 @@ set_target_properties(tomlc99
 
 include_directories(${PROJECT_SOURCE_DIR}/dep/tomlc99)
 
+
 # ------------------------------------------------ #
 #  Source                                          #
 # ------------------------------------------------ #
+
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(PRIVATE ${GLIB_INCLUDE_DIRS})
 
 file(GLOB_RECURSE SOURCE_FILES src/*.c)
 
@@ -94,7 +105,7 @@ file(GLOB_RECURSE SOURCE_FILES src/*.c)
 if (MSVC)
     set(FLAGS /Wall /W3 /permissive)
 else()
-    set(FLAGS -Wall -Wextra -Wconversion -Wpedantic)
+    set(FLAGS -Wall -Wextra -Wpedantic)
 endif()
 
 # ------------------------------------------------ #
@@ -110,6 +121,8 @@ set_target_properties(release
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
+
+target_link_libraries(release PkgConfig::GLIB)
 
 target_link_libraries(release tomlc99)
 
@@ -145,6 +158,8 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
+target_link_libraries(debug PkgConfig::GLIB)
+
 target_link_libraries(debug tomlc99)
 
 if (MSVC)
@@ -175,6 +190,8 @@ set_target_properties(check
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
+
+target_link_libraries(check PkgConfig::GLIB)
 
 target_link_libraries(check tomlc99)
 

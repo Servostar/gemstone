@@ -52,6 +52,7 @@
 "float" {DEBUG("\"%s\" tokenized with \'KeyFloat\'", yytext); return(KeyFloat);};
 "self" {DEBUG("\"%s\" tokenized with \'KeySelf\'", yytext); return(KeySelf);};
 "as" {DEBUG("\"%s\" tokenized with \'KeyAs'", yytext); return (KeyAs);};
+"to" {DEBUG("\"%s\" tokenized with \'KeyTo'", yytext); return (KeyTo);};
 "short" {DEBUG("\"%s\" tokenized with \'KeyShort\'", yytext); return(KeyShort);};
 "long" {DEBUG("\"%s\" tokenized with \'KeyLong\'", yytext); return(KeyLong);};
 "half" {DEBUG("\"%s\" tokenized with \'KeyHalf\'", yytext); return(KeyHalf);};
@@ -91,8 +92,17 @@
 [0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = strdup(yytext); return(ValInt); };
 [0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = strdup(yytext); return(ValFloat);};
 [a-zA-Z_0-9]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = strdup(yytext); return(Ident); };
-\"([^\"\n])*\" {DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
-\"\"\"([^\"\n]|\\\n)*\"\"\" {DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = strdup(yytext); return(ValMultistr);};
+
+\"([^\"\n])*\" {
+    yytext = yytext +1;
+    yytext[yyleng - 2] = 0;
+    
+    DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
+\"\"\"([^\"\n]|\\\n)*\"\"\" {
+    yytext = yytext +3;
+    yytext[yyleng - 4] = 0;
+
+    DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = strdup(yytext); return(ValMultistr);};
 [ \r\t] { /* ignore whitespace */ };
 . { return yytext[0]; /* passthrough unknown token, let parser handle the error */ };
 %%
