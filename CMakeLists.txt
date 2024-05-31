@@ -27,6 +27,8 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(GEMSTONE_TEST_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(GEMSTONE_BINARY_DIR ${PROJECT_SOURCE_DIR}/bin)
 
+add_compile_definitions(GSC_VERSION="${PROJECT_VERSION}")
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -143,6 +145,9 @@ target_compile_options(release PUBLIC ${FLAGS} ${RELEASE_FLAGS})
 
 # add src directory as include path
 target_include_directories(release PUBLIC src)
+
+# disable assertions
+target_compile_definitions(release PUBLIC NDEBUG="1")
 
 # ------------------------------------------------ #
 #  Target DEBUG                                    #

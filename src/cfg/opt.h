@@ -8,6 +8,13 @@
 #include <toml.h>
 #include <glib.h>
 
+#define MAX_TARGETS_PER_PROJECT 100
+#define PROJECT_CONFIG_FILE "build.toml"
+
+#define PROJECT_OK 0
+#define PROJECT_TOML_ERR 1
+#define PROJECT_SEMANTIC_ERR 2
+
 typedef enum TargetCompilationMode_t {
     Application,
     Library
@@ -42,13 +49,21 @@ typedef struct ProjectConfig_t {
     char* license;
     // list of authors
     GArray* authors;
-    GArray* targets;
+    GHashTable* targets;
 } ProjectConfig;
 
-TargetConfig default_target_config();
+TargetConfig* default_target_config();
 
-TargetConfig default_target_config_from_args(int argc, char* argv[]);
+ProjectConfig* default_project_config();
+
+TargetConfig* default_target_config_from_args(int argc, char* argv[]);
+
+int load_project_config(ProjectConfig *config);
 
 void print_help(void);
+
+void delete_project_config(ProjectConfig* config);
+
+void delete_target_config(TargetConfig*);
 
 #endif //GEMSTONE_OPT_H
