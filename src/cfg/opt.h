@@ -42,6 +42,7 @@ typedef struct ProjectConfig_t {
     char* license;
     // list of authors
     GArray* authors;
+    GArray* targets;
 } ProjectConfig;
 
 TargetConfig default_target_config();
