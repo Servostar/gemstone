@@ -8,11 +8,26 @@
 #include <toml.h>
 #include <glib.h>
 
+typedef enum TargetCompilationMode_t {
+    Application,
+    Library
+} TargetCompilationMode;
+
 typedef struct TargetConfig_t {
     char* name;
     bool print_ast;
     bool print_asm;
     bool print_ir;
+    // root module file which imports all submodules
+    char* root_module;
+    // output directory for binaries
+    char* output_directory;
+    // output directory for intermediate representations (LLVM-IR, Assembly, ...)
+    char* archive_directory;
+    // mode of compilation
+    TargetCompilationMode mode;
+    // number between 1 and 3
+    int optimization_level;
 } TargetConfig;
 
 typedef struct ProjectConfig_t {

@@ -28,6 +28,10 @@ TargetConfig default_target_config_from_args(int argc, char *argv[]) {
             config.print_asm = true;
         } else if (strcmp(option, "--print-ir") == 0) {
             config.print_ir = true;
+        } else if (strcmp(option, "--mode=app") == 0) {
+            config.mode = Application;
+        } else if (strcmp(option, "--mode=lib") == 0) {
+            config.mode = Library;
         }
     }
 
@@ -40,9 +44,10 @@ void print_help(void) {
             "Compile file(s): gsc <options> [files]",
             "Build project (build.toml): gsc [directory] [target]|all",
             "Options:",
-            "    --print-ast    print resulting abstract syntax tree to a file",
-            "    --print-asm    print resulting assembly language to a file",
-            "    --print-ir     print resulting LLVM-IR to a file"
+            "    --print-ast      print resulting abstract syntax tree to a file",
+            "    --print-asm      print resulting assembly language to a file",
+            "    --print-ir       print resulting LLVM-IR to a file",
+            "    --mode=[app|lib] set the compilation mode to either application or library"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
