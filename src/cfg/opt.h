@@ -6,6 +6,7 @@
 #define GEMSTONE_OPT_H
 
 #include <toml.h>
+#include <glib.h>
 
 typedef struct TargetConfig_t {
     char* name;
@@ -21,8 +22,10 @@ typedef struct ProjectConfig_t {
     char* desc;
     // version
     char* version;
+    // license
+    char* license;
     // list of authors
-    char** authors;
+    GArray* authors;
 } ProjectConfig;
 
 TargetConfig default_target_config();

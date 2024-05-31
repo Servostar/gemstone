@@ -4,7 +4,6 @@
 
 #include <cfg/opt.h>
 #include <string.h>
-#include <stdlib.h>
 
 TargetConfig default_target_config() {
     TargetConfig config;
@@ -74,19 +73,30 @@ static int parse_project_table(ProjectConfig *config, toml_table_t *project_tabl
     // author names
     toml_array_t *authors = toml_array_in(project_table, "authors");
     if (authors) {
-        unsigned int len = 0;
-        config->authors = malloc(sizeof(const char *) * 2);
+        config->authors = g_array_new(FALSE, FALSE, sizeof(char*));
 
         for (int i = 0;; i++) {
             toml_datum_t author = toml_string_at(authors, i);
             if (!author.ok)
                 break;
 
-            char** new_authors = realloc(config->authors, sizeof(const char *) * ++len);
-            config->authors = new_authors;
-            config->authors[len] = author.u.s;
+            g_array_append_val(config->authors, author.u.s);
         }
     }
+
+    // project description
+    toml_datum_t description = toml_string_in(project_table, "description");
+    if (description.ok) {
+        config->desc = description.u.s;
+    }
+
+    // project license
+    toml_datum_t license = toml_string_in(project_table, "license");
+    if (license.ok) {
+        config->license = license.u.s;
+    }
+
+    return PROJECT_OK;
 }
 
 int load_project_config(ProjectConfig *config) {
