@@ -32,7 +32,7 @@ static size_t compile_file_to_ast(AST_NODE_PTR ast, ModuleFile *file) {
 
     if (file->handle == NULL) {
         INFO("unable to open file: %s", file->path);
-        printf("Cannot open file %s: %s\n", file->path, strerror(errno));
+        print_message(Error, "Cannot open file %s: %s", file->path, strerror(errno));
         return 1;
     }
 
@@ -96,18 +96,20 @@ void setup(void) {
 }
 
 void build_target(ModuleFileStack *unit, TargetConfig *target) {
-    printf("Compiling file: %s\n\n", target->root_module);
+    print_message(Info, "Compiling file: %s", target->root_module);
 
-    TokenLocation location = {
-            .line_start = 0,
-            .line_end = 0,
-            .col_start = 0,
-            .col_end = 0
-    };
+    TokenLocation location = new_location(0,0,0,0);
     AST_NODE_PTR ast = AST_new_node(location, AST_Module, NULL);
     ModuleFile *file = push_file(unit, target->root_module);
 
     if (compile_file_to_ast(ast, file) == EXIT_SUCCESS) {
+
+
+
+        if (target->print_ast) {
+
+        }
+
         // TODO: parse AST to semantic values
         // TODO: backend codegen
     }
@@ -123,7 +125,7 @@ void compile_file(ModuleFileStack *unit, int argc, char *argv[]) {
     TargetConfig *target = default_target_config_from_args(argc, argv);
 
     if (target->root_module == NULL) {
-        printf("No input file specified\n");
+        print_message(Error, "No input file specified.");
         delete_target_config(target);
         return;
     }
@@ -133,69 +135,68 @@ void compile_file(ModuleFileStack *unit, int argc, char *argv[]) {
     delete_target_config(target);
 }
 
-void build_project_targets(ModuleFileStack *unit, ProjectConfig *config, const char *filter) {
-    if (strcmp(filter, "all") == 0) {
+void build_project_targets(ModuleFileStack *unit, ProjectConfig *config, int argc, char *argv[]) {
+    if (argc == 1 && strcmp(argv[0], "all") == 0) {
         GHashTableIter iter;
 
         g_hash_table_iter_init(&iter, config->targets);
 
-        char* key;
-        TargetConfig* val;
+        char *key;
+        TargetConfig *val;
         while (g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &val)) {
             build_target(unit, val);
         }
-    } else if (g_hash_table_contains(config->targets, filter)) {
-        build_target(unit, g_hash_table_lookup(config->targets, filter));
+    } else {
+        for (int i = 0; i < argc; i++) {
+            char *target_name = argv[i];
+            if (g_hash_table_contains(config->targets, target_name)) {
+                build_target(unit, g_hash_table_lookup(config->targets, target_name));
+            }
+        }
     }
 }
 
 void build_project(ModuleFileStack *unit, int argc, char *argv[]) {
-    if (argc >= 1) {
-        ProjectConfig* config = default_project_config();
-        int err = load_project_config(config);
-
-        if (err == PROJECT_OK) {
-            if (argc == 1) {
-                build_project_targets(unit, config, "all");
-            } else {
-                build_project_targets(unit, config, argv[0]);
-            }
-        }
-
-        delete_project_config(config);
-
-    } else {
-        printf("Expected 1 target to run\n");
+    if (argc <= 0) {
+        print_message(Error, "No targets specified.");
+        return;
     }
+
+    ProjectConfig *config = default_project_config();
+    int err = load_project_config(config);
+
+    if (err == PROJECT_OK) {
+        build_project_targets(unit, config, argc, argv);
+    }
+
+    delete_project_config(config);
 }
 
 void configure_run_mode(int argc, char *argv[]) {
-    if (argc > 1) {
-
-        ModuleFileStack files;
-        files.files = NULL;
-
-        if (strcmp(argv[1], "build") == 0) {
-            build_project(&files, argc - 2, &argv[2]);
-        } else if (strcmp(argv[1], "compile") == 0) {
-            compile_file(&files, argc - 2, &argv[2]);
-        } else {
-            printf("invalid mode of operation\n");
-        }
-
-        if (files.files == NULL) {
-            printf("No input files, nothing to do.\n\n");
-            exit(1);
-        }
-
-        print_unit_statistics(&files);
-        delete_files(&files);
-
+    if (argc <= 0) {
+        INFO("no arguments provided");
+        print_help();
         return;
     }
-    INFO("no arguments provided");
 
-    print_help();
+    ModuleFileStack files;
+    files.files = NULL;
+
+    if (strcmp(argv[0], "build") == 0) {
+        build_project(&files, argc - 1, &argv[1]);
+    } else if (strcmp(argv[0], "compile") == 0) {
+        compile_file(&files, argc - 1, &argv[1]);
+    } else {
+        print_message(Error, "Invalid mode of operation. Rerun with --help.");
+    }
+
+    if (files.files == NULL) {
+        print_message(Error, "No input files, nothing to do.");
+        exit(1);
+    }
+
+    print_unit_statistics(&files);
+    delete_files(&files);
 }
 
 int main(int argc, char *argv[]) {
@@ -203,9 +204,9 @@ int main(int argc, char *argv[]) {
     setup();
     atexit(close_file);
 
-    printf("running GSC version %s\n", GSC_VERSION);
+    print_message(Info, "running GSC version %s", GSC_VERSION);
 
-    configure_run_mode(argc, argv);
+    configure_run_mode(argc - 1, &argv[1]);
 
     return 0;
 }

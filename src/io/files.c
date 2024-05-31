@@ -217,7 +217,11 @@ void print_unit_statistics(ModuleFileStack *file_stack) {
         stats.error_count += file->statistics.error_count;
     }
 
-    printf("%d files generated ", file_stack->files->len);
+    if (stats.info_count + stats.warning_count + stats.error_count < 1) {
+        return;
+    }
+
+    printf("%d file(s) generated ", file_stack->files->len);
 
     if (stats.info_count > 0) {
         printf("%ld notice(s) ", stats.info_count);
@@ -232,4 +236,32 @@ void print_unit_statistics(ModuleFileStack *file_stack) {
     }
 
     printf("\n\n");
+}
+
+void print_message(Message kind, const char *fmt, ...) {
+    const char *accent_color = RESET;
+    const char *kind_text = "unknown";
+    switch (kind) {
+        case Info:
+            kind_text = "info";
+            accent_color = CYAN;
+            break;
+        case Warning:
+            kind_text = "warning";
+            accent_color = YELLOW;
+            break;
+        case Error:
+            kind_text = "error";
+            accent_color = RED;
+            break;
+    }
+
+    va_list args;
+    va_start(args, fmt);
+
+    printf("%s%s:%s ", accent_color, kind_text, RESET);
+    vprintf(fmt, args);
+    printf("\n\n");
+
+    va_end(args);
 }

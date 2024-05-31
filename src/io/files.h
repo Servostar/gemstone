@@ -70,6 +70,9 @@ TokenLocation empty_location(void);
 [[gnu::nonnull(1), gnu::nonnull(2)]]
 void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message);
 
+[[gnu::nonnull(2)]]
+void print_message(Message kind, const char *fmt, ...);
+
 [[gnu::nonnull(1)]]
 void print_file_statistics(ModuleFile *file);
 

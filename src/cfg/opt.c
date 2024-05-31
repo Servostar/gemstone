@@ -44,7 +44,7 @@ TargetConfig* default_target_config_from_args(int argc, char *argv[]) {
         } else if (strcmp(option, "--mode=lib") == 0) {
             config->mode = Library;
         } else {
-            config->root_module = option;
+            config->root_module = strdup(option);
         }
     }
 
