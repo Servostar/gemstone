@@ -67,6 +67,22 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
         VERBATIM)
 
 # ------------------------------------------------ #
+#  TOML-C99                                        #
+# ------------------------------------------------ #
+
+add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
+        COMMAND git
+        ARGS submodule update --init --recursive --checkout
+        COMMENT "checkout dependency TOML-C99"
+        VERBATIM)
+
+add_library(tomlc99 ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c)
+set_target_properties(tomlc99
+        PROPERTIES
+        OUTPUT_NAME "toml"
+        ARCHIVE_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/dep)
+
+# ------------------------------------------------ #
 #  Source                                          #
 # ------------------------------------------------ #
 
@@ -92,6 +108,8 @@ set_target_properties(release
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
+
+target_link_libraries(release tomlc99)
 
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
@@ -125,6 +143,8 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
+target_link_libraries(debug tomlc99)
+
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
 else()
@@ -153,6 +173,8 @@ set_target_properties(check
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
+
+target_link_libraries(check tomlc99)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)
