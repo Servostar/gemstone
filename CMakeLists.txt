@@ -76,7 +76,7 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
-    
+
 # ------------------------------------------------ #
 #  Source                                          #
 # ------------------------------------------------ #
