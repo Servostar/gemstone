@@ -401,7 +401,8 @@ typedef enum ExpressionKind_t {
     ExpressionKindOperation,
     ExpressionKindTypeCast,
     ExpressionKindTransmute,
-    ExpressionKindConstant
+    ExpressionKindConstant,
+    ExpressionKindVariable
 } ExpressionKind;
 
 typedef struct Expression_t {

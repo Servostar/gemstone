@@ -127,7 +127,7 @@ StorageQualifier Qualifier_from_string(const char *str) {
     PANIC("Provided string is not a storagequalifier: %s", str);
 }
 
-Variable **create_decl(AST_NODE_PTR currentNode){
+Variable **createDecl(AST_NODE_PTR currentNode){
     DEBUG("create declaration");
     Variable **variables = malloc(currentNode->children[currentNode->child_count -1]->child_count * sizeof(Variable));
 
@@ -189,8 +189,75 @@ int fillTablesWithVars(GHashTable *variableTable,GHashTable *currentScope , Vari
     return 0;
 }
 
+Variable **createDef(AST_NODE_PTR currentNode){
+
+}
 
 
+
+TypeValue createTypeValue(AST_NODE_PTR currentNode){
+    TypeValue value;
+    Type *type = malloc(sizeof(Type));
+    value.type = type;
+    type->kind = TypeKindPrimitive;
+    type->nodePtr = currentNode;
+
+    switch (currentNode->kind) {
+   
+        case AST_Int:
+            type->impl.primitive = Int;
+        case AST_Float:
+            type->impl.primitive = Int;
+        default:
+        PANIC("Node is not an expression but from kind: %i", currentNode->kind);
+            break;
+        }
+    
+    value.nodePtr = currentNode;
+    value.value = currentNode->value;
+    return value;
+}
+
+Expression *createExpression(AST_NODE_PTR currentNode){
+    Expression *expression = malloc(sizeof(Expression));
+    
+    switch(currentNode->kind){
+    
+    case AST_Int:
+    case AST_Float:
+        expression->kind = ExpressionKindConstant;
+        expression->impl.constant = createTypeValue(currentNode);
+
+    case AST_String:
+        //TODO
+    case AST_Ident:
+
+    case AST_Add:
+    case AST_Sub:
+    case AST_Mul:
+    case AST_Div:
+    case AST_Negate:
+
+    case AST_Eq:
+    case AST_Less:
+    case AST_Greater:
+
+    case AST_BoolAnd:
+    case AST_BoolNot:
+    case AST_BoolOr:
+    case AST_BoolXor:
+
+    case AST_BitAnd:
+    case AST_BitOr:
+    case AST_BitXor:
+    case AST_BitNot:
+
+
+    default:
+    PANIC("Node is not an expression but from kind: %i", currentNode->kind);
+        break;
+    }
+}
 
 Module *create_set(AST_NODE_PTR currentNode){
     DEBUG("create root Module");
@@ -229,7 +296,7 @@ Module *create_set(AST_NODE_PTR currentNode){
         switch(currentNode->children[i]->kind){
             
         case AST_Decl:
-            if (1 == fillTablesWithVars(variables,globalscope,create_decl(currentNode->children[i]) ,currentNode->children[i]->children[currentNode->children[i]->child_count -1]->child_count)){
+            if (1 == fillTablesWithVars(variables,globalscope,createDecl(currentNode->children[i]) ,currentNode->children[i]->children[currentNode->children[i]->child_count -1]->child_count)){
                 //TODO behandlung, wenn var schon existiert
                 DEBUG("var already exists");
                 break;
@@ -237,6 +304,12 @@ Module *create_set(AST_NODE_PTR currentNode){
             DEBUG("filled successfull the module and scope with vars");
             break;
         case AST_Def:
+            if (1 == fillTablesWithVars(variables,globalscope,createDef(currentNode->children[i]) ,currentNode->children[i]->children[currentNode->children[i]->child_count -1]->child_count)){
+                //TODO behandlung, wenn var schon existiert
+                DEBUG("var already exists");
+                break;
+            }
+            DEBUG("filled successfull the module and scope with vars");
         case AST_Box:
         case AST_Fun:
         case AST_Import:
