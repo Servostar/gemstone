@@ -79,6 +79,8 @@ pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 #  TOML-C99                                        #
 # ------------------------------------------------ #
 
+execute_process(COMMAND git submodule init -- dep/tomlc99)
+
 add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
         COMMAND git
         ARGS submodule update --init --recursive --checkout

@@ -5,19 +5,20 @@
 #include <cfg/opt.h>
 #include <string.h>
 #include <sys/log.h>
+#include <io/files.h>
 
 TargetConfig* default_target_config() {
     DEBUG("generating default target config...");
 
     TargetConfig* config = malloc(sizeof(TargetConfig));
 
-    config->name = NULL;
+    config->name = strdup("out");
     config->print_ast = false;
     config->print_asm = false;
     config->print_ir = false;
     config->mode = Application;
-    config->archive_directory = NULL;
-    config->archive_directory = NULL;
+    config->archive_directory = strdup("archive");
+    config->output_directory = strdup("bin");
     config->optimization_level = 1;
     config->root_module = NULL;
 
@@ -43,8 +44,10 @@ TargetConfig* default_target_config_from_args(int argc, char *argv[]) {
             config->mode = Application;
         } else if (strcmp(option, "--mode=lib") == 0) {
             config->mode = Library;
-        } else {
+        } else if (config->root_module == NULL) {
             config->root_module = strdup(option);
+        } else {
+            print_message(Warning, "Got more than one file to compile, using first by ignoring others.");
         }
     }
 
@@ -185,7 +188,7 @@ static int parse_targets(ProjectConfig *config, toml_table_t *root) {
 
     toml_table_t *targets = toml_table_in(root, "target");
     if (targets == NULL) {
-        printf("Project has no targets\n");
+        print_message(Warning, "Project has no targets");
         return PROJECT_SEMANTIC_ERR;
     }
 
@@ -209,7 +212,7 @@ int load_project_config(ProjectConfig *config) {
 
     FILE *config_file = fopen(PROJECT_CONFIG_FILE, "r");
     if (config_file == NULL) {
-        printf("Cannot open file %s: %s\n", PROJECT_CONFIG_FILE, strerror(errno));
+        print_message(Error, "Cannot open file %s: %s", PROJECT_CONFIG_FILE, strerror(errno));
         ERROR("project file not found");
         return PROJECT_TOML_ERR;
     }
@@ -220,17 +223,17 @@ int load_project_config(ProjectConfig *config) {
     fclose(config_file);
 
     if (!conf) {
-        printf("Invalid project configuration: %s\n\n", err_buf);
+        print_message(Error, "Invalid project configuration: %s", err_buf);
         return PROJECT_SEMANTIC_ERR;
     }
 
     toml_table_t *project = toml_table_in(conf, "project");
-    if (project) {
-        if (parse_project_table(config, project) == PROJECT_OK) {
-            return parse_targets(config, conf);
-        }
-    } else {
-        printf("Invalid project configuration: missing project table\n\n");
+    if (!project) {
+        print_message(Error, "Invalid project configuration: missing project table.");
+    }
+
+    if (parse_project_table(config, project) == PROJECT_OK) {
+        return parse_targets(config, conf);
     }
 
     toml_free(conf);

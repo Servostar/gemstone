@@ -95,6 +95,12 @@ void setup(void) {
     DEBUG("finished starting up gemstone...");
 }
 
+static void setup_target_environment(const TargetConfig* target) {
+    if (target->output_directory) {
+        
+    }
+}
+
 void build_target(ModuleFileStack *unit, TargetConfig *target) {
     print_message(Info, "Compiling file: %s", target->root_module);
 
@@ -103,8 +109,7 @@ void build_target(ModuleFileStack *unit, TargetConfig *target) {
     ModuleFile *file = push_file(unit, target->root_module);
 
     if (compile_file_to_ast(ast, file) == EXIT_SUCCESS) {
-
-
+        setup_target_environment(target);
 
         if (target->print_ast) {
 
