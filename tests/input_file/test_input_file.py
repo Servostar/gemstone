@@ -12,7 +12,7 @@ def check_accept():
 
     test_file_name = sys.argv[1]
 
-    p = subprocess.run(["./gsc", test_file_name], capture_output=True, text=True)
+    p = subprocess.run(["./gsc", "compile", test_file_name], capture_output=True, text=True)
 
     assert p.returncode == 0
 
@@ -22,7 +22,7 @@ def check_abort():
 
     logging.basicConfig(level=logging.INFO)
 
-    p = subprocess.run("./gsc", capture_output=True, text=True)
+    p = subprocess.run(["./gsc", "compile"], capture_output=True, text=True)
 
     assert p.returncode == 1
 

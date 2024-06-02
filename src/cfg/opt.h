@@ -52,11 +52,18 @@ typedef struct ProjectConfig_t {
     GHashTable* targets;
 } ProjectConfig;
 
+typedef struct Option_t {
+    int index;
+    const char* string;
+    const char* value;
+    bool is_opt;
+} Option;
+
 TargetConfig* default_target_config();
 
 ProjectConfig* default_project_config();
 
-TargetConfig* default_target_config_from_args(int argc, char* argv[]);
+TargetConfig* default_target_config_from_args();
 
 int load_project_config(ProjectConfig *config);
 
@@ -65,5 +72,17 @@ void print_help(void);
 void delete_project_config(ProjectConfig* config);
 
 void delete_target_config(TargetConfig*);
+
+void parse_options(int argc, char* argv[]);
+
+[[gnu::nonnull(1)]]
+bool is_option_set(const char* option);
+
+[[gnu::nonnull(1)]]
+const Option* get_option(const char* option);
+
+[[gnu::nonnull(1)]]
+[[nodiscard("must be freed")]]
+GArray* get_non_options_after(const char* command);
 
 #endif //GEMSTONE_OPT_H

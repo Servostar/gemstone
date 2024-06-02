@@ -6,6 +6,84 @@
 #include <string.h>
 #include <sys/log.h>
 #include <io/files.h>
+#include <assert.h>
+
+static GHashTable* args = NULL;
+
+static void clean(void) {
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, args);
+
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        free(value);
+    }
+
+    g_hash_table_destroy(args);
+}
+
+void parse_options(int argc, char* argv[]) {
+    args = g_hash_table_new(g_str_hash, g_str_equal);
+
+    atexit(clean);
+
+    for (int i = 0; i < argc; i++) {
+        Option* option = malloc(sizeof(Option));
+        option->is_opt = g_str_has_prefix(argv[i], "--");
+        option->string = argv[i] + (option->is_opt ? 2 : 0);
+        option->index = i;
+        option->value = NULL;
+
+        char* equals = strchr(argv[i], '=');
+        if (equals != NULL) {
+            option->value = equals;
+        }
+
+        g_hash_table_insert(args, (gpointer) option->string, (gpointer) option);
+    }
+}
+
+bool is_option_set(const char* option) {
+    assert(option != NULL);
+    assert(args != NULL);
+    return g_hash_table_contains(args, option);
+}
+
+const Option* get_option(const char* option) {
+    if (g_hash_table_contains(args, option)) {
+        return g_hash_table_lookup(args, option);
+    }
+
+    return NULL;
+}
+
+GArray* get_non_options_after(const char* command) {
+    const Option* command_option = get_option(command);
+
+    if (command_option == NULL) {
+        return NULL;
+    }
+
+    GArray* array = g_array_new(FALSE, FALSE, sizeof(const char*));
+
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, args);
+
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        Option* option = (Option*) value;
+        if (!option->is_opt && command_option->index < option->index) {
+            g_array_append_val(array, option->string);
+        }
+    }
+
+    if (array->len == 0) {
+        g_array_free(array, FALSE);
+        return NULL;
+    }
+
+    return array;
+}
 
 TargetConfig* default_target_config() {
     DEBUG("generating default target config...");
@@ -25,30 +103,42 @@ TargetConfig* default_target_config() {
     return config;
 }
 
-TargetConfig* default_target_config_from_args(int argc, char *argv[]) {
+TargetConfig* default_target_config_from_args() {
     DEBUG("generating default target from command line...");
 
     TargetConfig* config = default_target_config();
 
-    for (int i = 0; i < argc; i++) {
-        DEBUG("processing argument: %ld %s", i, argv[i]);
-        char *option = argv[i];
+    if (is_option_set("print-ast")) {
+        config->print_ast = true;
+    } else if (is_option_set("print-asm")) {
+        config->print_asm = true;
+    } else if (is_option_set("print-ir")) {
+        config->print_ir = true;
+    } else if (is_option_set("mode")) {
+        const Option* opt = get_option("mode");
 
-        if (strcmp(option, "--print-ast") == 0) {
-            config->print_ast = true;
-        } else if (strcmp(option, "--print-asm") == 0) {
-            config->print_asm = true;
-        } else if (strcmp(option, "--print-ir") == 0) {
-            config->print_ir = true;
-        } else if (strcmp(option, "--mode=app") == 0) {
-            config->mode = Application;
-        } else if (strcmp(option, "--mode=lib") == 0) {
-            config->mode = Library;
-        } else if (config->root_module == NULL) {
-            config->root_module = strdup(option);
-        } else {
-            print_message(Warning, "Got more than one file to compile, using first by ignoring others.");
+        if (opt->value != NULL) {
+            if (strcmp(opt->value, "app") == 0) {
+                config->mode = Application;
+            } else if (strcmp(opt->value, "lib") == 0) {
+                config->mode = Library;
+            } else {
+                print_message(Warning, "Invalid compilation mode: %s", opt->value);
+            }
         }
+    }
+
+    GArray* files = get_non_options_after("compile");
+
+    if (files == NULL) {
+        print_message(Error, "No input file provided.");
+    } else {
+
+        if (files->len > 1) {
+            print_message(Warning, "Got more than one file to compile, using first, ignoring others.");
+        }
+
+        config->root_module = strdup( ((char**) files->data) [0]);
     }
 
     return config;
@@ -66,7 +156,9 @@ void print_help(void) {
             "    --print-ast      print resulting abstract syntax tree to a file",
             "    --print-asm      print resulting assembly language to a file",
             "    --print-ir       print resulting LLVM-IR to a file",
-            "    --mode=[app|lib] set the compilation mode to either application or library"
+            "    --mode=[app|lib] set the compilation mode to either application or library",
+            "    --verbose        print logs with level information or higher",
+            "    --debug          print debug logs (if not disabled at compile time)"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {

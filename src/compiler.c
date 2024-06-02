@@ -160,10 +160,10 @@ static void build_target(ModuleFileStack *unit, TargetConfig *target) {
  * @param argc
  * @param argv
  */
-static void compile_file(ModuleFileStack *unit, int argc, char *argv[]) {
+static void compile_file(ModuleFileStack *unit) {
     INFO("compiling basic files...");
 
-    TargetConfig *target = default_target_config_from_args(argc, argv);
+    TargetConfig *target = default_target_config_from_args();
 
     if (target->root_module == NULL) {
         print_message(Error, "No input file specified.");
@@ -180,11 +180,9 @@ static void compile_file(ModuleFileStack *unit, int argc, char *argv[]) {
  * @brief Build all project targets specified by the command line arguments.
  * @param unit
  * @param config
- * @param argc
- * @param argv
  */
-static void build_project_targets(ModuleFileStack *unit, ProjectConfig *config, int argc, char *argv[]) {
-    if (argc == 1 && strcmp(argv[0], "all") == 0) {
+static void build_project_targets(ModuleFileStack *unit, ProjectConfig *config) {
+    if (is_option_set("all")) {
         // build all targets in the project
         GHashTableIter iter;
 
@@ -195,52 +193,51 @@ static void build_project_targets(ModuleFileStack *unit, ProjectConfig *config, 
         while (g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &val)) {
             build_target(unit, val);
         }
-    } else {
-        // build all targets given in the arguments
-        for (int i = 0; i < argc; i++) {
-            char *target_name = argv[i];
+        return;
+    }
+
+    // build all targets given in the arguments
+    GArray* targets = get_non_options_after("build");
+
+    if (targets != NULL) {
+        for (guint i = 0; i < targets->len; i++) {
+            const char *target_name = (((Option*) targets->data) + i)->string;
+
             if (g_hash_table_contains(config->targets, target_name)) {
                 build_target(unit, g_hash_table_lookup(config->targets, target_name));
+            } else {
+                print_message(Error, "Unknown target: %s", target_name);
             }
         }
+
+        g_array_free(targets, FALSE);
+    } else {
+        print_message(Error, "No targets specified.");
     }
 }
 
 /**
  * @brief Build targets from project. Configuration is provided by command line arguments.
  * @param unit File storage
- * @param argc Number of arguments
- * @param argv Array of Arguments
  */
-static void build_project(ModuleFileStack *unit, int argc, char *argv[]) {
-    if (argc <= 0) {
-        print_message(Error, "No targets specified.");
-        return;
-    }
-
+static void build_project(ModuleFileStack *unit) {
     ProjectConfig *config = default_project_config();
     int err = load_project_config(config);
 
     if (err == PROJECT_OK) {
-        build_project_targets(unit, config, argc, argv);
+        build_project_targets(unit, config);
     }
 
     delete_project_config(config);
 }
 
-void run_compiler(int argc, char *argv[]) {
-    if (argc <= 0) {
-        INFO("no arguments provided");
-        print_help();
-        return;
-    }
-
+void run_compiler() {
     ModuleFileStack files = new_file_stack();
 
-    if (strcmp(argv[0], "build") == 0) {
-        build_project(&files, argc - 1, &argv[1]);
-    } else if (strcmp(argv[0], "compile") == 0) {
-        compile_file(&files, argc - 1, &argv[1]);
+    if (is_option_set("build")) {
+        build_project(&files);
+    } else if (is_option_set("compile")) {
+        compile_file(&files);
     } else {
         print_message(Error, "Invalid mode of operation. Rerun with --help.");
     }

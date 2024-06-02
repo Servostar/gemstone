@@ -4,6 +4,7 @@
 #include <sys/col.h>
 #include <lex/util.h>
 #include <io/files.h>
+#include <cfg/opt.h>
 #include <compiler.h>
 
 /**
@@ -16,8 +17,9 @@ void notify_exit(void) { DEBUG("Exiting gemstone..."); }
  * @brief Run compiler setup here
  *
  */
-void setup(void) {
+void setup(int argc, char *argv[]) {
     // setup preample
+    parse_options(argc, argv);
 
     log_init();
     DEBUG("starting gemstone...");
@@ -37,11 +39,16 @@ void setup(void) {
 }
 
 int main(int argc, char *argv[]) {
-    setup();
+    if (argc <= 1) {
+        print_help();
+        exit(1);
+    }
+
+    setup(argc, argv);
 
     print_message(Info, "Running GSC version %s", GSC_VERSION);
 
-    run_compiler(argc - 1, &argv[1]);
+    run_compiler();
 
     return 0;
 }

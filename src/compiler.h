@@ -7,9 +7,7 @@
 
 /**
  * @brief Run the gemstone compiler with the provided command arguments.
- * @param argc
- * @param argv
  */
-void run_compiler(int argc, char *argv[]);
+void run_compiler();
 
 #endif //GEMSTONE_COMPILER_H
