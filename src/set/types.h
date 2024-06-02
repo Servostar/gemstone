@@ -11,9 +11,9 @@
  */
 typedef enum PrimitiveType_t {
     // 4 byte signed integer in two's complement
-    Int,
+    Int =0,
     // 4 byte IEEE-754 single precision
-    Float
+    Float =1
 } PrimitiveType;
 
 /**
@@ -21,10 +21,10 @@ typedef enum PrimitiveType_t {
  * 
  */
 typedef enum Sign_t {
-    // type has a sign bit
-    Signed,
     // type has no sign bit
-    Unsigned
+    Unsigned = 0,
+    // type has a sign bit
+    Signed = 1
 } Sign;
 
 /**
@@ -387,7 +387,7 @@ typedef struct Operation_t {
     union OperationImplementation {
         ArithmeticOperator arithmetic;
         RelationalOperator relational;
-        BooleanOperator boolean;
+        BooleanOperator boolean; 
         LogicalOperator logical;
         BitwiseOperator bitwise;
     } impl;
