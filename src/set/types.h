@@ -188,6 +188,7 @@ typedef enum ParameterKind_t {
  */
 typedef struct Parameter_t {
     const char* name;
+    
     ParameterKind kind;
     union ParameterImplementation {
         ParameterDeclaration declaration;
@@ -316,7 +317,8 @@ typedef enum ArithmeticOperator_t {
     Add,
     Sub,
     Mul,
-    Div
+    Div,
+    Negate
 } ArithmeticOperator;
 
 // .------------------------------------------------.
@@ -389,7 +391,7 @@ typedef struct Operation_t {
         LogicalOperator logical;
         BitwiseOperator bitwise;
     } impl;
-    Expression* operands;
+    GArray* operands; //Expression*
     AST_NODE_PTR nodePtr;
 } Operation;
 
@@ -414,7 +416,7 @@ typedef struct Expression_t {
         TypeCast typecast;
         Transmute transmute;
         TypeValue constant;
-        Variable variable;
+        Variable* variable;
     } impl;
     AST_NODE_PTR nodePtr;
 } Expression;
