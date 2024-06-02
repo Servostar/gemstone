@@ -326,7 +326,7 @@ const char *get_absolute_path(const char *path) {
     return strdup(absolute_path);
 }
 
-const char* make_file_path(int count, const char* name, const char* ext, ...) {
+const char* make_file_path(const char* name, const char* ext, int count, ...) {
     DEBUG("building file path...");
 
     va_list args;

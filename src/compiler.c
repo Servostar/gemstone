@@ -110,7 +110,7 @@ static void print_ast_to_file(AST_NODE_PTR ast, TargetConfig *target) {
         return;
 
     // create file path to write graphviz to
-    const char *path = make_file_path(1, target->name, ".gv", target->archive_directory);
+    const char *path = make_file_path(target->name, ".gv", 1, target->archive_directory);
 
     FILE *output = fopen((const char *) path, "w");
     if (output == NULL) {

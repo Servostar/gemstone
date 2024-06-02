@@ -151,6 +151,6 @@ const char* get_absolute_path(const char* path);
  * @return A relative path of a file
  */
 [[nodiscard("pointer must be freed")]]
-const char* make_file_path(int count, const char* name, const char* ext, ...);
+const char* make_file_path(const char* name, const char* ext, int count, ...);
 
 #endif //GEMSTONE_FILES_H
