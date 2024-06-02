@@ -6,6 +6,28 @@
 #include <sys/log.h>
 #include <assert.h>
 #include <sys/col.h>
+#include <stdarg.h>
+
+#ifdef __unix__
+
+#include <sys/stat.h>
+
+#define MAX_PATH_BYTES PATH_MAX
+
+#elif defined(_WIN32) || defined(WIN32)
+
+#include <Windows.h>
+
+#define MAX_PATH_BYTES _MAX_PATH
+
+#endif
+
+ModuleFileStack new_file_stack() {
+    ModuleFileStack stack;
+    stack.files = NULL;
+
+    return stack;
+}
 
 ModuleFile *push_file(ModuleFileStack *stack, const char *path) {
     assert(stack != NULL);
@@ -92,11 +114,12 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
             break;
     }
 
-    char absolute_path[PATH_MAX];
-    realpath(file->path, absolute_path);
+    const char *absolute_path = get_absolute_path(file->path);
 
     printf("%s%s:%ld:%s %s%s:%s %s\n", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET,
            message);
+
+    free((void *) absolute_path);
 
     size_t lines = location->line_end - location->line_start + 1;
 
@@ -261,7 +284,73 @@ void print_message(Message kind, const char *fmt, ...) {
 
     printf("%s%s:%s ", accent_color, kind_text, RESET);
     vprintf(fmt, args);
-    printf("\n\n");
+    printf("\n");
 
     va_end(args);
+}
+
+int create_directory(const char *path) {
+    assert(path != NULL);
+
+    DEBUG("creating directory: %s", path);
+
+    int result;
+#ifdef __unix__
+    result = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+#elif defined(_WIN32) || defined(WIN32)
+    result = _mkdir(path);
+#endif
+
+    return result;
+}
+
+const char *get_last_error() {
+    return strdup(strerror(errno));
+}
+
+const char *get_absolute_path(const char *path) {
+    assert(path != NULL);
+
+    DEBUG("resolving absolute path of: %s", path);
+
+#ifdef __unix__
+    // use unix specific function
+    char absolute_path[MAX_PATH_BYTES];
+    realpath(path, absolute_path);
+#elif defined(_WIN32) || defined(WIN32)
+    // use Windows CRT specific function
+    char absolute_path[MAX_PATH_BYTES];
+    _fullpath(path, absolute_path, _MAX_PATH);
+#endif
+
+    return strdup(absolute_path);
+}
+
+const char* make_file_path(int count, const char* name, const char* ext, ...) {
+    DEBUG("building file path...");
+
+    va_list args;
+    va_start(args, count); // Initialize the va_list with the first variadic argument
+
+    char* path = calloc(MAX_PATH_BYTES, sizeof(char));
+
+    for (int i = 0; i < count; i++) {
+        const char* arg = va_arg(args, const char*);
+        assert(arg != NULL);
+
+        strcat(path, arg);
+        strcat(path, PATH_SEPARATOR);
+    }
+
+    va_end(args); // Clean up the va_list
+
+    if (name != NULL) {
+        strcat(path, name);
+    }
+
+    if (name != NULL) {
+        strcat(path, ext);
+    }
+
+    return path;
 }
