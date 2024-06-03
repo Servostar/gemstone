@@ -72,9 +72,7 @@ static int setup_target_environment(const TargetConfig *target) {
     assert(target->output_directory != NULL);
     assert(target->archive_directory != NULL);
 
-    int result;
-
-    result = create_directory(target->archive_directory);
+    int result = create_directory(target->archive_directory);
     if (result != 0 && errno != EEXIST) {
         const char *message = get_last_error();
         assert(message != NULL);
@@ -102,7 +100,7 @@ static int setup_target_environment(const TargetConfig *target) {
  * @param ast
  * @param target
  */
-static void print_ast_to_file(AST_NODE_PTR ast, TargetConfig *target) {
+static void print_ast_to_file(const AST_NODE_PTR ast, const TargetConfig *target) {
     assert(ast != NULL);
     assert(target != NULL);
 
@@ -132,7 +130,7 @@ static void print_ast_to_file(AST_NODE_PTR ast, TargetConfig *target) {
  * @param unit
  * @param target
  */
-static void build_target(ModuleFileStack *unit, TargetConfig *target) {
+static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     print_message(Info, "Building target: %s", target->name);
 
     AST_NODE_PTR ast = AST_new_node(empty_location(), AST_Module, NULL);
@@ -157,8 +155,6 @@ static void build_target(ModuleFileStack *unit, TargetConfig *target) {
  * @brief Compile a single file.
  *        Creates a single target by the given command line arguments.
  * @param unit
- * @param argc
- * @param argv
  */
 static void compile_file(ModuleFileStack *unit) {
     INFO("compiling basic files...");
@@ -181,7 +177,7 @@ static void compile_file(ModuleFileStack *unit) {
  * @param unit
  * @param config
  */
-static void build_project_targets(ModuleFileStack *unit, ProjectConfig *config) {
+static void build_project_targets(ModuleFileStack *unit, const ProjectConfig *config) {
     if (is_option_set("all")) {
         // build all targets in the project
         GHashTableIter iter;

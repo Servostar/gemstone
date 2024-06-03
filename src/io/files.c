@@ -6,7 +6,6 @@
 #include <sys/log.h>
 #include <assert.h>
 #include <sys/col.h>
-#include <stdarg.h>
 
 #ifdef __unix__
 
@@ -49,7 +48,7 @@ ModuleFile *push_file(ModuleFileStack *stack, const char *path) {
 
 void delete_files(ModuleFileStack *stack) {
     for (size_t i = 0; i < stack->files->len; i++) {
-        ModuleFile *file = ((ModuleFile *) stack->files->data) + i;
+        const ModuleFile *file = (ModuleFile *) stack->files->data + i;
 
         if (file->handle != NULL) {
             DEBUG("closing file: %s", file->path);
@@ -62,6 +61,8 @@ void delete_files(ModuleFileStack *stack) {
     DEBUG("deleted module file stack");
 }
 
+// Number of bytes to read at once whilest
+// seeking the current line in print_diagnostic()
 #define SEEK_BUF_BYTES 256
 
 static inline unsigned long int min(unsigned long int a, unsigned long int b) {
@@ -121,16 +122,15 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
 
     free((void *) absolute_path);
 
-    size_t lines = location->line_end - location->line_start + 1;
+    const size_t lines = location->line_end - location->line_start + 1;
 
     for (size_t l = 0; l < lines; l++) {
         printf(" %4ld | ", location->line_start + l);
 
-        size_t limit;
         size_t chars = 0;
 
         // print line before token group start
-        limit = min(location->col_start, SEEK_BUF_BYTES);
+        size_t limit = min(location->col_start, SEEK_BUF_BYTES);
         while (limit > 1) {
             custom_fgets(buffer, (int) limit, file->handle);
             chars += printf("%s", buffer);

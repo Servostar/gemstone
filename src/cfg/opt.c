@@ -7,6 +7,7 @@
 #include <sys/log.h>
 #include <io/files.h>
 #include <assert.h>
+#include <toml.h>
 
 static GHashTable* args = NULL;
 
@@ -188,10 +189,10 @@ void print_help(void) {
     }
 }
 
-static void get_bool(bool* boolean, toml_table_t *table, const char* name) {
+static void get_bool(bool* boolean, const toml_table_t *table, const char* name) {
     DEBUG("retrieving boolean %s", name);
 
-    toml_datum_t datum = toml_bool_in(table, name);
+    const toml_datum_t datum = toml_bool_in(table, name);
 
     if (datum.ok) {
         *boolean = datum.u.b;
@@ -199,10 +200,10 @@ static void get_bool(bool* boolean, toml_table_t *table, const char* name) {
     }
 }
 
-static void get_str(char** string, toml_table_t *table, const char* name) {
+static void get_str(char** string, const toml_table_t *table, const char* name) {
     DEBUG("retrieving string %s", name);
 
-    toml_datum_t datum = toml_string_in(table, name);
+    const toml_datum_t datum = toml_string_in(table, name);
 
     if (datum.ok) {
         *string = datum.u.s;
@@ -210,10 +211,10 @@ static void get_str(char** string, toml_table_t *table, const char* name) {
     }
 }
 
-static void get_int(int* integer, toml_table_t *table, const char* name) {
+static void get_int(int* integer, const toml_table_t *table, const char* name) {
     DEBUG("retrieving integer %s", name);
 
-    toml_datum_t datum = toml_int_in(table, name);
+    const toml_datum_t datum = toml_int_in(table, name);
 
     if (datum.ok) {
         *integer = (int) datum.u.i;
@@ -221,7 +222,7 @@ static void get_int(int* integer, toml_table_t *table, const char* name) {
     }
 }
 
-static int parse_project_table(ProjectConfig *config, toml_table_t *project_table) {
+static int parse_project_table(ProjectConfig *config, const toml_table_t *project_table) {
     DEBUG("parsing project table...");
 
     // project name
@@ -268,7 +269,7 @@ static int get_mode_from_str(TargetCompilationMode* mode, const char* name) {
     return PROJECT_SEMANTIC_ERR;
 }
 
-static int parse_target(ProjectConfig *config, toml_table_t *target_table, const char* name) {
+static int parse_target(const ProjectConfig *config, const toml_table_t *target_table, const char* name) {
     DEBUG("parsing target table...");
 
     TargetConfig* target_config = default_target_config();
@@ -297,7 +298,7 @@ static int parse_target(ProjectConfig *config, toml_table_t *target_table, const
     return PROJECT_OK;
 }
 
-static int parse_targets(ProjectConfig *config, toml_table_t *root) {
+static int parse_targets(ProjectConfig *config, const toml_table_t *root) {
     DEBUG("parsing targets of project \"%s\"", config->name);
 
     toml_table_t *targets = toml_table_in(root, "target");
@@ -311,7 +312,7 @@ static int parse_targets(ProjectConfig *config, toml_table_t *root) {
     for (int i = 0; i < MAX_TARGETS_PER_PROJECT; i++) {
         const char *key = toml_key_in(targets, i);
 
-        if (!key)
+        if (key == NULL)
             break;
 
         toml_table_t *target = toml_table_in(targets, key);
@@ -331,18 +332,18 @@ int load_project_config(ProjectConfig *config) {
         return PROJECT_TOML_ERR;
     }
 
-    char err_buf[200];
+    char err_buf[TOML_ERROR_MSG_BUF];
 
     toml_table_t *conf = toml_parse_file(config_file, err_buf, sizeof(err_buf));
     fclose(config_file);
 
-    if (!conf) {
+    if (conf == NULL) {
         print_message(Error, "Invalid project configuration: %s", err_buf);
         return PROJECT_SEMANTIC_ERR;
     }
 
     toml_table_t *project = toml_table_in(conf, "project");
-    if (!project) {
+    if (project == NULL) {
         print_message(Error, "Invalid project configuration: missing project table.");
     }
 
