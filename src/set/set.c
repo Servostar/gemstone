@@ -345,12 +345,110 @@ int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode,
         ParentExpression->result = createTypeFromOperands(LeftOperandType, RightOperandType, currentNode);
     }
 
+    if(ParentExpression->result == NULL){
+        return 1;
+    }
 
 
     return 0;
 }
 
+int createRelationalOperation(Expression* ParentExpression,AST_NODE_PTR currentNode){
+    //fill kind and Nodeptr
+    ParentExpression->impl.operation.kind = Relational;
+    ParentExpression->impl.operation.nodePtr = currentNode;
 
+    //fill Operands
+    for (size_t i = 0; i < currentNode->child_count; i++){
+        Expression* expression = createExpression(currentNode->children[i]);
+        if(NULL == expression){
+            return 1;
+        }
+        g_array_append_val(ParentExpression->impl.operation.operands , expression);
+    }
+
+    //fill impl
+    switch (currentNode->kind){
+    case AST_Eq:
+        ParentExpression->impl.operation.impl.relational = Equal;
+    case AST_Less:
+        ParentExpression->impl.operation.impl.relational = Greater;
+    case AST_Greater:
+        ParentExpression->impl.operation.impl.relational= Less;
+    default:
+        PANIC("Current node is not an relational operater");
+    break;
+    }
+    Type * result = malloc(sizeof(Type));
+    result->impl.primitive = Int;
+    result->kind = TypeKindPrimitive;
+    result->nodePtr = currentNode;
+
+    ParentExpression->result = result;
+    return 0;
+}
+
+
+int createBoolOperation(Expression *ParentExpression, AST_NODE_PTR currentNode){
+    //fill kind and Nodeptr
+    ParentExpression->impl.operation.kind = Boolean;
+    ParentExpression->impl.operation.nodePtr = currentNode;
+
+    //fill Operands
+    for (size_t i = 0; i < currentNode->child_count; i++){
+        Expression* expression = createExpression(currentNode->children[i]);
+        if(NULL == expression){
+            return 1;
+        }
+        g_array_append_val(ParentExpression->impl.operation.operands , expression);
+    }
+
+    switch (currentNode->kind){
+    case AST_BoolAnd:
+        ParentExpression->impl.operation.impl.boolean = BooleanAnd;
+    case AST_BoolOr:
+        ParentExpression->impl.operation.impl.boolean = BooleanOr;
+    case AST_BoolXor:
+        ParentExpression->impl.operation.impl.boolean = BooleanXor;
+    default:
+        PANIC("Current node is not an boolean operater");
+    break;
+    }
+
+
+    Type* LeftOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
+    Type* RightOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[1]->result;
+
+    //should not be a box or a reference
+    if(LeftOperandType->kind != TypeKindPrimitive && LeftOperandType->kind != TypeKindComposite){
+        return 1;
+    }
+    if(RightOperandType->kind != TypeKindPrimitive && RightOperandType->kind != TypeKindComposite){
+        return 1;
+    }
+    //should not be a float
+    if(LeftOperandType->kind == TypeKindComposite){
+        if(LeftOperandType->impl.composite.primitive == Float){
+            return 1;
+        }
+    }else if(LeftOperandType->kind == TypeKindPrimitive){
+        if(LeftOperandType->impl.primitive == Float){
+            return 1;
+        }
+    }else if(RightOperandType->kind == TypeKindComposite){
+        if(RightOperandType->impl.composite.primitive == Float){
+            return 1;
+        }
+    }else if(RightOperandType->kind == TypeKindPrimitive){
+        if(RightOperandType->impl.primitive == Float){
+            return 1;
+        }
+    }
+
+
+    ParentExpression->result = createTypeFromOperands(LeftOperandType, RightOperandType, currentNode);
+    return 0;
+}
 
 Expression *createExpression(AST_NODE_PTR currentNode){
     Expression *expression = malloc(sizeof(Expression));
@@ -402,11 +500,19 @@ Expression *createExpression(AST_NODE_PTR currentNode){
     case AST_Eq:
     case AST_Less:
     case AST_Greater:
+        expression->kind = ExpressionKindOperation;
+        if(createRelationalOperation(expression,currentNode)){
+            return NULL;
+        }
 
     case AST_BoolAnd:
-    case AST_BoolNot:
     case AST_BoolOr:
     case AST_BoolXor:
+        expression->kind = ExpressionKindOperation;
+        if(createRelationalOperation(expression,currentNode)){
+            return NULL;
+        }
+    case AST_BoolNot:
 
     case AST_BitAnd:
     case AST_BitOr:
