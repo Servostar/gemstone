@@ -133,13 +133,13 @@ int impl_composite_type(AST_NODE_PTR ast_type, CompositeType* composite) {
         }
     }
 
-    const char* typeKind = ast_type->children[ast_type->child_count - 1]->value;
+    AST_NODE_PTR typeKind = ast_type->children[ast_type->child_count - 1];
 
-    status = primitive_from_string(typeKind, &composite->primitive);
+    status = primitive_from_string(typeKind->value, &composite->primitive);
     
     if (status == SEMANTIC_ERROR) {
         // not a primitive try to resolve the type by name (must be a composite)
-        status = impl_composite_type();
+        
     }
 
     return SEMANTIC_OK;
@@ -861,6 +861,8 @@ Module *create_set(AST_NODE_PTR currentNode){
             DEBUG("filled successfull the module and scope with vars");
             break;
         case AST_Def:
+            DEBUG("created Definition successfully");
+            break;
         case AST_Box:
         case AST_Fun:
         case AST_Import:
@@ -868,7 +870,7 @@ Module *create_set(AST_NODE_PTR currentNode){
             g_array_append_val(imports, currentNode->children[i]->value);
             break;
         default:
-            INFO("Provided source file could not be parsed beecause of semantic error.");
+            INFO("Provided source file could not be parsed because of semantic error.");
             break;
 
         }
