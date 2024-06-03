@@ -3,7 +3,6 @@
 #include <sys/log.h>
 #include <sys/col.h>
 #include <lex/util.h>
-#include <io/files.h>
 #include <cfg/opt.h>
 #include <compiler.h>
 
