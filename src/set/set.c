@@ -450,6 +450,48 @@ int createBoolOperation(Expression *ParentExpression, AST_NODE_PTR currentNode){
     return 0;
 }
 
+int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNode){
+    //fill kind and Nodeptr
+    ParentExpression->impl.operation.kind = Boolean;
+    ParentExpression->impl.operation.nodePtr = currentNode;
+
+    //fill Operand
+    Expression* expression = createExpression(currentNode->children[0]);
+    if(NULL == expression){
+        return 1;
+    }
+    g_array_append_val(ParentExpression->impl.operation.operands , expression);
+
+    ParentExpression->impl.operation.impl.boolean = BooleanNot;
+
+    Type* Operand = ((Expression**)ParentExpression->impl.operation.operands)[0]->result;
+
+    Type* result = malloc(sizeof(Type));
+    result->nodePtr = currentNode;
+    if (Operand->kind == TypeKindBox || Operand->kind == TypeKindReference){
+        return 1;
+    }
+    if(Operand->kind == TypeKindPrimitive){
+        if(Operand->impl.primitive == Float){
+            return 1;
+        }
+        result->kind = Operand->kind;
+        result->impl = Operand->impl;
+    }else if(Operand->kind == TypeKindComposite){
+        if(Operand->impl.composite.primitive == Float){
+            return 1;
+        }
+        result->kind = Operand->kind;
+        result->impl = Operand->impl;      
+    }
+
+    ParentExpression->result = result;
+    return 0;
+}
+
+
+
+
 Expression *createExpression(AST_NODE_PTR currentNode){
     Expression *expression = malloc(sizeof(Expression));
     expression->nodePtr = currentNode;
@@ -509,14 +551,19 @@ Expression *createExpression(AST_NODE_PTR currentNode){
     case AST_BoolOr:
     case AST_BoolXor:
         expression->kind = ExpressionKindOperation;
-        if(createRelationalOperation(expression,currentNode)){
+        if(createBoolOperation(expression,currentNode)){
             return NULL;
         }
     case AST_BoolNot:
+        expression->kind= ExpressionKindOperation;
+        if(createBoolNotOperation(expression, currentNode)){
+            return NULL;
+        }
 
     case AST_BitAnd:
     case AST_BitOr:
     case AST_BitXor:
+
     case AST_BitNot:
 
     case AST_IdentList:
