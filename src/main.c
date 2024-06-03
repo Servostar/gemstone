@@ -51,7 +51,10 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    print_message(Info, "Running GSC version %s", GSC_VERSION);
+    if (is_option_set("version")) {
+        printf("Running GSC version %s\n", GSC_VERSION);
+        exit(0);
+    }
 
     run_compiler();
 

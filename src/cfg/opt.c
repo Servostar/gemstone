@@ -17,6 +17,7 @@ static void clean(void) {
 
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         free(value);
+        free(key);
     }
 
     g_hash_table_destroy(args);
@@ -30,13 +31,14 @@ void parse_options(int argc, char* argv[]) {
     for (int i = 0; i < argc; i++) {
         Option* option = malloc(sizeof(Option));
         option->is_opt = g_str_has_prefix(argv[i], "--");
-        option->string = argv[i] + (option->is_opt ? 2 : 0);
+        option->string = strdup(argv[i] + (option->is_opt ? 2 : 0));
         option->index = i;
         option->value = NULL;
 
-        char* equals = strchr(argv[i], '=');
+        char* equals = strchr(option->string, '=');
         if (equals != NULL) {
-            option->value = equals;
+            option->value = equals + 1;
+            *equals = 0;
         }
 
         g_hash_table_insert(args, (gpointer) option->string, (gpointer) option);
@@ -110,11 +112,17 @@ TargetConfig* default_target_config_from_args() {
 
     if (is_option_set("print-ast")) {
         config->print_ast = true;
-    } else if (is_option_set("print-asm")) {
+    }
+
+    if (is_option_set("print-asm")) {
         config->print_asm = true;
-    } else if (is_option_set("print-ir")) {
+    }
+
+    if (is_option_set("print-ir")) {
         config->print_ir = true;
-    } else if (is_option_set("mode")) {
+    }
+
+    if (is_option_set("mode")) {
         const Option* opt = get_option("mode");
 
         if (opt->value != NULL) {
@@ -125,6 +133,14 @@ TargetConfig* default_target_config_from_args() {
             } else {
                 print_message(Warning, "Invalid compilation mode: %s", opt->value);
             }
+        }
+    }
+
+    if (is_option_set("output")) {
+        const Option* opt = get_option("output");
+
+        if (opt->value != NULL) {
+            config->name = strdup(opt->value);
         }
     }
 
@@ -139,6 +155,8 @@ TargetConfig* default_target_config_from_args() {
         }
 
         config->root_module = strdup( ((char**) files->data) [0]);
+
+        g_array_free(files, TRUE);
     }
 
     return config;
@@ -148,17 +166,21 @@ void print_help(void) {
     DEBUG("printing help dialog...");
 
     const char *lines[] = {
-            "Gemstone Compiler (C) GPL-2.0",
-            "Build a project target: gsc build [target]|all",
-            "Compile non-project file: gsc compile <options> [file]",
-            "Options:",
-            "    --version        print the version",
-            "    --print-ast      print resulting abstract syntax tree to a file",
-            "    --print-asm      print resulting assembly language to a file",
-            "    --print-ir       print resulting LLVM-IR to a file",
-            "    --mode=[app|lib] set the compilation mode to either application or library",
-            "    --verbose        print logs with level information or higher",
-            "    --debug          print debug logs (if not disabled at compile time)"
+        "Gemstone Compiler (c) GPL-2.0",
+        "Build a project target: gsc build [target]|all",
+        "Compile non-project file: gsc compile <target-options> [file]",
+        "Output information: gsc <option>",
+        "Target options:",
+        "    --print-ast      print resulting abstract syntax tree to a file",
+        "    --print-asm      print resulting assembly language to a file",
+        "    --print-ir       print resulting LLVM-IR to a file",
+        "    --mode=[app|lib] set the compilation mode to either application or library",
+        "    --output=name    name of output files without extension",
+        "Options:",
+        "    --verbose        print logs with level information or higher",
+        "    --debug          print debug logs (if not disabled at compile time)",
+        "    --version        print the version",
+        "    --help           print this hel dialog",
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
