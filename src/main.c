@@ -46,6 +46,11 @@ int main(int argc, char *argv[]) {
 
     setup(argc, argv);
 
+    if (is_option_set("help")) {
+        print_help();
+        exit(0);
+    }
+
     print_message(Info, "Running GSC version %s", GSC_VERSION);
 
     run_compiler();
