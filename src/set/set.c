@@ -3,13 +3,15 @@
 #include <ast/ast.h>
 #include <set/types.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/log.h>
 #include <glib.h>
+#include <assert.h>
+#include <set/set.h>
 
-
-GHashTable *declaredComposites;//pointer to composites with names, 
-GHashTable *declaredBoxes;//pointer to typeboxes
-GArray *Scope;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
+GHashTable *declaredComposites = NULL;//pointer to composites with names, 
+GHashTable *declaredBoxes = NULL;//pointer to typeboxes
+GArray *Scope = NULL;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
 
 const Type ShortShortUnsingedIntType = {
     .kind = TypeKindComposite,
@@ -31,64 +33,154 @@ const Type StringLiteralType = {
     .nodePtr = NULL,
 };
 
+/**
+ * @brief Convert a string into a sign typ
+ * @return 0 on success, 1 otherwise
+ */
+int sign_from_string(const char* string, Sign* sign) {
 
-Type *findType(AST_NODE_PTR currentNode){
+    if (strcmp(string, "unsigned") == 0) {
+        *sign = Unsigned;
+        return 0;
+    } else if (strcmp(string, "signed") == 0) {
+        *sign = Signed;
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ * @brief Convert a string into a primitive type
+ * @return 0 on success, 1 otherwise
+ */
+int primitive_from_string(const char* string, PrimitiveType* primitive) {
+
+    if (strcmp(string, "int") == 0) {
+        *primitive = Int;
+        return 0;
+    } else if (strcmp(string, "float") == 0) {
+        *primitive = Float;
+        return 0;
+    }
+
+    return 1;
+}
+
+int scale_factor_from(const char* string, double* factor) {
+    if (strcmp(string, "half") == 0 || strcmp(string, "short") == 0) {
+        *factor = 0.5;
+        return SEMANTIC_OK;
+    } else if (strcmp(string, "double") == 0 || strcmp(string, "long") == 0) {
+        *factor = 2.0;
+        return SEMANTIC_OK;
+    }
+
+    return SEMANTIC_ERROR;
+}
+
+int merge_scale_list(AST_NODE_PTR scale_list, Scale* scale) {
+    for (size_t i = 0; i < scale_list->child_count; i++) {
+
+        double scale_in_list = 1.0;
+        int scale_invalid = scale_factor_from(AST_get_node(scale_list, i)->value, &scale_in_list);
+
+        if (scale_invalid == SEMANTIC_ERROR) {
+            return SEMANTIC_ERROR;
+        }
+
+        *scale *= scale_in_list;
+
+        if (0.25 > *scale || 8 > *scale) {
+            // TODO: print diagnostic: Invalid composite scale
+            return SEMANTIC_ERROR;
+        }
+    }
+
+    return SEMANTIC_OK;
+}
+
+Type *findType(AST_NODE_PTR currentNode);
+
+int impl_composite_type(AST_NODE_PTR ast_type, CompositeType* composite) {
+    DEBUG("Type is a Composite");
+
+    int status = SEMANTIC_OK;
+    int scaleNodeOffset = 0;
+    
+    // check if we have a sign
+    if (AST_Sign == ast_type->children[0]->kind) {
+
+        status = sign_from_string(ast_type->children[0]->value, &composite->sign);
+
+        if (status == SEMANTIC_ERROR) {
+            ERROR("invalid sign: %s", ast_type->children[0]->value);
+            return SEMANTIC_ERROR;
+        }
+
+        scaleNodeOffset++;
+    }
+
+    composite->scale = 1.0;
+
+    // check if we have a list of scale factors
+    if (ast_type->children[scaleNodeOffset]->kind == AST_List) {
+        
+        status = merge_scale_list(ast_type->children[scaleNodeOffset], &composite->scale);
+
+        if (status == SEMANTIC_ERROR) {
+            return SEMANTIC_ERROR;
+        }
+    }
+
+    const char* typeKind = ast_type->children[ast_type->child_count - 1]->value;
+
+    status = primitive_from_string(typeKind, &composite->primitive);
+    
+    if (status == SEMANTIC_ERROR) {
+        // not a primitive try to resolve the type by name (must be a composite)
+        status = impl_composite_type();
+    }
+
+    return SEMANTIC_OK;
+}
+
+/**
+ * @brief Converts the given AST node to a gemstone type implementation.
+ * @param currentNode AST node of type kind type
+ * @return the gemstone type implementation
+ */
+Type *findType(AST_NODE_PTR currentNode) {
+    assert(currentNode != NULL);
+    assert(currentNode->kind == AST_Type);
+    assert(currentNode->child_count > 0);
 
     const char *typekind = currentNode->children[currentNode->child_count -1]->value;
-    if (0 == strcmp(typekind, "int")||0 == strcmp(typekind, "float")){
+    
+    // type implementation
+    Type *type = malloc(sizeof(Type));
+    type->nodePtr = currentNode;
+
+    // primitive type OR composit
+    if (0 == strcmp(typekind, "int") || 0 == strcmp(typekind, "float")) {
         
-        Type *type =  malloc(sizeof(Type));
-        type->nodePtr =  currentNode;
-        if(AST_Typekind != currentNode->children[0]->kind){
-            DEBUG("Type is a Composite");
+        if(AST_Typekind != currentNode->children[0]->kind) {
+            
             type->kind = TypeKindComposite;
-
-     
-            CompositeType composite;
-            composite.nodePtr = currentNode;
-
-
-            if(0 == strcmp(typekind, "int")){
-                composite.primitive = Int;
-            }else{
-                composite.primitive = Float;
-            }
-            composite.sign = Signed;
-
-            size_t scalelist = 0;
-            if(AST_Sign == currentNode->children[0]->kind){
-            if(0 == strcmp(currentNode->children[0]->value, "unsigned")){
-                composite.sign = Unsigned;
-                }
-                scalelist = 1;
-            }
-
-            composite.scale = 1.0;
-            if(AST_List == currentNode->children[scalelist]->kind){
-                for (size_t i = 0; i < currentNode->children[scalelist]->child_count; i++){
-                    if (0 == strcmp(currentNode->children[scalelist]->children[i]->value, "short") || 0 == strcmp(currentNode->children[scalelist]->children[i]->value, "half")){
-                        composite.scale /= 2;
-                    }else{
-                        composite.scale *= 2; 
-                    }
-                    if (0.25 > composite.scale  || 8 > composite.scale) {
-                        //TODO scale not right
-                    }
-                }
-            }
-
-            type->impl.composite = composite;
-
-
-        }else{
+            type->impl.composite.nodePtr = currentNode;
+            impl_composite_type(currentNode, &type->impl.composite, typekind);
+            
+        } else {
+            // type is a primitive
             type->kind = TypeKindPrimitive;
-            if(0 == strcmp(typekind, "int")){
-                type->impl.primitive = Int;
-            }else{
-                type->impl.primitive = Float;
+
+            int primitive_invalid = primitive_from_string(typekind, &type->impl.primitive);
+            
+            if (primitive_invalid) {
+                PANIC("invalid primitive: %s", typekind);
             }
-            return type;
         }
+        
     }else if(g_hash_table_contains(declaredBoxes, typekind)){
         if(AST_Typekind != currentNode->children[0]->kind){
             //TODO composite Box try
@@ -208,9 +300,7 @@ int fillTablesWithVars(GHashTable *variableTable,GHashTable *currentScope , Vari
     return 0;
 }
 
-Variable **createDef(AST_NODE_PTR currentNode){
 
-}
 
 
 
@@ -489,6 +579,16 @@ int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNod
     return 0;
 }
 
+bool isScaleEqual(double leftScale, double rightScale){
+    int leftIntScale =(int)(leftScale *4);
+    int rightIntScale =(int)(rightScale *4);
+    
+    if (leftIntScale == rightIntScale){
+        return TRUE;
+    }
+    return FALSE;
+}
+
 int createBitOperation(Expression* ParentExpression, AST_NODE_PTR currentNode){
     //fill kind and Nodeptr
     ParentExpression->impl.operation.kind = Boolean;
@@ -503,6 +603,113 @@ int createBitOperation(Expression* ParentExpression, AST_NODE_PTR currentNode){
         g_array_append_val(ParentExpression->impl.operation.operands , expression);
     }
 
+
+    switch (currentNode->kind){
+    case AST_BitAnd:
+        ParentExpression->impl.operation.impl.bitwise = BitwiseAnd;
+    case AST_BitOr:
+        ParentExpression->impl.operation.impl.bitwise = BitwiseOr;
+    case AST_BitXor:
+        ParentExpression->impl.operation.impl.bitwise = BitwiseXor;
+    default:
+        PANIC("Current node is not an bitwise operater");
+    break;
+    }
+
+
+    Type *result = malloc(sizeof(Type));
+    result->nodePtr = currentNode;
+    
+    Type* LeftOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
+    Type* RightOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[1]->result;
+
+    //should not be a box or a reference
+    if(LeftOperandType->kind != TypeKindPrimitive && LeftOperandType->kind != TypeKindComposite){
+        return 1;
+    }
+    if(RightOperandType->kind != TypeKindPrimitive && RightOperandType->kind != TypeKindComposite){
+        return 1;
+    }
+    if(LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindPrimitive){
+        if(LeftOperandType->impl.primitive == Float || RightOperandType->impl.primitive == Float){
+            return 1;
+        }
+        result->kind = TypeKindPrimitive;
+        result->impl.primitive = Int;
+    }else if(LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindComposite){
+        if(LeftOperandType->impl.primitive == Float || RightOperandType->impl.composite.primitive == Float){
+            return 1;
+        }
+        if((int)RightOperandType->impl.composite.scale != 1){
+            return 1;
+        }
+        result->kind = TypeKindPrimitive;
+        result->impl.primitive = Int;
+    }else if(LeftOperandType->kind == TypeKindComposite && RightOperandType->kind == TypeKindPrimitive){
+        if(LeftOperandType->impl.composite.primitive == Float || RightOperandType->impl.primitive == Float){
+            return 1;
+        }
+        if((int)LeftOperandType->impl.composite.scale != 1){
+            return 1;
+        }
+        result->kind = TypeKindPrimitive;
+        result->impl.primitive = Int;
+    }else{
+        if(LeftOperandType->impl.composite.primitive == Float || RightOperandType->impl.composite.primitive == Float){
+            return 1;
+        }
+        if(!isScaleEqual(LeftOperandType->impl.composite.scale,  RightOperandType->impl.composite.scale)){
+            return 1;
+        }
+        result->kind = TypeKindComposite;
+        result->impl.composite.nodePtr = currentNode;
+        result->impl.composite.scale = LeftOperandType->impl.composite.scale;
+        result->impl.composite.sign = MAX(LeftOperandType->impl.composite.sign, RightOperandType->impl.composite.sign);
+    }
+
+    ParentExpression->result = result;
+    return 0;
+}
+
+int createBitNotOperation(Expression* ParentExpression, AST_NODE_PTR currentNode){
+    //fill kind and Nodeptr
+    ParentExpression->impl.operation.kind = Bitwise;
+    ParentExpression->impl.operation.nodePtr = currentNode;
+
+    //fill Operand
+    Expression* expression = createExpression(currentNode->children[0]);
+    if(NULL == expression){
+        return 1;
+    }
+    g_array_append_val(ParentExpression->impl.operation.operands , expression);
+
+    ParentExpression->impl.operation.impl.bitwise = BitwiseNot;
+
+    Type* Operand = ((Expression**)ParentExpression->impl.operation.operands)[0]->result;
+    
+    Type* result = malloc(sizeof(Type));
+    result->nodePtr = currentNode;
+    
+    
+    if (Operand->kind  == TypeKindPrimitive){
+        if(Operand->impl.primitive == Float){
+            return SEMANTIC_ERROR;
+        }
+        result->kind = TypeKindPrimitive;
+        result->impl.primitive = Int;
+    }else if(Operand->kind == TypeKindComposite){
+        if (Operand->impl.composite.primitive == Float){
+            return SEMANTIC_ERROR;
+        }
+        result->kind = TypeKindComposite;
+        result->impl.composite.nodePtr = currentNode;
+        result->impl.composite.primitive = Int;
+        result->impl.composite.sign = Operand->impl.composite.sign;
+        result->impl.composite.scale = Operand->impl.composite.scale;
+    }   
+    
+    ParentExpression->result = result;
+    return SEMANTIC_OK;
 }
 
 
@@ -516,11 +723,12 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         expression->kind = ExpressionKindConstant;
         expression->impl.constant = createTypeValue(currentNode);
         expression->result = expression->impl.constant.type;
-
+        break;
     case AST_String:
         expression->kind = ExpressionKindConstant;
         expression->impl.constant = createString(currentNode);
         expression->result = expression->impl.constant.type;
+        break;
     case AST_Ident:
         expression->kind = ExpressionKindVariable;
         expression->impl.variable = getVariableFromScope(currentNode->value);
@@ -531,13 +739,15 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         switch (expression->impl.variable->kind) {
             case VariableKindDeclaration:
                 expression->result = expression->impl.variable->impl.declaration.type;
+                break;
             case VariableKindDefinition:
                 expression->result = expression->impl.variable->impl.definiton.declaration.type;
+                break;
             default:
                 PANIC("current Variable should not be an BoxMember");
                 break;
         }
-
+        break;
     case AST_Add:
     case AST_Sub:
     case AST_Mul:
@@ -545,14 +755,14 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         expression->kind = ExpressionKindOperation;
          if(createArithOperation(expression, currentNode, 2)){
            return NULL; 
-        } 
+        }
+        break;
     case AST_Negate:
         expression->kind = ExpressionKindOperation;
         if(createArithOperation(expression,currentNode, 1)){
             return NULL;
         }
-
-
+        break;
     case AST_Eq:
     case AST_Less:
     case AST_Greater:
@@ -560,7 +770,7 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         if(createRelationalOperation(expression,currentNode)){
             return NULL;
         }
-
+        break;
     case AST_BoolAnd:
     case AST_BoolOr:
     case AST_BoolXor:
@@ -568,12 +778,13 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         if(createBoolOperation(expression,currentNode)){
             return NULL;
         }
+        break;
     case AST_BoolNot:
         expression->kind= ExpressionKindOperation;
         if(createBoolNotOperation(expression, currentNode)){
             return NULL;
         }
-
+        break;
     case AST_BitAnd:
     case AST_BitOr:
     case AST_BitXor:
@@ -581,8 +792,13 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         if(createBitOperation(expression, currentNode)){
             return NULL;
         }
-
+        break;
     case AST_BitNot:
+        expression->kind = ExpressionKindOperation;
+        if(createBitNotOperation(expression, currentNode)){
+            return NULL;
+        }
+        break;
 
     case AST_IdentList:
     //Box Accsess
@@ -590,12 +806,14 @@ Expression *createExpression(AST_NODE_PTR currentNode){
     // Box Self Access
     case AST_Typekind:
     case AST_Transmute:
-
+    
+        
 
     default:
     PANIC("Node is not an expression but from kind: %i", currentNode->kind);
         break;
     }
+    return expression;
 }
 
 Module *create_set(AST_NODE_PTR currentNode){
@@ -643,12 +861,6 @@ Module *create_set(AST_NODE_PTR currentNode){
             DEBUG("filled successfull the module and scope with vars");
             break;
         case AST_Def:
-            if (1 == fillTablesWithVars(variables,globalscope,createDef(currentNode->children[i]) ,currentNode->children[i]->children[currentNode->children[i]->child_count -1]->child_count)){
-                //TODO behandlung, wenn var schon existiert
-                DEBUG("var already exists");
-                break;
-            }
-            DEBUG("filled successfull the module and scope with vars");
         case AST_Box:
         case AST_Fun:
         case AST_Import:
