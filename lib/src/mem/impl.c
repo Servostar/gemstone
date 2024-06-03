@@ -1,7 +1,8 @@
 
 #include <mem/api.h>
+#include <capi.h>
 
-#if defined(_WIN32) || defined (_WIN64)
+#if defined(PLATFORM_WINDOWS)
 
 #include <Windows.h>
 
@@ -22,7 +23,7 @@ void heap_free(u8* ptr) {
     HeapFree(heap, ptr);
 }
 
-#elif defined(unix) || defined(__unix) || defined(__unix__) || defined(__linux__)
+#elif defined(PLATFORM_POSIX)
 
 #include <malloc.h>
 

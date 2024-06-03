@@ -1,7 +1,8 @@
 
 #include <io/api.h>
+#include <capi.h>
 
-#if defined(_WIN32) || defined (_WIN64)
+#if defined(PLATFORM_WINDOWS)
 
 // Compile for Windows
 
@@ -34,7 +35,7 @@ void flush(handle dev) {
     FlushFileBuffers((HANDLE) dev);
 }
 
-#elif defined(unix) || defined(__unix) || defined(__unix__) || defined(__linux__)
+#elif defined(PLATFORM_POSIX)
 
 // Compile for Linux and BSD
 

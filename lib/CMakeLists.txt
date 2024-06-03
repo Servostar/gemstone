@@ -20,3 +20,6 @@ add_library(io ${STDLIB_IO_SOURCE_FILES})
 
 file(GLOB_RECURSE STDLIB_MEM_SOURCE_FILES src/mem/*.c)
 add_library(mem ${STDLIB_MEM_SOURCE_FILES})
+
+file(GLOB_RECURSE STDLIB_OS_SOURCE_FILES src/os/*.c)
+add_library(os ${STDLIB_OS_SOURCE_FILES})

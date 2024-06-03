@@ -31,7 +31,7 @@ type signed double double float: f128
 
 # String constant
 
-type ref u8: str
+type ref u8: cstr
 
 # C style void pointer replacement
 
