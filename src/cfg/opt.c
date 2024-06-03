@@ -305,7 +305,7 @@ int load_project_config(ProjectConfig *config) {
     FILE *config_file = fopen(PROJECT_CONFIG_FILE, "r");
     if (config_file == NULL) {
         print_message(Error, "Cannot open file %s: %s", PROJECT_CONFIG_FILE, strerror(errno));
-        ERROR("project file not found");
+        INFO("project file not found");
         return PROJECT_TOML_ERR;
     }
 
