@@ -84,6 +84,9 @@ void AST_init() {
   lookup_table[AST_Negate] = "-";
   lookup_table[AST_Parameter] = "parameter";
   lookup_table[AST_ParamDecl] = "parameter-declaration";
+  lookup_table[AST_AddressOf] = "address of";
+  lookup_table[AST_Dereference] = "deref";
+  lookup_table[AST_Reference] = "ref";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {
