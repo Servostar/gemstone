@@ -1,0 +1,4 @@
+
+fun main(out int: e) {
+    e = 0
+}

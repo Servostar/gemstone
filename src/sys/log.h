@@ -53,11 +53,21 @@ will not print.
 #define INFO(format, ...) __LOG(LOG_STRING_INFORMATION, LOG_LEVEL_INFORMATION, format"\n", ##__VA_ARGS__)
 #define DEBUG(format, ...) __LOG(LOG_STRING_DEBUG, LOG_LEVEL_DEBUG, format"\n", ##__VA_ARGS__)
 
+extern int runtime_log_level;
+
 #define __LOG(level, priority, format, ...) \
     do { \
         if (LOG_LEVEL <= priority) \
-            syslog_logf(level, __FILE_NAME__, __LINE__, __func__, format, ##__VA_ARGS__); \
+            if (runtime_log_level <= priority) \
+                syslog_logf(level, __FILE_NAME__, __LINE__, __func__, format, ##__VA_ARGS__); \
     } while(0)
+
+/**
+ * @brief Set the runtime log level. Must be one of: LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
+ *        LOG_LEVEL_INFORMATION, LOG_LEVEL_DEBUG
+ * @param level the new log level
+ */
+void set_log_level(int level);
 
 /**
  * @brief Log a message into all registered streams

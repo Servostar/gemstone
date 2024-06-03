@@ -3,9 +3,12 @@
 //
 
 #include "sys/log.h"
+#include <cfg/opt.h>
 
-int main(void) {
+int main(int argc, char* argv[]) {
+    parse_options(argc, argv);
     log_init();
+    set_log_level(LOG_LEVEL_DEBUG);
 
     // this should appear in stderr
     INFO("before exit");
