@@ -4,14 +4,29 @@
 #include <stdlib.h>
 #include <sys/log.h>
 #include <assert.h>
+#include <string.h>
+#include <cfg/opt.h>
 
 static struct Logger_t {
     FILE** streams;
     size_t stream_count;
 } GlobalLogger;
 
-void log_init(void)
+int runtime_log_level = LOG_LEVEL_WARNING;
+
+void set_log_level(int level)
 {
+    runtime_log_level = level;
+}
+
+void log_init()
+{
+    if (is_option_set("verbose")) {
+        set_log_level(LOG_LEVEL_INFORMATION);
+    } else if (is_option_set("debug")) {
+        set_log_level(LOG_LEVEL_DEBUG);
+    }
+
     assert(LOG_DEFAULT_STREAM != NULL);
     log_register_stream(LOG_DEFAULT_STREAM);
 }
@@ -30,7 +45,7 @@ void log_register_stream(FILE* restrict stream)
         if (GlobalLogger.streams == NULL)
         {
             PANIC("failed to allocate stream buffer");
-        }   
+        }
     }
     else
     {

@@ -10,6 +10,12 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 include_directories(PRIVATE ${GLIB_INCLUDE_DIRS})
 
+# ------------------------------------------------ #
+# Setup TOML-C99                                   #
+# ------------------------------------------------ #
+
+include_directories(${PROJECT_SOURCE_DIR}/dep/tomlc99)
+
 # ------------------------------------------------------- #
 # CTEST 1
 # test building the syntax tree
@@ -19,6 +25,8 @@ add_executable(ast_build_tree
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
+        ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+        ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
         build_tree.c)
 set_target_properties(ast_build_tree
         PROPERTIES
@@ -38,6 +46,8 @@ add_executable(ast_print_node
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
+        ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+        ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
         print_node.c)
 set_target_properties(ast_print_node
         PROPERTIES
@@ -57,6 +67,8 @@ add_executable(ast_graphviz
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
+        ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+        ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
         print_graphviz.c)
 set_target_properties(ast_graphviz
         PROPERTIES
