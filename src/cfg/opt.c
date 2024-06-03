@@ -258,6 +258,10 @@ static int parse_project_table(ProjectConfig *config, const toml_table_t *projec
 }
 
 static int get_mode_from_str(TargetCompilationMode* mode, const char* name) {
+    if (mode == NULL) {
+        return PROJECT_SEMANTIC_ERR;
+    }
+
     if (strcmp(name, "application") == 0) {
         *mode = Application;
         return PROJECT_OK;
