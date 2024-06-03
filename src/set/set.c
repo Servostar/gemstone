@@ -489,7 +489,21 @@ int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNod
     return 0;
 }
 
+int createBitOperation(Expression* ParentExpression, AST_NODE_PTR currentNode){
+    //fill kind and Nodeptr
+    ParentExpression->impl.operation.kind = Boolean;
+    ParentExpression->impl.operation.nodePtr = currentNode;
 
+    //fill Operands
+    for (size_t i = 0; i < currentNode->child_count; i++){
+        Expression* expression = createExpression(currentNode->children[i]);
+        if(NULL == expression){
+            return 1;
+        }
+        g_array_append_val(ParentExpression->impl.operation.operands , expression);
+    }
+
+}
 
 
 Expression *createExpression(AST_NODE_PTR currentNode){
@@ -563,6 +577,10 @@ Expression *createExpression(AST_NODE_PTR currentNode){
     case AST_BitAnd:
     case AST_BitOr:
     case AST_BitXor:
+        expression->kind= ExpressionKindOperation;
+        if(createBitOperation(expression, currentNode)){
+            return NULL;
+        }
 
     case AST_BitNot:
 
