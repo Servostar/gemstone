@@ -132,7 +132,7 @@
 %left '*' '/'
 %left OpNot OpBitnot
 %left KeyAs KeyTo
-%left '(' ')'
+%left '(' ')' '[' ']'
 
 %%
 program: program programbody {AST_push_node(root, $2);}
@@ -158,6 +158,13 @@ expr: ValFloat {$$ = AST_new_node(new_loc(), AST_Float, $1);}
     | typecast{$$ = $1;}
     | reinterpretcast{$$ = $1;}
     | '(' expr ')' {$$=$2;}
+    | KeyRef Ident {AST_NODE_PTR addrof = AST_new_node(new_loc(), AST_AddressOf, NULL);
+                                   AST_push_node(addrof, AST_new_node(new_loc(), AST_Ident, $2));
+                                   $$ = addrof;}
+    | expr '[' expr ']' {AST_NODE_PTR deref = AST_new_node(new_loc(), AST_Dereference, NULL);
+                                   AST_push_node(deref, $1);
+                                   AST_push_node(deref, $3);
+                                   $$ = deref;};
 
 exprlist: expr ',' exprlist {AST_push_node($3, $1);
                              $$ = $3;}
@@ -449,7 +456,10 @@ type: typekind {AST_NODE_PTR type = AST_new_node(new_loc(), AST_Type, NULL);
                 AST_push_node(type, $1);
                 AST_push_node(type, $2);
                 AST_push_node(type, $3);
-                $$ = type;};
+                $$ = type;}
+    | KeyRef type {AST_NODE_PTR reftype = AST_new_node(new_loc(), AST_Reference, NULL);
+               AST_push_node(reftype, $2);
+               $$ = reftype; };
 
 operation: oparith {$$ = $1;}
     | oplogic {$$ = $1;}

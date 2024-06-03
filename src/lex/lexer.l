@@ -98,7 +98,7 @@
     yytext[yyleng - 2] = 0;
     
     DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
-\"\"\"([^\"\n]|\\\n)*\"\"\" {
+\"\"\"[^\"]*\"\"\" {
     yytext = yytext +3;
     yytext[yyleng - 4] = 0;
 

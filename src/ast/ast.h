@@ -76,6 +76,9 @@ enum AST_SyntaxElement_t {
   AST_Parameter,
   AST_Qualifyier,
   AST_ParamDecl,
+  AST_AddressOf,
+  AST_Dereference,
+  AST_Reference,
   AST_ELEMENT_COUNT
 };
 
