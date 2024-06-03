@@ -79,7 +79,7 @@ typedef struct BoxMember_t {
 } BoxMember;
 
 /**
- * @brief Essentially a glorified struct
+ * @brief Essentially a g   lorified struct
  * 
  */
 typedef struct BoxType_t {

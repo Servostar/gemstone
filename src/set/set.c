@@ -1,3 +1,5 @@
+#include "io/files.h"
+#include "yacc/parser.tab.h"
 #include <complex.h>
 #include <stdio.h>
 #include <ast/ast.h>
@@ -38,6 +40,8 @@ const Type StringLiteralType = {
  * @return 0 on success, 1 otherwise
  */
 int sign_from_string(const char* string, Sign* sign) {
+    assert(string != NULL);
+    assert(sign != NULL);
 
     if (strcmp(string, "unsigned") == 0) {
         *sign = Unsigned;
@@ -55,6 +59,8 @@ int sign_from_string(const char* string, Sign* sign) {
  * @return 0 on success, 1 otherwise
  */
 int primitive_from_string(const char* string, PrimitiveType* primitive) {
+    assert(string != NULL);
+    assert(primitive != NULL);
 
     if (strcmp(string, "int") == 0) {
         *primitive = Int;
@@ -68,6 +74,9 @@ int primitive_from_string(const char* string, PrimitiveType* primitive) {
 }
 
 int scale_factor_from(const char* string, double* factor) {
+    assert(string != NULL);
+    assert(factor != NULL);
+
     if (strcmp(string, "half") == 0 || strcmp(string, "short") == 0) {
         *factor = 0.5;
         return SEMANTIC_OK;
@@ -79,7 +88,24 @@ int scale_factor_from(const char* string, double* factor) {
     return SEMANTIC_ERROR;
 }
 
+int check_scale_factor(AST_NODE_PTR node, Scale scale) {
+    assert(node != NULL);
+
+    if (8 > scale) {
+        print_diagnostic(current_file, &node->location, Error, "Composite scale overflow");
+        return SEMANTIC_ERROR;
+    }
+    if (0.25 > scale) {
+        print_diagnostic(current_file, &node->location, Error, "Composite scale underflow");
+        return SEMANTIC_ERROR;
+    }
+    return SEMANTIC_OK;
+}
+
 int merge_scale_list(AST_NODE_PTR scale_list, Scale* scale) {
+    assert(scale_list != NULL);
+    assert(scale != NULL);
+
     for (size_t i = 0; i < scale_list->child_count; i++) {
 
         double scale_in_list = 1.0;
@@ -90,24 +116,39 @@ int merge_scale_list(AST_NODE_PTR scale_list, Scale* scale) {
         }
 
         *scale *= scale_in_list;
-
-        if (0.25 > *scale || 8 > *scale) {
-            // TODO: print diagnostic: Invalid composite scale
-            return SEMANTIC_ERROR;
-        }
     }
 
     return SEMANTIC_OK;
 }
 
-Type *findType(AST_NODE_PTR currentNode);
+/**
+ * @brief Get an already declared type from its name
+ */
+int get_type_decl(const char* name, Type** type) {
+    assert(name != NULL);
+    assert(type != NULL);
+
+    if (g_hash_table_contains(declaredComposites, name) == TRUE) {
+
+        *type = (Type*) g_hash_table_lookup(declaredComposites, name);
+
+        return SEMANTIC_OK;
+    }
+
+    return SEMANTIC_ERROR;
+}
 
 int impl_composite_type(AST_NODE_PTR ast_type, CompositeType* composite) {
+    assert(ast_type != NULL);
+    assert(composite != NULL);
+
     DEBUG("Type is a Composite");
 
     int status = SEMANTIC_OK;
     int scaleNodeOffset = 0;
     
+    composite->sign = Signed;
+
     // check if we have a sign
     if (AST_Sign == ast_type->children[0]->kind) {
 
@@ -137,12 +178,37 @@ int impl_composite_type(AST_NODE_PTR ast_type, CompositeType* composite) {
 
     status = primitive_from_string(typeKind->value, &composite->primitive);
     
+    // type kind is not primitve, must be a predefined composite
+
     if (status == SEMANTIC_ERROR) {
         // not a primitive try to resolve the type by name (must be a composite)
-        
+        Type* nested_type = NULL;
+        status = get_type_decl(typeKind->value, &nested_type);
+
+        if (status == SEMANTIC_ERROR) {
+            print_diagnostic(current_file, &typeKind->location, Error, "Unknown composite type in declaration");
+            return SEMANTIC_ERROR;
+        }
+
+        if (nested_type->kind == TypeKindComposite) {
+            // valid composite type
+
+            composite->primitive = nested_type->impl.composite.primitive;
+            
+            // no sign was set, use sign of type
+            if (scaleNodeOffset == 0) {
+                composite->sign = nested_type->impl.composite.sign;
+            }
+
+            composite->scale = composite->scale * nested_type->impl.composite.scale;
+            
+        } else {
+            print_diagnostic(current_file, &typeKind->location, Error, "Type must be either composite or primitive");
+            return SEMANTIC_ERROR;
+        }
     }
 
-    return SEMANTIC_OK;
+    return check_scale_factor(ast_type, composite->scale);
 }
 
 /**
@@ -150,85 +216,52 @@ int impl_composite_type(AST_NODE_PTR ast_type, CompositeType* composite) {
  * @param currentNode AST node of type kind type
  * @return the gemstone type implementation
  */
-Type *findType(AST_NODE_PTR currentNode) {
+int get_type_impl(AST_NODE_PTR currentNode, Type** type) {
     assert(currentNode != NULL);
     assert(currentNode->kind == AST_Type);
     assert(currentNode->child_count > 0);
 
+    int status;
+
     const char *typekind = currentNode->children[currentNode->child_count -1]->value;
-    
-    // type implementation
-    Type *type = malloc(sizeof(Type));
-    type->nodePtr = currentNode;
 
-    // primitive type OR composit
-    if (0 == strcmp(typekind, "int") || 0 == strcmp(typekind, "float")) {
-        
-        if(AST_Typekind != currentNode->children[0]->kind) {
-            
-            type->kind = TypeKindComposite;
-            type->impl.composite.nodePtr = currentNode;
-            impl_composite_type(currentNode, &type->impl.composite, typekind);
-            
-        } else {
-            // type is a primitive
-            type->kind = TypeKindPrimitive;
-
-            int primitive_invalid = primitive_from_string(typekind, &type->impl.primitive);
-            
-            if (primitive_invalid) {
-                PANIC("invalid primitive: %s", typekind);
-            }
-        }
-        
-    }else if(g_hash_table_contains(declaredBoxes, typekind)){
-        if(AST_Typekind != currentNode->children[0]->kind){
-            //TODO composite Box try
-        }
-        return (Type *) g_hash_table_lookup(declaredBoxes, typekind);
-    }else if(g_hash_table_contains(declaredComposites, typekind)){
-        if(AST_Typekind != currentNode->children[0]->kind){
-            Type *composite = malloc(sizeof(Type));
-            
-            *composite =  *(Type*) g_hash_table_lookup(declaredComposites, typekind);
-            
-
-
-            size_t scalelist = 0;
-            if(AST_Sign == currentNode->children[0]->kind){
-                if(0 == strcmp(currentNode->children[0]->value, "unsigned")){
-                    composite->impl.composite.sign = Unsigned;
-                }else if(0 == strcmp(currentNode->children[0]->value, "unsigned")){
-                    composite->impl.composite.sign = Signed;
-                }
-                scalelist = 1;
-            }
-
-
-            if(AST_List == currentNode->children[scalelist]->kind){
-                for (size_t i = 0; i < currentNode->children[scalelist]->child_count; i++){
-                    if (0 == strcmp(currentNode->children[scalelist]->children[i]->value, "short") || 0 == strcmp(currentNode->children[scalelist]->children[i]->value, "half")){
-                        composite->impl.composite.scale /= 2;
-                    }else{
-                        composite->impl.composite.scale *= 2; 
-                    }
-                    if (0.25 > composite->impl.composite.scale  || 8 > composite->impl.composite.scale) {
-                        //TODO scale not right
-                        return NULL;
-                    }
-                }
-            }
-            return composite;
-        }
-        return (Type *) g_hash_table_lookup(declaredComposites, typekind);
-    }else{
-        //TODO doesnt know typekind 
-        return NULL;
+    if (g_hash_table_contains(declaredComposites, typekind) == TRUE) {
+        *type = g_hash_table_lookup(declaredComposites, typekind);
+        return SEMANTIC_OK;
     }
-    return NULL;
+
+    if (g_hash_table_contains(declaredBoxes, typekind) == TRUE) {
+        *type = g_hash_table_lookup(declaredBoxes, typekind);
+        return SEMANTIC_OK;
+    }
+
+    // type is not yet declared, make a new one
+
+    Type* new_type = malloc(sizeof(Type));
+    new_type->nodePtr = currentNode;
+
+    // only one child means either composite or primitive
+    // try to implement primitive first
+    // if not successfull continue building a composite
+    if(currentNode->child_count == 1) {    
+        // type is a primitive
+        new_type->kind = TypeKindPrimitive;
+
+        status = primitive_from_string(typekind, &new_type->impl.primitive);
+        
+        // if err continue at composite construction
+        if (status == SEMANTIC_OK) {
+            return SEMANTIC_OK;
+        }
+    }
+
+    new_type->kind = TypeKindComposite;
+    new_type->impl.composite.nodePtr = currentNode;
+    status = impl_composite_type(currentNode, &new_type->impl.composite);
+    *type = new_type;
+
+    return status;
 }
-
-
 
 StorageQualifier Qualifier_from_string(const char *str) {
     if (!strncmp(str, "local", 5)) return Local;
@@ -237,73 +270,127 @@ StorageQualifier Qualifier_from_string(const char *str) {
     PANIC("Provided string is not a storagequalifier: %s", str);
 }
 
-Variable **createDecl(AST_NODE_PTR currentNode){
+int createDecl(AST_NODE_PTR currentNode, GArray** variables) {
     DEBUG("create declaration");
-    Variable **variables = malloc(currentNode->children[currentNode->child_count -1]->child_count * sizeof(Variable*));
+
+    AST_NODE_PTR ident_list = currentNode->children[currentNode->child_count - 1];
+
+    *variables = g_array_new(FALSE, FALSE, sizeof(Variable*));
 
     VariableDeclaration decl;
     decl.nodePtr = currentNode;
 
+    int status = SEMANTIC_OK;
+
+    DEBUG("Child Count: %i", currentNode->child_count);
+
+    for (size_t i = 0; i < currentNode->child_count; i++) {
+        switch(currentNode->children[i]->kind){
+            case AST_Storage:
+                DEBUG("fill Qualifier");
+                decl.qualifier = Qualifier_from_string(currentNode->children[i]->value);
+                break;
+            case AST_Type:
+                DEBUG("fill Type");
+                status = get_type_impl(currentNode->children[i], &decl.type);
+                break;
+            case AST_IdentList:
+                break;
+            default:
+                PANIC("invalid node type: %ld", currentNode->children[i]->kind);
+                break;
+        }
+    }
+
+    for(size_t i = 0; i < ident_list->child_count; i++) {
+        Variable* variable = malloc(sizeof(Variable));
+
+        variable->kind = VariableKindDeclaration;
+        variable->nodePtr = currentNode;
+        variable->name = ident_list->children[i]->value;
+        variable->impl.declaration = decl;
+
+        g_array_append_val(*variables, variable);
+    }
+    
+    return status;
+}
+
+int createDef(AST_NODE_PTR currentNode, GArray** variables) {
+    assert(variables != NULL);
+    assert(currentNode != NULL);
+
+    DEBUG("create definition");
+
+    AST_NODE_PTR declaration = currentNode->children[currentNode->child_count - 1];
+
+    * variables = g_array_new(FALSE, FALSE, sizeof(Variable*));
+    
+    VariableDefiniton def;
+    def.nodePtr = currentNode;
+
+    Variable* variable = malloc(sizeof(Variable));
+    variable->kind = VariableKindDefinition;
+    variable->nodePtr = currentNode;
+    variable->name = declaration->children[1]->value;
+    variable->impl.definiton= def;
+    g_array_append_val(*variables, variable);
+
+    int status = SEMANTIC_OK;
+
     DEBUG("Child Count: %i", currentNode->child_count);
     for (size_t i = 0; i < currentNode->child_count; i++){
     
-        switch(currentNode->children[i]->kind){
-        case AST_Storage:
-            DEBUG("fill Qualifier");
-            decl.qualifier = Qualifier_from_string(currentNode->children[i]->value);
-            break;
-        case AST_Type:
-            DEBUG("fill Type");
-            decl.type = findType(currentNode->children[i]);
-            break;
-        case AST_IdentList:
-            for(size_t i = 0; i < currentNode->children[currentNode->child_count -1]->child_count; i++){
-                Variable *variable = malloc(sizeof(Variable));
-                variable->kind = VariableKindDeclaration;
-                variable->nodePtr = currentNode;
-                variable->name = currentNode->children[currentNode->child_count -1]->children[i]->value;
-                variable->impl.declaration = decl;
-                variables[i] = variable;
-            }   
-            break;
-        default:
-        //TODO PANIC maybe
-            break;
+        switch(currentNode->children[i]->kind) {
+            case AST_Decl:
+                break;
+            default:
+                PANIC("invalid node type: %ld", currentNode->children[i]->kind);
+                break;
         }
+    }
+    return status;
+}
+
+int getVariableFromScope(const char* name, Variable** variable) {
+    assert(name != NULL);
+    assert(variable != NULL);
+    assert(Scope != NULL);
+
+    // loop through all variable scope and find a variable
+    for(size_t i = 0; i < Scope->len; i++) {
+        GHashTable* variable_table = ((GHashTable**) Scope->data)[i];
+        
+        if(g_hash_table_contains(variable_table, name)) {
+            *variable = g_hash_table_lookup(variable_table, name);
+            return SEMANTIC_OK;
+        }
+    }
+
+    return SEMANTIC_ERROR;
+}
+
+int fillTablesWithVars(GHashTable *variableTable, GHashTable *currentScope , GArray* variables) {
+    DEBUG("filling vars in scope and table");
+
+    for(size_t i = 0; i < variables->len; i++) {
+        Variable* var = (Variable*) variables->data + i;
+
+        // this variable is discarded, only need status code
+        Variable* tmp = NULL;
+        if(getVariableFromScope(var->name, &tmp) == SEMANTIC_OK) {
+            INFO("this var already exist: ", var->name);
+            return SEMANTIC_ERROR;
+        }
+
+        g_hash_table_insert(variableTable, (gpointer) var->name, var);   
+        g_hash_table_insert(currentScope, (gpointer) var->name, var);
     }
     
-    return variables;
+    return SEMANTIC_OK;
 }
 
-Variable* getVariableFromScope(const char* name){
-    for(size_t i = 0; i < Scope->len; i++){
-        if(g_hash_table_contains(((GHashTable **) Scope->data)[i], name))
-        {
-            return g_hash_table_lookup(((GHashTable**)Scope->data)[i], name);
-        }
-    }
-    return NULL;
-}
-
-
-
-int fillTablesWithVars(GHashTable *variableTable,GHashTable *currentScope , Variable** content, size_t amount){
-    DEBUG("filling vars in scope and table");
-    for(size_t i = 0; i < amount; i++){
-        if(!(NULL == getVariableFromScope(content[i]->name))){
-            DEBUG("this var already exist: ",content[i]->name);
-            return 1;
-        }
-        g_hash_table_insert(variableTable, (gpointer) content[i]->name, content[i] );   
-        g_hash_table_insert(currentScope, (gpointer) content[i]->name, content[i] );
-    }
-    return 0;
-}
-
-
-
-
-
+[[nodiscard("type must be freed")]]
 TypeValue createTypeValue(AST_NODE_PTR currentNode){
     TypeValue value;
     Type *type = malloc(sizeof(Type));
@@ -312,40 +399,36 @@ TypeValue createTypeValue(AST_NODE_PTR currentNode){
     type->nodePtr = currentNode;
 
     switch (currentNode->kind) {
-   
         case AST_Int:
             type->impl.primitive = Int;
         case AST_Float:
-            type->impl.primitive = Int;
+            type->impl.primitive = Float;
         default:
-        PANIC("Node is not an expression but from kind: %i", currentNode->kind);
+            PANIC("Node is not an expression but from kind: %i", currentNode->kind);
             break;
-        }
+    }
     
     value.nodePtr = currentNode;
     value.value = currentNode->value;
     return value;
 }
 
-TypeValue createString(AST_NODE_PTR currentNode){
+TypeValue createString(AST_NODE_PTR currentNode) {
     TypeValue value;
-    Type *type =(Type*) &StringLiteralType;
+    Type *type = (Type*) &StringLiteralType;
     value.type = type;
     value.nodePtr = currentNode;
     value.value = currentNode->value; 
     return value;
 }
 
-Expression *createExpression(AST_NODE_PTR currentNode);
+Expression* createExpression(AST_NODE_PTR currentNode);
 
-
-Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_NODE_PTR currentNode){
+Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_NODE_PTR currentNode) {
     Type *result = malloc(sizeof(Type));
     result->nodePtr = currentNode;
-
     
-    if(LeftOperandType->kind == TypeKindComposite && RightOperandType->kind == TypeKindComposite)
-    {
+    if (LeftOperandType->kind == TypeKindComposite && RightOperandType->kind == TypeKindComposite) {
         result->kind = TypeKindComposite;
         CompositeType resultImpl;
 
@@ -353,81 +436,87 @@ Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_
         resultImpl.sign = MAX(LeftOperandType->impl.composite.sign, RightOperandType->impl.composite.sign);
         resultImpl.scale = MAX(LeftOperandType->impl.composite.scale, RightOperandType->impl.composite.scale);
         resultImpl.primitive = MAX(LeftOperandType->impl.composite.primitive , RightOperandType->impl.composite.primitive);
-        
-        result->impl.composite = resultImpl;
 
+        result->impl.composite = resultImpl;
         
-    } else if(LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindPrimitive){
+    } else if (LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindPrimitive) {
         result->kind = TypeKindPrimitive;
         
         result->impl.primitive = MAX(LeftOperandType->impl.primitive , RightOperandType->impl.primitive);
 
-    } else if(LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindComposite){
+    } else if (LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindComposite) {
         result->kind = TypeKindComposite;
 
         result->impl.composite.sign = Signed;
-        result->impl.composite.scale = MAX( 1.0, RightOperandType->impl.composite.scale);
+        result->impl.composite.scale = MAX(1.0, RightOperandType->impl.composite.scale);
         result->impl.composite.primitive = MAX(Int, RightOperandType->impl.composite.primitive);
         result->impl.composite.nodePtr = currentNode;
 
-    } else if(LeftOperandType->kind == TypeKindComposite && RightOperandType->kind == TypeKindPrimitive){
+    } else if (LeftOperandType->kind == TypeKindComposite && RightOperandType->kind == TypeKindPrimitive) {
         result->kind = TypeKindComposite;
 
         result->impl.composite.sign = Signed;
-        result->impl.composite.scale = MAX( 1.0, LeftOperandType->impl.composite.scale);
+        result->impl.composite.scale = MAX(1.0, LeftOperandType->impl.composite.scale);
         result->impl.composite.primitive = MAX(Int, LeftOperandType->impl.composite.primitive);
         result->impl.composite.nodePtr = currentNode;
-    }else{
+    } else {
+        free(result);
         return NULL;
     }
     return result;
 }
 
-int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode, size_t expectedChildCount){
+int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode, [[maybe_unused]] size_t expectedChildCount) {
     
     ParentExpression->impl.operation.kind = Arithmetic;
     ParentExpression->impl.operation.nodePtr = currentNode;
-    if (expectedChildCount > currentNode->child_count){
-        PANIC("Operation has to many children");
-    }
-    for (size_t i = 0; i < currentNode->child_count; i++){
+
+    assert(expectedChildCount > currentNode->child_count);
+
+    for (size_t i = 0; i < currentNode->child_count; i++) {
         Expression* expression = createExpression(currentNode->children[i]);
-        if(NULL == expression){
-            return 1;
-        }
-        g_array_append_val(ParentExpression->impl.operation.operands , expression);
 
+        if(NULL == expression) {
+            return SEMANTIC_OK;
+        }
+
+        g_array_append_val(ParentExpression->impl.operation.operands, expression);
     }
 
-    switch (currentNode->kind){
+    switch (currentNode->kind) {
         case AST_Add:
             ParentExpression->impl.operation.impl.arithmetic = Add;
+            break;
         case AST_Sub:
             ParentExpression->impl.operation.impl.arithmetic = Sub;
+            break;
         case AST_Mul:
             ParentExpression->impl.operation.impl.arithmetic = Mul;
+            break;
         case AST_Div:
             ParentExpression->impl.operation.impl.arithmetic = Div;
+            break;
         case AST_Negate:
             ParentExpression->impl.operation.impl.arithmetic = Negate;
+            break;
         default:
             PANIC("Current node is not an arithmetic operater");
-        break;
+            break;
     }
 
-
-    if(ParentExpression->impl.operation.impl.arithmetic == Negate){
-        Type* result = malloc(sizeof(Type));
-        result = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
+    if (ParentExpression->impl.operation.impl.arithmetic == Negate) {
+        Type* result = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
         result->nodePtr = currentNode;
-        if (result->kind == TypeKindReference || result->kind == TypeKindBox){
-            return 1;
-        }else if(result->kind == TypeKindComposite){
+        
+        if (result->kind == TypeKindReference || result->kind == TypeKindBox) {
+            print_diagnostic(current_file, &currentNode->location, Error, "Invalid type for arithmetic operation");
+            return SEMANTIC_ERROR;
+        } else if(result->kind == TypeKindComposite) {
             result->impl.composite.sign = Signed;
         }
         ParentExpression->result = result;
         
-    }else{
+    } else {
 
         Type* LeftOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
         Type* RightOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[1]->result;
@@ -435,41 +524,44 @@ int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode,
         ParentExpression->result = createTypeFromOperands(LeftOperandType, RightOperandType, currentNode);
     }
 
-    if(ParentExpression->result == NULL){
-        return 1;
+    if (ParentExpression->result == NULL) {
+        return SEMANTIC_ERROR;
     }
 
-
-    return 0;
+    return SEMANTIC_OK;
 }
 
-int createRelationalOperation(Expression* ParentExpression,AST_NODE_PTR currentNode){
-    //fill kind and Nodeptr
+int createRelationalOperation(Expression* ParentExpression, AST_NODE_PTR currentNode) {
+    // fill kind and Nodeptr
     ParentExpression->impl.operation.kind = Relational;
     ParentExpression->impl.operation.nodePtr = currentNode;
 
-    //fill Operands
-    for (size_t i = 0; i < currentNode->child_count; i++){
+    // fill Operands
+    for (size_t i = 0; i < currentNode->child_count; i++) {
         Expression* expression = createExpression(currentNode->children[i]);
         if(NULL == expression){
-            return 1;
+            return SEMANTIC_ERROR;
         }
-        g_array_append_val(ParentExpression->impl.operation.operands , expression);
+        g_array_append_val(ParentExpression->impl.operation.operands, expression);
     }
 
-    //fill impl
-    switch (currentNode->kind){
-    case AST_Eq:
-        ParentExpression->impl.operation.impl.relational = Equal;
-    case AST_Less:
-        ParentExpression->impl.operation.impl.relational = Greater;
-    case AST_Greater:
-        ParentExpression->impl.operation.impl.relational= Less;
-    default:
-        PANIC("Current node is not an relational operater");
-    break;
+    // fill impl
+    switch (currentNode->kind) {
+        case AST_Eq:
+            ParentExpression->impl.operation.impl.relational = Equal;
+            break;
+        case AST_Less:
+            ParentExpression->impl.operation.impl.relational = Greater;
+            break;
+        case AST_Greater:
+            ParentExpression->impl.operation.impl.relational= Less;
+            break;
+        default:
+            PANIC("Current node is not an relational operater");
+            break;
     }
-    Type * result = malloc(sizeof(Type));
+
+    Type* result = malloc(sizeof(Type));
     result->impl.primitive = Int;
     result->kind = TypeKindPrimitive;
     result->nodePtr = currentNode;
@@ -478,66 +570,76 @@ int createRelationalOperation(Expression* ParentExpression,AST_NODE_PTR currentN
     return 0;
 }
 
-
-int createBoolOperation(Expression *ParentExpression, AST_NODE_PTR currentNode){
-    //fill kind and Nodeptr
+int createBoolOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) {
+    // fill kind and Nodeptr
     ParentExpression->impl.operation.kind = Boolean;
     ParentExpression->impl.operation.nodePtr = currentNode;
 
-    //fill Operands
+    // fill Operands
     for (size_t i = 0; i < currentNode->child_count; i++){
         Expression* expression = createExpression(currentNode->children[i]);
-        if(NULL == expression){
-            return 1;
+        if (NULL == expression) {
+            return SEMANTIC_ERROR;
         }
-        g_array_append_val(ParentExpression->impl.operation.operands , expression);
+        g_array_append_val(ParentExpression->impl.operation.operands, expression);
     }
 
-    switch (currentNode->kind){
-    case AST_BoolAnd:
-        ParentExpression->impl.operation.impl.boolean = BooleanAnd;
-    case AST_BoolOr:
-        ParentExpression->impl.operation.impl.boolean = BooleanOr;
-    case AST_BoolXor:
-        ParentExpression->impl.operation.impl.boolean = BooleanXor;
-    default:
-        PANIC("Current node is not an boolean operater");
-    break;
+    switch (currentNode->kind) {
+        case AST_BoolAnd:
+            ParentExpression->impl.operation.impl.boolean = BooleanAnd;
+            break;
+        case AST_BoolOr:
+            ParentExpression->impl.operation.impl.boolean = BooleanOr;
+            break;
+        case AST_BoolXor:
+            ParentExpression->impl.operation.impl.boolean = BooleanXor;
+            break;
+        default:
+            PANIC("Current node is not an boolean operater");
+            break;
     }
 
+    Expression* lhs = ((Expression**) ParentExpression->impl.operation.operands->data)[0];
+    Expression* rhs = ((Expression**) ParentExpression->impl.operation.operands->data)[1];
 
-    Type* LeftOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
-    Type* RightOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[1]->result;
+    Type* LeftOperandType = lhs->result;
+    Type* RightOperandType = rhs->result;
 
-    //should not be a box or a reference
-    if(LeftOperandType->kind != TypeKindPrimitive && LeftOperandType->kind != TypeKindComposite){
-        return 1;
+    // should not be a box or a reference
+    if(LeftOperandType->kind != TypeKindPrimitive && LeftOperandType->kind != TypeKindComposite) {
+        print_diagnostic(current_file, &lhs->nodePtr->location, Error, "invalid type for boolean operation");
+        return SEMANTIC_ERROR;
     }
-    if(RightOperandType->kind != TypeKindPrimitive && RightOperandType->kind != TypeKindComposite){
-        return 1;
+    if(RightOperandType->kind != TypeKindPrimitive && RightOperandType->kind != TypeKindComposite) {
+        print_diagnostic(current_file, &rhs->nodePtr->location, Error, "invalid type for boolean operation");
+        return SEMANTIC_ERROR;
     }
-    //should not be a float
-    if(LeftOperandType->kind == TypeKindComposite){
-        if(LeftOperandType->impl.composite.primitive == Float){
-            return 1;
+    // should not be a float
+    if (LeftOperandType->kind == TypeKindComposite) {
+        if (LeftOperandType->impl.composite.primitive == Float) {
+            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "operand must not be a float");
+            return SEMANTIC_ERROR;
         }
-    }else if(LeftOperandType->kind == TypeKindPrimitive){
-        if(LeftOperandType->impl.primitive == Float){
-            return 1;
+    } else if (LeftOperandType->kind == TypeKindPrimitive) {
+        if (LeftOperandType->impl.primitive == Float) {
+            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "operand must not be a float");
+            return SEMANTIC_ERROR;
         }
-    }else if(RightOperandType->kind == TypeKindComposite){
-        if(RightOperandType->impl.composite.primitive == Float){
-            return 1;
+    } else if (RightOperandType->kind == TypeKindComposite) {
+        if (RightOperandType->impl.composite.primitive == Float) {
+            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "operand must not be a float");
+            return SEMANTIC_ERROR;
         }
-    }else if(RightOperandType->kind == TypeKindPrimitive){
-        if(RightOperandType->impl.primitive == Float){
-            return 1;
+    } else if (RightOperandType->kind == TypeKindPrimitive) {
+        if (RightOperandType->impl.primitive == Float) {
+            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "operand must not be a float");
+            return SEMANTIC_ERROR;
         }
     }
-
 
     ParentExpression->result = createTypeFromOperands(LeftOperandType, RightOperandType, currentNode);
-    return 0;
+
+    return SEMANTIC_OK;
 }
 
 int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNode){
@@ -590,11 +692,11 @@ bool isScaleEqual(double leftScale, double rightScale){
 }
 
 int createBitOperation(Expression* ParentExpression, AST_NODE_PTR currentNode){
-    //fill kind and Nodeptr
+    // fill kind and Nodeptr
     ParentExpression->impl.operation.kind = Boolean;
     ParentExpression->impl.operation.nodePtr = currentNode;
 
-    //fill Operands
+    // fill Operands
     for (size_t i = 0; i < currentNode->child_count; i++){
         Expression* expression = createExpression(currentNode->children[i]);
         if(NULL == expression){
@@ -712,6 +814,78 @@ int createBitNotOperation(Expression* ParentExpression, AST_NODE_PTR currentNode
     return SEMANTIC_OK;
 }
 
+GArray* getBoxMember(Type* currentBoxType, GArray *names){
+    
+    
+    GArray *members = g_array_new(FALSE, FALSE, sizeof(BoxMember));    
+    GHashTable* memberList = currentBoxType->impl.box.member;
+    
+    const char* currentName = ((const char **) names)[0];
+    if(!g_hash_table_contains(memberList, currentName)){
+        // TODO: free  members
+        return NULL; 
+    }
+    BoxMember * currentMember = g_hash_table_lookup(memberList, currentName);
+    g_array_append_val(members, currentMember);
+
+    g_array_remove_index(names,0);
+    if (names->len == 0){
+        return members;
+    }
+    if (currentMember->type->kind == TypeKindBox){
+        GArray *otherMember = getBoxMember(currentMember->type, names);
+        if(NULL == otherMember){
+            return NULL;
+        }
+        g_array_append_vals(members,(BoxMember *) otherMember->data, otherMember->len);
+        return members;
+    } 
+    return NULL;
+}
+
+int createBoxAccess(Expression* ParentExpression,AST_NODE_PTR currentNode) {
+
+    const char* boxname = currentNode->children[0]->value;
+    Variable* boxVariable = NULL;
+    int status = getVariableFromScope(boxname, &boxVariable);
+
+    if(status == SEMANTIC_ERROR){
+        return SEMANTIC_ERROR;
+    }
+    Type* boxType;
+
+    if(boxVariable->kind == VariableKindDeclaration){
+        
+        boxType = boxVariable->impl.declaration.type;
+    } else if (boxVariable->kind == VariableKindDefinition){
+        boxType = boxVariable->impl.definiton.declaration.type;
+    } else{
+        return SEMANTIC_ERROR;
+    }
+    if (boxType->kind != TypeKindBox){
+        return SEMANTIC_ERROR;
+    }
+    //filling boxAccess variable
+    ParentExpression->impl.variable->kind = VariableKindBoxMember;
+    ParentExpression->impl.variable->nodePtr = currentNode;
+    ParentExpression->impl.variable->name = NULL;
+    ParentExpression->impl.variable->impl.member.nodePtr = currentNode;
+
+    //filling boxacces.variable
+    ParentExpression->impl.variable->impl.member.variable = boxVariable;
+
+    //first one is the box itself
+    GArray* names = malloc(sizeof(GArray));
+    for (size_t i = 1; i < currentNode->child_count; i++){
+        g_array_append_val(names, currentNode->children[1]->value);
+    }
+
+    GArray * boxMember = getBoxMember(boxType, names);
+    ParentExpression->impl.variable->impl.member.member = boxMember;
+    ParentExpression->result = ((BoxMember *)boxMember->data)[boxMember->len].type;
+    return SEMANTIC_OK;
+
+}
 
 Expression *createExpression(AST_NODE_PTR currentNode){
     Expression *expression = malloc(sizeof(Expression));
@@ -731,8 +905,8 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         break;
     case AST_Ident:
         expression->kind = ExpressionKindVariable;
-        expression->impl.variable = getVariableFromScope(currentNode->value);
-        if(NULL == expression->impl.variable){
+        int status = getVariableFromScope(currentNode->value, &expression->impl.variable  );             
+        if(status == SEMANTIC_ERROR){
             DEBUG("Identifier is not in current scope");
             return NULL;
         }
@@ -801,6 +975,8 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         break;
 
     case AST_IdentList:
+    expression->kind = ExpressionKindVariable;
+    
     //Box Accsess
     case AST_List:
     // Box Self Access
@@ -815,6 +991,12 @@ Expression *createExpression(AST_NODE_PTR currentNode){
     }
     return expression;
 }
+
+
+
+
+
+
 
 Module *create_set(AST_NODE_PTR currentNode){
     DEBUG("create root Module");
@@ -852,17 +1034,24 @@ Module *create_set(AST_NODE_PTR currentNode){
         DEBUG("created Child: %i" ,currentNode->children[i]->kind);
         switch(currentNode->children[i]->kind){
             
-        case AST_Decl:
-            if (1 == fillTablesWithVars(variables,globalscope,createDecl(currentNode->children[i]) ,currentNode->children[i]->children[currentNode->children[i]->child_count -1]->child_count)){
-                //TODO behandlung, wenn var schon existiert
-                DEBUG("var already exists");
+        case AST_Decl: {
+            GArray* vars;
+            int status = createDecl(currentNode->children[i], &vars);
+
+            if (fillTablesWithVars(variables, globalscope, vars) == SEMANTIC_ERROR) {
+                print_diagnostic(current_file, &currentNode->children[i]->location, Error, "Variable already declared");
+                INFO("var already exists");
                 break;
             }
             DEBUG("filled successfull the module and scope with vars");
             break;
-        case AST_Def:
+        }
+        case AST_Def: {
+            GArray* vars;
+            int status = createDef(currentNode->children[i], &vars);
             DEBUG("created Definition successfully");
             break;
+        }
         case AST_Box:
         case AST_Fun:
         case AST_Import:
