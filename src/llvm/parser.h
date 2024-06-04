@@ -18,12 +18,16 @@ typedef struct LLVMGlobalScope_t {
     GHashTable* variables;
     // of type LLVMTypeRef
     GHashTable* functions;
+    // module definition
+    Module* module;
 } LLVMGlobalScope;
 
-LLVMGlobalScope* new_global_scope();
+LLVMGlobalScope* new_global_scope(const Module* module);
+
+void list_available_targets();
 
 void delete_global_scope(LLVMGlobalScope* scope);
 
-BackendError parse_module(const Module* module, void**);
+BackendError parse_module(const Module* module, const TargetConfig* config);
 
 #endif // LLVM_BACKEND_PARSE_H_

@@ -11,6 +11,8 @@
 #include <io/files.h>
 #include <assert.h>
 #include <cfg/opt.h>
+#include <codegen/backend.h>
+#include <llvm/backend.h>
 
 extern void yyrestart(FILE *);
 
@@ -125,6 +127,25 @@ static void print_ast_to_file(const AST_NODE_PTR ast, const TargetConfig *target
     free((void *) path);
 }
 
+static void run_backend_codegen(const Module* module, const TargetConfig* target) {
+    DEBUG("initializing LLVM codegen backend...");
+    llvm_backend_init();
+
+    DEBUG("initiializing backend for codegen...");
+    BackendError err = init_backend();
+    if (err.kind != Success) {
+        return;
+    }
+
+    DEBUG("generating code...");
+    err = generate_code(module, target);
+    if (err.kind != Success) {
+        return;
+    }
+
+    err = deinit_backend();
+}
+
 /**
  * @brief Build the given target
  * @param unit
@@ -142,7 +163,9 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
             print_ast_to_file(ast, target);
 
             // TODO: parse AST to semantic values
-            // TODO: backend codegen
+            Module* module = NULL;
+
+            run_backend_codegen(module, target);
         }
     }
 

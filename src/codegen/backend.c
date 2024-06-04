@@ -68,7 +68,7 @@ BackendError set_backend(const codegen_init init_func, const codegen_deinit dein
     return new_backend_error(Success);
 }
 
-BackendError generate_code(const Module* root, void** output) {
+BackendError generate_code(const Module* root, const TargetConfig* target) {
     DEBUG("generating code with backend: %s", CodegenBackend.name);
 
     if (CodegenBackend.codegen_func == NULL) {
@@ -76,7 +76,7 @@ BackendError generate_code(const Module* root, void** output) {
         return new_backend_error(NoBackend);
     }
 
-    BackendError code = CodegenBackend.codegen_func(root, output);
+    BackendError code = CodegenBackend.codegen_func(root, target);
     if (code.kind) {
         ERROR("code generation of backend: %s failed with code: %ld", CodegenBackend.name, code);
         return code;

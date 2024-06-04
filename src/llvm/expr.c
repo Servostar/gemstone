@@ -300,7 +300,7 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
 
     switch (expr->kind) {
         case ExpressionKindConstant:
-            err = get_type_value(unit, scope->func_scope->global_scope,
+            err = get_const_type_value(unit, scope->func_scope->global_scope,
                                  &expr->impl.constant, llvm_result);
             break;
         case ExpressionKindTransmute:

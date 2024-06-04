@@ -4,6 +4,7 @@
 
 #include <set/types.h>
 #include <ast/ast.h>
+#include <cfg/opt.h>
 
 typedef struct BackendImplError_t {
     // faulty AST node
@@ -30,7 +31,7 @@ typedef struct BackendError_t {
  * @brief Function called by the compiler backend to generate an intermediate format
  *        from AST. Returns a custom container for its intermediate language.
  */
-typedef BackendError (*codegen)(const Module*, void**);
+typedef BackendError (*codegen)(const Module*, const TargetConfig* target);
 
 /**
  * @brief Initialize the code generation backend.
@@ -78,7 +79,7 @@ BackendError deinit_backend(void);
  * @return BackendError 
  */
 [[nodiscard]]
-BackendError generate_code(const Module* root, void** code);
+BackendError generate_code(const Module* root, const TargetConfig* target);
 
 /**
  * @brief Create a new backend error

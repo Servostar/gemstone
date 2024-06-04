@@ -103,6 +103,9 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
             break;
         }
 
+        Paramer* parameter = (Paramer*) call->function->parameter->data + i;
+        // TODO: create a pointer to LLVMValueRef in case parameter is `out`
+
         g_array_append_vals(arguments, &llvm_arg, 1);
     }
 

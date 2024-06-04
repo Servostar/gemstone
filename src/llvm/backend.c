@@ -34,7 +34,35 @@ Target create_native_target() {
     return target;
 }
 
-Target create_target_from_config() { PANIC("NOT IMPLEMENTED"); }
+LLVMCodeGenOptLevel llvm_opt_from_int(int level) {
+    switch (level) {
+        case 1:
+            return LLVMCodeGenLevelLess;
+        case 2:
+            return LLVMCodeGenLevelDefault;
+        case 3:
+            return LLVMCodeGenLevelAggressive;
+        default:
+            break;
+    }
+    PANIC("invalid code generation optimization level: %d", level);
+}
+
+Target create_target_from_config(const TargetConfig* config) {
+    DEBUG("Building target from configuration");
+
+    Target target = create_native_target();
+
+    target.name.str = config->name;
+    target.name.allocation = NONE;  // freed later by compiler
+
+    target.opt = llvm_opt_from_int(config->optimization_level);
+
+    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name, target.opt,
+         target.triple, target.cpu, target.features);
+
+    return target;
+}
 
 static void delete_string(String string) {
     DEBUG("deleting string...");
@@ -59,8 +87,9 @@ void delete_target(Target target) {
 
 typedef enum LLVMBackendError_t { UnresolvedImport } LLVMBackendError;
 
-static BackendError llvm_backend_codegen(const Module* unit, void** output) {
-    return parse_module(unit, output);
+static BackendError llvm_backend_codegen(const Module* unit,
+                                         const TargetConfig* target) {
+    return parse_module(unit, target);
 }
 
 static BackendError llvm_backend_codegen_init(void) {

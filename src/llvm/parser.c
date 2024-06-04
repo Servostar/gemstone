@@ -8,15 +8,15 @@
 #include <llvm/parser.h>
 #include <llvm/types.h>
 #include <llvm/variables.h>
+#include <llvm/func.h>
 #include <set/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/log.h>
 
-#define EXPORT_IR 1
-
-BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target) {
+BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
+                       const TargetConfig* config) {
     DEBUG("exporting module to LLVM-IR...");
 
     BackendError err = SUCCESS;
@@ -25,8 +25,8 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target) {
     char* ir = LLVMPrintModuleToString(unit->module);
 
     // construct file name
-    char* filename = alloca(strlen(target->name.str) + 4);
-    sprintf(filename, "%s.ll", target->name.str);
+    const char* filename =
+        make_file_path(target->name.str, ".ll", 1, config->archive_directory);
 
     INFO("Writing LLVM-IR to %s", filename);
 
@@ -49,13 +49,52 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target) {
 
     INFO("%ld bytes written to %s", bytes, filename);
 
+    free((char*)filename);
+
     // clean up LLVM-IR string
     LLVMDisposeMessage(ir);
 
     return err;
 }
 
-BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target) {
+BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
+                                 LLVMTargetMachineRef target_machine,
+                                 LLVMCodeGenFileType file_type, char* error,
+                                 const TargetConfig* config) {
+    BackendError err = SUCCESS;
+    DEBUG("Generating code...");
+
+    const char* filename;
+    switch (file_type) {
+        case LLVMAssemblyFile:
+            filename = make_file_path(config->name, ".s", 1,
+                                      config->archive_directory);
+            break;
+        case LLVMObjectFile:
+            filename = make_file_path(config->name, ".o", 1,
+                                      config->archive_directory);
+            break;
+        default:
+            return new_backend_impl_error(Implementation, NULL,
+                                          "invalid codegen file");
+    }
+
+    if (LLVMTargetMachineEmitToFile(target_machine, unit->module, filename,
+                                    file_type, &error) != 0) {
+        ERROR("failed to emit code: %s", error);
+        err =
+            new_backend_impl_error(Implementation, NULL, "failed to emit code");
+        LLVMDisposeMessage(error);
+    }
+
+    free((void*)filename);
+
+    return err;
+}
+
+BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
+                           const TargetConfig* config) {
+    BackendError err = SUCCESS;
     DEBUG("exporting object file...");
 
     INFO("Using target (%s): %s with features: %s", target->name.str,
@@ -72,8 +111,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target) {
     if (LLVMGetTargetFromTriple(target->triple.str, &llvm_target, &error) !=
         0) {
         ERROR("failed to create target machine: %s", error);
-        BackendError err = new_backend_impl_error(
-            Implementation, NULL, "unable to create target machine");
+        err = new_backend_impl_error(Implementation, NULL,
+                                     "unable to create target machine");
         LLVMDisposeMessage(error);
         return err;
     }
@@ -83,19 +122,19 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target) {
         llvm_target, target->triple.str, target->cpu.str, target->features.str,
         target->opt, target->reloc, target->model);
 
-    LLVMCodeGenFileType file_type = LLVMObjectFile;
+    if (config->print_asm) {
+        err = emit_module_to_file(unit, target_machine, LLVMAssemblyFile, error,
+                                  config);
+    }
 
-    DEBUG("Generating code...");
-    if (LLVMTargetMachineEmitToFile(target_machine, unit->module, "output",
-                                    file_type, &error) != 0) {
-        ERROR("failed to emit code: %s", error);
-        BackendError err =
-            new_backend_impl_error(Implementation, NULL, "failed to emit code");
-        LLVMDisposeMessage(error);
+    if (err.kind != Success) {
         return err;
     }
 
-    return SUCCESS;
+    err = emit_module_to_file(unit, target_machine, LLVMObjectFile, error,
+                              config);
+
+    return err;
 }
 
 void list_available_targets() {
@@ -120,23 +159,25 @@ void list_available_targets() {
     LLVMDisposeMessage(default_triple);
 }
 
-BackendError export_module(LLVMBackendCompileUnit* unit, const Target* target) {
+BackendError export_module(LLVMBackendCompileUnit* unit, const Target* target,
+                           const TargetConfig* config) {
     DEBUG("exporting module...");
 
     BackendError err = SUCCESS;
 
-    export_object(unit, target);
+    export_object(unit, target, config);
 
-    if (EXPORT_IR) {
-        export_IR(unit, target);
-    } else {
-        DEBUG("not exporting LLVM-IR");
+    if (config->print_ir) {
+        export_IR(unit, target, config);
     }
 
     return err;
 }
 
-static BackendError build_module(LLVMBackendCompileUnit* unit, LLVMGlobalScope* global_scope, const Module* module) {
+static BackendError build_module(LLVMBackendCompileUnit* unit,
+                                 LLVMGlobalScope* global_scope,
+                                 const Module* module) {
+    DEBUG("building module...");
     BackendError err = SUCCESS;
 
     err = impl_types(unit, global_scope, module->types);
@@ -156,10 +197,13 @@ static BackendError build_module(LLVMBackendCompileUnit* unit, LLVMGlobalScope* 
         return err;
     }
 
+    // TODO: implement functions
+    err = impl_functions(unit, global_scope, module->functions);
+
     return err;
 }
 
-BackendError parse_module(const Module* module, void**) {
+BackendError parse_module(const Module* module, const TargetConfig* config) {
     DEBUG("generating code for module %p", module);
     if (module == NULL) {
         ERROR("no module for codegen");
@@ -171,20 +215,19 @@ BackendError parse_module(const Module* module, void**) {
     // we start with a LLVM module
     DEBUG("creating LLVM context and module");
     unit->context = LLVMContextCreate();
-    unit->module = LLVMModuleCreateWithNameInContext("gemstone application",
-                                                     unit->context);
+    unit->module =
+        LLVMModuleCreateWithNameInContext(config->name, unit->context);
 
-    LLVMGlobalScope* global_scope = new_global_scope();
-
-    BackendError err = new_backend_error(Success);
+    LLVMGlobalScope* global_scope = new_global_scope(module);
 
     DEBUG("generating code...");
 
-    err = build_module(unit, global_scope, module);
+    BackendError err = build_module(unit, global_scope, module);
     if (err.kind == Success) {
-        Target target = create_native_target();
+        INFO("Module build successfully...");
+        Target target = create_target_from_config(config);
 
-        export_module(unit, &target);
+        export_module(unit, &target, config);
 
         delete_target(target);
     }
@@ -199,10 +242,11 @@ BackendError parse_module(const Module* module, void**) {
     return err;
 }
 
-LLVMGlobalScope* new_global_scope() {
+LLVMGlobalScope* new_global_scope(const Module* module) {
     DEBUG("creating global scope...");
     LLVMGlobalScope* scope = malloc(sizeof(LLVMGlobalScope));
 
+    scope->module = (Module*) module;
     scope->functions = g_hash_table_new(g_str_hash, g_str_equal);
     scope->variables = g_hash_table_new(g_str_hash, g_str_equal);
     scope->types = g_hash_table_new(g_str_hash, g_str_equal);

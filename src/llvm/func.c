@@ -3,11 +3,11 @@
 #include <codegen/backend.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Types.h>
+#include <llvm/func.h>
 #include <llvm/parser.h>
 #include <llvm/types.h>
 #include <set/types.h>
 #include <sys/log.h>
-#include <llvm/func.h>
 
 LLVMLocalScope* new_local_scope(LLVMLocalScope* parent) {
     LLVMLocalScope* scope = malloc(sizeof(LLVMLocalScope));
@@ -24,7 +24,8 @@ void delete_local_scope(LLVMLocalScope* scope) {
     free(scope);
 }
 
-static LLVMValueRef get_parameter(const LLVMFuncScope* scope, const char* name) {
+static LLVMValueRef get_parameter(const LLVMFuncScope* scope,
+                                  const char* name) {
     if (g_hash_table_contains(scope->params, name)) {
         return g_hash_table_lookup(scope->params, name);
     }
@@ -108,7 +109,8 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
     return err;
 }
 
-BackendError impl_func(LLVMBackendCompileUnit* unit, LLVMGlobalScope* global_scope,
+BackendError impl_func(LLVMBackendCompileUnit* unit,
+                       LLVMGlobalScope* global_scope,
                        FunctionDefinition* fundef, const char* name) {
     BackendError err = SUCCESS;
 
@@ -125,18 +127,20 @@ BackendError impl_func(LLVMBackendCompileUnit* unit, LLVMGlobalScope* global_sco
         func_scope->params = g_hash_table_new(g_str_hash, g_str_equal);
 
         // store function type in global scope
-        g_hash_table_insert(global_scope->functions, (gpointer) name, llvm_func);
+        g_hash_table_insert(global_scope->functions, (gpointer)name, llvm_func);
 
         // create function body builder
-        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(unit->context, llvm_func, "entry");
+        LLVMBasicBlockRef body =
+            LLVMAppendBasicBlockInContext(unit->context, llvm_func, "entry");
         LLVMBuilderRef builder = LLVMCreateBuilderInContext(unit->context);
         LLVMPositionBuilderAtEnd(builder, body);
 
         // create value references for parameter
         const size_t params = fundef->parameter->len;
         for (size_t i = 0; i < params; i++) {
-            const Paramer* param = ((Paramer*) fundef->parameter) + i;
-            g_hash_table_insert(func_scope->params, (gpointer) param->name, LLVMGetParam(llvm_func, i));
+            const Paramer* param = ((Paramer*)fundef->parameter) + i;
+            g_hash_table_insert(func_scope->params, (gpointer)param->name,
+                                LLVMGetParam(llvm_func, i));
         }
 
         // TODO: parse function body
@@ -145,6 +149,32 @@ BackendError impl_func(LLVMBackendCompileUnit* unit, LLVMGlobalScope* global_sco
 
         // delete function scope GLib structs
         g_hash_table_destroy(func_scope->params);
+    }
+
+    return err;
+}
+
+BackendError impl_functions(LLVMBackendCompileUnit* unit,
+                            LLVMGlobalScope* scope, GHashTable* functions) {
+    DEBUG("implementing functions...");
+    GHashTableIter iterator;
+    g_hash_table_iter_init(&iterator, functions);
+
+    gpointer key = NULL;
+    gpointer val = NULL;
+
+    BackendError err = SUCCESS;
+
+    size_t variable_count = 0;
+    while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
+        err =
+            impl_func(unit, scope, (FunctionDefinition*)val, (const char*)key);
+
+        if (err.kind != Success) {
+            break;
+        }
+
+        variable_count++;
     }
 
     return err;

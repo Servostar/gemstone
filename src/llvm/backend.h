@@ -27,7 +27,7 @@ typedef struct Target_t {
 
 Target create_native_target();
 
-Target create_target_from_config();
+Target create_target_from_config(const TargetConfig* config);
 
 void delete_target(Target target);
 

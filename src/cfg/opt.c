@@ -181,7 +181,8 @@ void print_help(void) {
         "    --verbose        print logs with level information or higher",
         "    --debug          print debug logs (if not disabled at compile time)",
         "    --version        print the version",
-        "    --help           print this hel dialog",
+        "    --list-targets   print a list of all available targets supported"
+        "    --help           print this help dialog"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
