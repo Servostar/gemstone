@@ -6,11 +6,16 @@ Gemstone is a programming language compiler written in C with lex and yacc.
 
 ### Windows 11
 
-For setup instruction see issue #30
-
-Requires:
-- Microsoft Build Tools 2022 (includes: CMake, MSVC)
-- WinFlexBison [find it here](https://github.com/lexxmark/winflexbison) (needs to be in PATH)
+#### MSYS2
+Install MSYS2 under Windows 11. Open the MingGW64 environment.
+Install the following packages:
+```
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-glib2 bison flex mingw-w64-x86_64-llvm cmake git make
+```
+Clone the repository and build the gemstone compiler:
+```
+cmake . && make release
+```
 
 ### GNU/Linux
 
