@@ -4,8 +4,6 @@ cmake_minimum_required(VERSION 3.15...3.25)
 # Header must be included this way: #include <module/header.h>
 #
 # ├─ res
-# ├─ dep
-# │  └─ klib
 # ├─ src
 # │  ├─ lex
 # │  │  └─ lexer.l
@@ -28,6 +26,8 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 set(GEMSTONE_TEST_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(GEMSTONE_BINARY_DIR ${PROJECT_SOURCE_DIR}/bin)
+
+add_compile_definitions(GSC_VERSION="${PROJECT_VERSION}")
 
 include(CTest)
 
@@ -63,10 +63,8 @@ set(YACC_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.y)
 set(YACC_GENERATED_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.tab.c)
 
 add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
-
         COMMAND bison
         ARGS -Wno-yacc -Wcounterexamples -d -o ${YACC_GENERATED_SOURCE_FILE} ${YACC_SOURCE_FILE}
-
         COMMENT "generate C source file for parser"
         VERBATIM)
 
@@ -77,7 +75,28 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
 include(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
-    
+
+# ------------------------------------------------ #
+#  TOML-C99                                        #
+# ------------------------------------------------ #
+
+execute_process(COMMAND git submodule init -- dep/tomlc99)
+
+add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
+        COMMAND git
+        ARGS submodule update --init --recursive --checkout
+        COMMENT "checkout dependency TOML-C99"
+        VERBATIM)
+
+add_library(tomlc99 ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c)
+set_target_properties(tomlc99
+        PROPERTIES
+        OUTPUT_NAME "toml"
+        ARCHIVE_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/dep)
+
+include_directories(${PROJECT_SOURCE_DIR}/dep/tomlc99)
+
+
 # ------------------------------------------------ #
 #  LLVM backend                                    #
 # ------------------------------------------------ #
@@ -127,6 +146,8 @@ set_target_properties(release
 
 target_link_libraries(release PkgConfig::GLIB)
 
+target_link_libraries(release tomlc99)
+
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
     set(RELEASE_FLAGS)
@@ -145,6 +166,9 @@ target_compile_options(release PUBLIC ${FLAGS} ${RELEASE_FLAGS})
 # add src directory as include path
 target_include_directories(release PUBLIC src)
 
+# disable assertions
+target_compile_definitions(release PUBLIC NDEBUG="1")
+
 # ------------------------------------------------ #
 #  Target DEBUG                                    #
 # ------------------------------------------------ #
@@ -160,6 +184,8 @@ set_target_properties(debug
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
 target_link_libraries(debug PkgConfig::GLIB)
+
+target_link_libraries(debug tomlc99)
 
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
@@ -191,6 +217,8 @@ set_target_properties(check
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
 
 target_link_libraries(check PkgConfig::GLIB)
+
+target_link_libraries(check tomlc99)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)

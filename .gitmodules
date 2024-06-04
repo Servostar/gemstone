@@ -1,0 +1,3 @@
+[submodule "dep/tomlc99"]
+	path = dep/tomlc99
+	url = https://github.com/cktan/tomlc99.git

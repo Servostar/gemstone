@@ -25,6 +25,16 @@ void lex_init(void) {
   atexit(lex_deinit);
 }
 
+void lex_reset(void) {
+    eof = 0;
+    nRow = 0;
+    nBuffer = 0;
+    lBuffer = 0;
+    nTokenStart = 0;
+    nTokenLength = 0;
+    nTokenNextStart = 0;
+}
+
 void beginToken(char *t) {
   nTokenStart = nTokenNextStart;
   nTokenLength = (int) strlen(t);
@@ -41,7 +51,7 @@ int nextChar(char *dst) {
 
   if (eof)
     return 0;
-  
+
   while (nBuffer >= lBuffer) {
     frc = getNextLine();
     if (frc != 0) {
@@ -57,7 +67,7 @@ int nextChar(char *dst) {
 
 int getNextLine(void) {
   char *p;
-  
+
   nBuffer = 0;
   nTokenStart = -1;
   nTokenNextStart = 1;

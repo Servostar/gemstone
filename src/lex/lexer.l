@@ -52,6 +52,7 @@
 "float" {DEBUG("\"%s\" tokenized with \'KeyFloat\'", yytext); return(KeyFloat);};
 "self" {DEBUG("\"%s\" tokenized with \'KeySelf\'", yytext); return(KeySelf);};
 "as" {DEBUG("\"%s\" tokenized with \'KeyAs'", yytext); return (KeyAs);};
+"to" {DEBUG("\"%s\" tokenized with \'KeyTo'", yytext); return (KeyTo);};
 "short" {DEBUG("\"%s\" tokenized with \'KeyShort\'", yytext); return(KeyShort);};
 "long" {DEBUG("\"%s\" tokenized with \'KeyLong\'", yytext); return(KeyLong);};
 "half" {DEBUG("\"%s\" tokenized with \'KeyHalf\'", yytext); return(KeyHalf);};
@@ -97,7 +98,7 @@
     yytext[yyleng - 2] = 0;
     
     DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = strdup(yytext); return(ValStr);};
-\"\"\"([^\"\n]|\\\n)*\"\"\" {
+\"\"\"[^\"]*\"\"\" {
     yytext = yytext +3;
     yytext[yyleng - 4] = 0;
 

@@ -81,6 +81,9 @@ def run_check_print_node():
 50 parameter
 51 value
 52 parameter-declaration
+53 address of
+54 deref
+55 ref
 """ == p.stdout
 
 

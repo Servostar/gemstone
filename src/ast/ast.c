@@ -5,7 +5,7 @@
 #include <sys/log.h>
 #include <assert.h>
 
-struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value) {
+struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value) {
   DEBUG("creating new AST node: %d \"%s\"", kind, value);
   assert(kind < AST_ELEMENT_COUNT);
 
@@ -23,6 +23,7 @@ struct AST_Node_t *AST_new_node(enum AST_SyntaxElement_t kind, const char* value
   node->child_count = 0;
   node->kind = kind;
   node->value = value;
+  node->location = location;
 
   return node;
 }
@@ -83,6 +84,9 @@ void AST_init() {
   lookup_table[AST_Negate] = "-";
   lookup_table[AST_Parameter] = "parameter";
   lookup_table[AST_ParamDecl] = "parameter-declaration";
+  lookup_table[AST_AddressOf] = "address of";
+  lookup_table[AST_Dereference] = "deref";
+  lookup_table[AST_Reference] = "ref";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {
@@ -114,6 +118,14 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
   return string;
 }
 
+static inline unsigned long int min(unsigned long int a, unsigned long int b) {
+    return a > b ? b : a;
+}
+
+static inline unsigned long int max(unsigned long int a, unsigned long int b) {
+    return a > b ? a : b;
+}
+
 void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
   DEBUG("Adding new node %p to %p", child, owner);
   assert(owner != NULL);
@@ -133,6 +145,12 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
   if (owner->children == NULL) {
     PANIC("failed to allocate children array of AST node");
   }
+
+  owner->location.col_end = max(owner->location.col_end, child->location.col_end);
+  owner->location.line_end = max(owner->location.line_end, child->location.line_end);
+
+  owner->location.col_start = min(owner->location.col_start, child->location.col_start);
+  owner->location.line_start = min(owner->location.line_start, child->location.line_start);
 
   assert(owner->children != NULL);
 
