@@ -30,10 +30,16 @@ include_directories(${LLVM_INCLUDE_DIR})
 # CTEST 1
 # test llvm backend codegen for global variables
 
-file(GLOB_RECURSE SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.c)
+file(GLOB_RECURSE SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/llvm/*.c)
 list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/main.c)
 add_executable(global_vars
-global_vars.c ${SOURCE_FILES})
+        ${PROJECT_SOURCE_DIR}/src/codegen/backend.c
+        ${PROJECT_SOURCE_DIR}/src/sys/log.c
+        ${PROJECT_SOURCE_DIR}/src/sys/col.c
+        ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+        ${PROJECT_SOURCE_DIR}/src/io/files.c
+        global_vars.c
+        ${SOURCE_FILES})
 set_target_properties(global_vars
         PROPERTIES
         OUTPUT_NAME "global_vars"
