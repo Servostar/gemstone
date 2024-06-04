@@ -106,6 +106,9 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
     LLVMInitializeAllTargets();
     LLVMInitializeAllTargetInfos();
     LLVMInitializeAllTargetMCs();
+    // NOTE: for code generation (assmebly or binary) we need the following:
+    LLVMInitializeAllAsmParsers();
+    LLVMInitializeAllAsmPrinters();
 
     DEBUG("creating target...");
     if (LLVMGetTargetFromTriple(target->triple.str, &llvm_target, &error) !=
