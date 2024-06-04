@@ -2,8 +2,8 @@
 // Created by servostar on 5/28/24.
 //
 
-#include <llvm/expr.h>
-#include <llvm/types.h>
+#include <llvm/llvm-ir/expr.h>
+#include <llvm/llvm-ir/types.h>
 #include <sys/log.h>
 
 BackendError impl_bitwise_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,

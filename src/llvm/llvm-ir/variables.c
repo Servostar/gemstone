@@ -1,11 +1,11 @@
 
 #include <codegen/backend.h>
-#include <llvm-c/Core.h>
-#include <llvm-c/Types.h>
-#include <llvm/types.h>
-#include <llvm/variables.h>
 #include <set/types.h>
 #include <sys/log.h>
+#include <llvm/llvm-ir/variables.h>
+#include <llvm-c/Core.h>
+#include <llvm-c/Types.h>
+#include <llvm/llvm-ir/types.h>
 
 BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
                                      LLVMGlobalScope* scope,

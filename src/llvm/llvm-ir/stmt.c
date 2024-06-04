@@ -3,11 +3,11 @@
 //
 
 #include <codegen/backend.h>
-#include <llvm/func.h>
-#include <llvm/parser.h>
-#include <llvm/stmt.h>
-#include <llvm/expr.h>
 #include <sys/log.h>
+#include <llvm/parser.h>
+#include <llvm/llvm-ir/stmt.h>
+#include <llvm/llvm-ir/expr.h>
+#include <llvm/llvm-ir/func.h>
 
 BackendError impl_assign_stmt([[maybe_unused]] LLVMBackendCompileUnit *unit,
                               const LLVMBuilderRef builder, const LLVMLocalScope *scope,

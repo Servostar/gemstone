@@ -3,9 +3,9 @@
 #include <codegen/backend.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Types.h>
-#include <llvm/func.h>
+#include <llvm/llvm-ir/func.h>
 #include <llvm/parser.h>
-#include <llvm/types.h>
+#include <llvm/llvm-ir/types.h>
 #include <set/types.h>
 #include <sys/log.h>
 

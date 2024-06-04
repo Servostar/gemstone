@@ -1,10 +1,10 @@
 #include <codegen/backend.h>
-#include <llvm-c/Core.h>
-#include <llvm-c/Types.h>
-#include <llvm/parser.h>
-#include <llvm/types.h>
 #include <set/types.h>
 #include <sys/log.h>
+#include <llvm/parser.h>
+#include <llvm/llvm-ir/types.h>
+#include <llvm-c/Core.h>
+#include <llvm-c/Types.h>
 
 #define BASE_BYTES 4
 #define BITS_PER_BYTE 8

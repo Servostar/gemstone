@@ -7,7 +7,7 @@
 
 #include <codegen/backend.h>
 #include <llvm-c/Types.h>
-#include <llvm/func.h>
+#include <llvm/llvm-ir/func.h>
 #include <llvm/parser.h>
 
 BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,

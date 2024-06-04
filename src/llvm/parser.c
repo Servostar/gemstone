@@ -6,9 +6,9 @@
 #include <llvm-c/Types.h>
 #include <llvm/backend.h>
 #include <llvm/parser.h>
-#include <llvm/types.h>
-#include <llvm/variables.h>
-#include <llvm/func.h>
+#include <llvm/llvm-ir/types.h>
+#include <llvm/llvm-ir/variables.h>
+#include <llvm/llvm-ir/func.h>
 #include <set/types.h>
 #include <stdio.h>
 #include <stdlib.h>
