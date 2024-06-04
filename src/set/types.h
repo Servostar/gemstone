@@ -5,6 +5,9 @@
 #include <glib.h>
 #include <ast/ast.h>
 
+// with of primitive types (int/float) in bytes
+#define BASE_BYTES 4
+
 /**
  * @brief Primitive types form the basis of all other types.
  * 
@@ -36,7 +39,7 @@ typedef enum Sign_t {
 typedef double Scale;
 
 /**
- * @brief A composite type is an extended definiton of a primitive type.
+ * @brief A composite type is an extended definition of a primitive type.
  * 
  */
 typedef struct CompositeType_t {
@@ -124,7 +127,7 @@ typedef struct Typedefine_t {
 
 
 /**
- * @brief Reprents the value of type. Can be used to definitons, initialization and for expressions contants.
+ * @brief Reprents the value of type. Can be used to definitions, initialization and for expressions contants.
  * 
  */
 typedef struct TypeValue_t {
@@ -183,7 +186,7 @@ typedef enum ParameterKind_t {
 } ParameterKind;
 
 /**
- * @brief A parameter can either be a declaration or a definiton
+ * @brief A parameter can either be a declaration or a definition
  * 
  */
 typedef struct Parameter_t {
@@ -245,7 +248,7 @@ typedef struct VariableDeclaration_t {
 } VariableDeclaration;
 
 /**
- * @brief Definiton of a variable
+ * @brief Definition of a variable
  * 
  * @attention NOTE: The types of the initializer and the declaration must be equal
  * 
@@ -455,7 +458,7 @@ typedef struct Block_t {
 // '------------------------------------------------'
 
 typedef struct While_t {
-    Expression conditon;
+    Expression *conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } While;
@@ -465,13 +468,13 @@ typedef struct While_t {
 // '------------------------------------------------'
 
 typedef struct If_t {
-    Expression conditon;
+    Expression *conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } If;
 
 typedef struct ElseIf_t {
-    Expression conditon;
+    Expression *conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } ElseIf;
@@ -495,7 +498,7 @@ typedef struct Branch_t {
 
 typedef struct Assignment_t {
     Variable* variable;
-    Expression value;
+    Expression* value;
     AST_NODE_PTR nodePtr;
 } Assignment;
 
@@ -504,7 +507,9 @@ typedef enum StatementKind_t {
     StatementKindFunctionBoxCall,
     StatementKindWhile,
     StatementKindBranch,
-    StatementKindAssignment
+    StatementKindAssignment,
+    StatementKindDeclaration,
+    StatementKindDefinition
 } StatementKind;
 
 typedef struct Statement_t {
@@ -515,6 +520,7 @@ typedef struct Statement_t {
         While whileLoop;
         Branch branch;
         Assignment assignment;
+        Variable variable;
     } impl;
     AST_NODE_PTR nodePtr;
 } Statement;

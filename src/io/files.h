@@ -92,7 +92,7 @@ TokenLocation empty_location(void);
  * @param message
  */
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message);
+void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message, ...);
 
 [[gnu::nonnull(2)]]
 /**
