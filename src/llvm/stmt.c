@@ -9,7 +9,7 @@
 #include <llvm/expr.h>
 #include <sys/log.h>
 
-BackendError impl_assign_stmt(LLVMBackendCompileUnit *unit,
+BackendError impl_assign_stmt([[maybe_unused]] LLVMBackendCompileUnit *unit,
                               const LLVMBuilderRef builder, const LLVMLocalScope *scope,
                               const Assignment *assignment) {
     BackendError err = SUCCESS;
@@ -45,6 +45,7 @@ BackendError impl_basic_block(LLVMBackendCompileUnit *unit,
     LLVMPositionBuilderAtEnd(builder, *llvm_block);
 
     for (size_t i = 0; i < block->statemnts->len; i++) {
+        [[maybe_unused]]
         Statement *stmt = ((Statement *) block->statemnts->data) + i;
 
         // TODO: implement statement
@@ -66,7 +67,7 @@ BackendError impl_while(LLVMBackendCompileUnit *unit,
     LLVMPositionBuilderAtEnd(builder, while_cond_block);
     // Resolve condition in block to a variable
     LLVMValueRef cond_result = NULL;
-    impl_expr(unit, scope, builder, &while_stmt->conditon, &cond_result);
+    impl_expr(unit, scope, builder, (Expression*) &while_stmt->conditon, &cond_result);
 
     // build body of loop
     LLVMBasicBlockRef while_body_block = NULL;
@@ -103,6 +104,7 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
             break;
         }
 
+        [[maybe_unused]]
         Paramer* parameter = (Paramer*) call->function->parameter->data + i;
         // TODO: create a pointer to LLVMValueRef in case parameter is `out`
 
@@ -123,7 +125,7 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
 
 BackendError
 impl_cond_block(LLVMBackendCompileUnit *unit, LLVMBuilderRef builder, LLVMLocalScope *scope, Expression *cond,
-                Block *block, LLVMBasicBlockRef *cond_block, LLVMBasicBlockRef *body_block,
+                const Block *block, LLVMBasicBlockRef *cond_block, LLVMBasicBlockRef *body_block,
                 LLVMValueRef *llvm_cond) {
     BackendError err;
 
@@ -155,7 +157,7 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
         LLVMBasicBlockRef body_block = NULL;
         LLVMValueRef cond_value = NULL;
 
-        err = impl_cond_block(unit, builder, scope, &branch->ifBranch.conditon, &branch->ifBranch.block, &cond_block,
+        err = impl_cond_block(unit, builder, scope, (Expression*) &branch->ifBranch.conditon, &branch->ifBranch.block, &cond_block,
                               &body_block, &cond_value);
 
         g_array_append_val(cond_blocks, cond_block);
@@ -215,4 +217,7 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
     return err;
 }
 
-BackendError impl_stmt(LLVMBackendCompileUnit *unit, Statement *stmt) {}
+BackendError impl_stmt([[maybe_unused]] LLVMBackendCompileUnit *unit, [[maybe_unused]] Statement *stmt) {
+    // TODO: implement
+    return SUCCESS;
+}

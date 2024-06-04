@@ -5,7 +5,9 @@ include_directories(PRIVATE ${GLIB_INCLUDE_DIRS})
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
-link_libraries(PkgConfig::GLIB)    
+link_libraries(PkgConfig::GLIB)
+
+include_directories(${PROJECT_SOURCE_DIR}/dep/tomlc99)
 
 # ------------------------------------------------ #
 #  LLVM backend                                    #
@@ -30,15 +32,13 @@ include_directories(${LLVM_INCLUDE_DIR})
 
 file(GLOB_RECURSE SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.c)
 list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/main.c)
-list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/yacc/parser.tab.c)
-list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/lex/lexer.ll.c)
-list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/lex/util.c)
 add_executable(global_vars
 global_vars.c ${SOURCE_FILES})
 set_target_properties(global_vars
         PROPERTIES
         OUTPUT_NAME "global_vars"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/tests/llvm)
+target_link_libraries(global_vars tomlc99)
 add_test(NAME global_vars
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/llvm
         COMMAND ${GEMSTONE_BINARY_DIR}/tests/llvm/global_vars)

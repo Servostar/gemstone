@@ -5,9 +5,6 @@
 #include <sys/log.h>
 #include <set/types.h>
 
-// NOTE: unused
-AST_NODE_PTR root;
-
 [[gnu::always_inline]]
 [[clang::always_inline]]
 inline Variable* create_variable_decl(const char* name, StorageQualifier qualifier, Type type) {
@@ -85,7 +82,8 @@ inline Module* create_module() {
     return module;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    parse_options(argc, argv);
     log_init();
 
     // no need to clean up ;-)
@@ -99,10 +97,14 @@ int main() {
         PANIC("%ld: at [%p] %s", err.kind, err.impl.ast_node, err.impl.message);
     }
 
-    err = generate_code(module, NULL);
+    TargetConfig* config = default_target_config();
+
+    err = generate_code(module, config);
     if (err.kind != Success) {
         PANIC("%ld: at [%p] %s", err.kind, err.impl.ast_node, err.impl.message);
     }
+
+    delete_target_config(config);
 
     err = deinit_backend();
     if (err.kind != Success) {

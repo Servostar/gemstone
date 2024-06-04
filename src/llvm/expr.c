@@ -6,8 +6,8 @@
 #include <llvm/types.h>
 #include <sys/log.h>
 
-BackendError impl_bitwise_operation(LLVMBackendCompileUnit *unit,
-                                    LLVMLocalScope *scope,
+BackendError impl_bitwise_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
+                                    [[maybe_unused]] LLVMLocalScope *scope,
                                     LLVMBuilderRef builder,
                                     Operation *operation,
                                     LLVMValueRef *llvm_result) {
@@ -57,8 +57,8 @@ static LLVMValueRef convert_integral_to_boolean(
     return LLVMBuildICmp(builder, LLVMIntNE, zero, integral, "to boolean");
 }
 
-BackendError impl_logical_operation(LLVMBackendCompileUnit *unit,
-                                    LLVMLocalScope *scope,
+BackendError impl_logical_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
+                                    [[maybe_unused]] LLVMLocalScope *scope,
                                     LLVMBuilderRef builder,
                                     Operation *operation,
                                     LLVMValueRef *llvm_result) {
@@ -66,7 +66,7 @@ BackendError impl_logical_operation(LLVMBackendCompileUnit *unit,
     LLVMValueRef rhs = NULL;
     LLVMValueRef lhs = NULL;
 
-    if (operation->kind == LogicalNot) {
+    if (operation->impl.logical == LogicalNot) {
         // single operand
         rhs = convert_integral_to_boolean(builder, rhs);
     } else {
@@ -75,7 +75,7 @@ BackendError impl_logical_operation(LLVMBackendCompileUnit *unit,
         rhs = convert_integral_to_boolean(builder, rhs);
     }
 
-    switch (operation->impl.bitwise) {
+    switch (operation->impl.logical) {
         case LogicalAnd:
             *llvm_result = LLVMBuildAnd(builder, lhs, rhs, "logical and");
             break;
@@ -108,8 +108,8 @@ static LLVMBool is_integral(LLVMValueRef value) {
     return typeKind == LLVMIntegerTypeKind;
 }
 
-BackendError impl_relational_operation(LLVMBackendCompileUnit *unit,
-                                       LLVMLocalScope *scope,
+BackendError impl_relational_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
+                                       [[maybe_unused]] LLVMLocalScope *scope,
                                        LLVMBuilderRef builder,
                                        Operation *operation,
                                        LLVMValueRef *llvm_result) {
@@ -158,8 +158,8 @@ BackendError impl_relational_operation(LLVMBackendCompileUnit *unit,
     return SUCCESS;
 }
 
-BackendError impl_arithmetic_operation(LLVMBackendCompileUnit *unit,
-                                       LLVMLocalScope *scope,
+BackendError impl_arithmetic_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
+                                       [[maybe_unused]] LLVMLocalScope *scope,
                                        LLVMBuilderRef builder,
                                        Operation *operation,
                                        LLVMValueRef *llvm_result) {
@@ -169,7 +169,6 @@ BackendError impl_arithmetic_operation(LLVMBackendCompileUnit *unit,
 
     if ((is_integral(lhs) && is_integral(rhs)) == 1) {
         // integral type
-        LLVMIntPredicate operator = 0;
 
         switch (operation->impl.arithmetic) {
             case Add:
