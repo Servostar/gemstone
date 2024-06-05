@@ -74,10 +74,13 @@ typedef struct BoxType_t BoxType;
 
 typedef struct Block_t Block;
 
+typedef struct Expression_t Expression;
+
 typedef struct BoxMember_t {
     const char* name;
     Type* type;
     BoxType* box;
+    Expression* initalizer;
     AST_NODE_PTR nodePtr;
 } BoxMember;
 
@@ -88,12 +91,11 @@ typedef struct BoxMember_t {
 typedef struct BoxType_t {
     // hashtable of members.
     // Associates the memebers name (const char*) with its type (BoxMember) 
-    GHashTable* member;
+    GHashTable* member; //BoxMember Pointer
     AST_NODE_PTR nodePtr;
 } BoxType;
 
 typedef struct Variable_t Variable;
-typedef struct Expression_t Expression;
 
 typedef struct BoxAccess_t {
     // list of recursive box accesses
@@ -208,7 +210,7 @@ typedef enum FunctionKind_t {
 typedef struct FunctionDefinition_t {
     // hashtable of parameters
     // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
-    GArray* parameter;
+    GArray* parameter; // Parameter
     AST_NODE_PTR nodePtr;
     // body of function
     Block *body;
@@ -219,8 +221,9 @@ typedef struct FunctionDefinition_t {
 typedef struct FunctionDeclaration_t {
     // hashtable of parameters
     // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
-    GArray* parameter;
+    GArray* parameter; // Parameter
     AST_NODE_PTR nodePtr;
+    const char* name;
 } FunctionDeclaration;
 
 typedef struct Function_t {
@@ -229,6 +232,7 @@ typedef struct Function_t {
         FunctionDefinition definition;
         FunctionDeclaration declaration;
     } impl;
+    AST_NODE_PTR nodePtr;
 } Function;
 
 // .------------------------------------------------.
@@ -449,7 +453,7 @@ typedef struct FunctionBoxCall_t {
 
 typedef struct Block_t {
     // array of statements
-    GArray* statemnts;
+    GArray* statemnts; // array of type(Statement)
     AST_NODE_PTR nodePtr;
 } Block;
 
@@ -520,7 +524,7 @@ typedef struct Statement_t {
         While whileLoop;
         Branch branch;
         Assignment assignment;
-        Variable variable;
+        Variable *variable;
     } impl;
     AST_NODE_PTR nodePtr;
 } Statement;
@@ -530,8 +534,8 @@ typedef struct Statement_t {
 // '------------------------------------------------'
 
 typedef struct Module_t {
-    GHashTable* boxes;
-    GHashTable* types;
+    GHashTable* boxes; //BoxType
+    GHashTable* types; //
     GHashTable* functions;
     GHashTable* variables;
     // to be resolved after the module has been parsed completely
