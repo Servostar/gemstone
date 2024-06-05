@@ -18,6 +18,8 @@
 #include <Windows.h>
 // for _fullpath
 #include <stdlib.h>
+// for _mkdir
+#include <direct.h>
 
 #define MAX_PATH_BYTES _MAX_PATH
 
@@ -67,9 +69,7 @@ void delete_files(ModuleFileStack *stack) {
 // seeking the current line in print_diagnostic()
 #define SEEK_BUF_BYTES 256
 
-static inline unsigned long int min(unsigned long int a, unsigned long int b) {
-    return a > b ? b : a;
-}
+#define min(a, b) ((a) > (b) ? (b) : (a))
 
 // behaves like fgets except that it has defined behavior when n == 1
 static void custom_fgets(char *buffer, size_t n, FILE *stream) {
