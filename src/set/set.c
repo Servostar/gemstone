@@ -18,7 +18,7 @@
 // |   .----------'                 o
 // `--'
 //
-
+extern ModuleFile * current_file;
 static GHashTable *declaredComposites = NULL;//pointer to composites with names 
 static GHashTable *declaredBoxes = NULL;//pointer to typeboxes
 static GArray *Scope = NULL;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
@@ -1251,6 +1251,15 @@ int createIf(Branch* Parentbranch, AST_NODE_PTR currentNode){
     ifbranch.conditon = expression;
     int status = fillBlock(&ifbranch.block, currentNode->children[1]);
     
+    if(status){
+        return SEMANTIC_ERROR;
+    }
+    Parentbranch->ifBranch = ifbranch;
+    return SEMANTIC_OK;
+}
+
+int createElse(){
+    
 }
 
 int createBranch(Statement* ParentStatement,AST_NODE_PTR currentNode){
@@ -1259,11 +1268,13 @@ int createBranch(Statement* ParentStatement,AST_NODE_PTR currentNode){
     for (size_t i = 0; i < currentNode->child_count; i++ ){
         switch (currentNode->children[i]->kind){
             case AST_If:
-                createIf(&Branch, currentNode->children[i]);
+                if(createIf(&Branch, currentNode->children[i])){
+                    return SEMANTIC_ERROR;
+                }
             case AST_IfElse:
             case AST_Else:
             default:
-                PANIC("current node is not part of a Branch")
+                PANIC("current node is not part of a Branch");
                 break;
 
             
