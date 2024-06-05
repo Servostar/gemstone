@@ -1,29 +1,15 @@
 
 #include <ast/ast.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/log.h>
 #include <assert.h>
+#include <mem/cache.h>
 
-struct AST_Node_t {
-    // parent node that owns this node
-    struct AST_Node_t *parent;
-
-    // type of AST node: if, declaration, ...
-    enum AST_SyntaxElement_t kind;
-    // optional value: integer literal, string literal, ...
-    const char *value;
-
-    TokenLocation location;
-
-    GArray *children;
-};
-
-AST_NODE_PTR AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char *value) {
+struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value) {
     DEBUG("creating new AST node: %d \"%s\"", kind, value);
     assert(kind < AST_ELEMENT_COUNT);
 
-    AST_NODE_PTR node = malloc(sizeof(struct AST_Node_t));
+    struct AST_Node_t *node = mem_alloc(MemoryNamespaceAst, sizeof(struct AST_Node_t));
 
     if (node == NULL) {
         PANIC("failed to allocate AST node");
@@ -34,6 +20,7 @@ AST_NODE_PTR AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind,
     // init to discrete state
     node->parent = NULL;
     node->children = NULL;
+    node->child_count = 0;
     node->kind = kind;
     node->value = value;
     node->location = location;
@@ -41,21 +28,7 @@ AST_NODE_PTR AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind,
     return node;
 }
 
-size_t AST_child_count(AST_NODE_PTR node) {
-    assert(node != NULL);
-    assert(node->children != NULL);
-
-    return node->children->len;
-}
-
-AST_NODE_PTR AST_get_last_node(AST_NODE_PTR node) {
-    assert(node != NULL);
-    assert(node->children != NULL);
-
-    return AST_get_node(node, AST_child_count(node) - 1);
-}
-
-static const char *lookup_table[AST_ELEMENT_COUNT] = {"__UNINIT__"};
+static const char* lookup_table[AST_ELEMENT_COUNT] = { "__UNINIT__" };
 
 void AST_init() {
     DEBUG("initializing global syntax tree...");
@@ -116,13 +89,13 @@ void AST_init() {
     lookup_table[AST_Reference] = "ref";
 }
 
-const char *AST_node_to_string(AST_NODE_PTR node) {
+const char* AST_node_to_string(const struct AST_Node_t* node) {
     DEBUG("converting AST node to string: %p", node);
     assert(node != NULL);
 
-    const char *string;
+    const char* string;
 
-    switch (node->kind) {
+    switch(node->kind) {
         case AST_Int:
         case AST_Float:
         case AST_String:
@@ -153,15 +126,20 @@ static inline unsigned long int max(unsigned long int a, unsigned long int b) {
     return a > b ? a : b;
 }
 
-void AST_push_node(AST_NODE_PTR owner, AST_NODE_PTR child) {
+void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
     DEBUG("Adding new node %p to %p", child, owner);
     assert(owner != NULL);
     assert(child != NULL);
 
     // if there are no children for now
-    if (owner->children == NULL) {
+    if (owner->child_count == 0) {
         DEBUG("Allocating new children array");
-        owner->children = g_array_new(FALSE, FALSE, sizeof(AST_NODE_PTR));
+        owner->children = mem_alloc(MemoryNamespaceAst, sizeof(struct AST_Node_t *));
+
+    } else {
+        DEBUG("Rellocating old children array");
+        const size_t size = sizeof(struct AST_Node_t *) * (owner->child_count + 1);
+        owner->children = mem_realloc(MemoryNamespaceAst, owner->children, size);
     }
 
     if (owner->children == NULL) {
@@ -176,20 +154,20 @@ void AST_push_node(AST_NODE_PTR owner, AST_NODE_PTR child) {
 
     assert(owner->children != NULL);
 
-    g_array_append_val(owner->children, child);
+    owner->children[owner->child_count++] = child;
 }
 
-AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, const size_t idx) {
+struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, const size_t idx) {
     DEBUG("retrvieng node %d from %p", idx, owner);
     assert(owner != NULL);
     assert(owner->children != NULL);
-    assert(idx < owner->children->len);
+    assert(idx < owner->child_count);
 
     if (owner->children == NULL) {
         PANIC("AST owner node has no children");
     }
 
-    AST_NODE_PTR child = ((AST_NODE_PTR *) owner->children->data)[idx];
+    struct AST_Node_t *child = owner->children[idx];
 
     if (child == NULL) {
         PANIC("child node is NULL");
@@ -198,58 +176,63 @@ AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, const size_t idx) {
     return child;
 }
 
-AST_NODE_PTR AST_remove_child(AST_NODE_PTR owner, const size_t idx) {
+struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, const size_t idx) {
     assert(owner != NULL);
     assert(owner->children != NULL);
-    assert(idx < owner->children->len);
+    assert(idx < owner->child_count);
 
-    AST_NODE_PTR child = AST_get_node(owner, idx);
+    struct AST_Node_t* child = owner->children[idx];
 
     child->parent = NULL;
 
-    g_array_remove_index(owner->children, idx);
+    owner->child_count--;
+
+    // shift back every following element by one
+    for (size_t i = idx; i < owner->child_count; i++) {
+        owner->children[i] = owner->children[i + 1];
+    }
 
     return child;
 }
 
-AST_NODE_PTR AST_detach_child(AST_NODE_PTR child) {
+struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_Node_t* child) {
+    assert(owner != NULL);
     assert(child != NULL);
+    assert(owner->children != NULL);
 
-    for (size_t i = 0; i < AST_child_count(child->parent); i++) {
-        if (AST_get_node(child->parent, i) == child) {
-            return AST_remove_child(child->parent, i);
+    for (size_t i = 0; i < owner->child_count; i++) {
+        if (owner->children[i] == child) {
+            return AST_remove_child(owner, i);
         }
     }
 
     PANIC("Child to detach not a child of parent");
 }
 
-void AST_delete_node(AST_NODE_PTR node) {
+void AST_delete_node(struct AST_Node_t *node) {
     assert(node != NULL);
 
     DEBUG("Deleting AST node: %p", node);
 
     if (node->parent != NULL) {
-        AST_NODE_PTR child = AST_detach_child(node);
+        const struct AST_Node_t* child = AST_detach_child(node->parent, node);
         assert(child == node);
     }
 
     if (node->children != NULL) {
-        for (size_t i = 0; i < AST_child_count(node); i++) {
-            AST_NODE_PTR child = AST_get_node(node, i);
+        for (size_t i = 0; i < node->child_count; i++) {
             // prevent detach of children node
-            child->parent = NULL;
-            AST_delete_node(child);
+            node->children[i]->parent = NULL;
+            AST_delete_node(node->children[i]);
         }
-
-        g_array_free(node->children, TRUE);
+        mem_free(node->children);
     }
 
-    free(node);
+    mem_free(node);
 }
 
-static void AST_visit_nodes_recurse2(AST_NODE_PTR root,
-                                     void (*for_each)(AST_NODE_PTR node,
+static void AST_visit_nodes_recurse2(struct AST_Node_t *root,
+                                     void (*for_each)(struct AST_Node_t *node,
                                                       size_t depth),
                                      const size_t depth) {
     DEBUG("Recursive visit of %p at %d with %p", root, depth, for_each);
@@ -258,13 +241,13 @@ static void AST_visit_nodes_recurse2(AST_NODE_PTR root,
 
     (for_each)(root, depth);
 
-    for (size_t i = 0; i < root->children->len; i++) {
-        AST_visit_nodes_recurse2(AST_get_node(root, i), for_each, depth + 1);
+    for (size_t i = 0; i < root->child_count; i++) {
+        AST_visit_nodes_recurse2(root->children[i], for_each, depth + 1);
     }
 }
 
-void AST_visit_nodes_recurse(AST_NODE_PTR root,
-                             void (*for_each)(AST_NODE_PTR node,
+void AST_visit_nodes_recurse(struct AST_Node_t *root,
+                             void (*for_each)(struct AST_Node_t *node,
                                               size_t depth)) {
     DEBUG("Starting recursive visit of %p with %p", root, for_each);
 
@@ -274,24 +257,24 @@ void AST_visit_nodes_recurse(AST_NODE_PTR root,
     AST_visit_nodes_recurse2(root, for_each, 0);
 }
 
-static void AST_fprint_graphviz_node_definition(FILE *stream, AST_NODE_PTR node) {
+static void AST_fprint_graphviz_node_definition(FILE* stream, const struct AST_Node_t* node) {
     DEBUG("Printing graphviz definition of %p", node);
 
     assert(stream != NULL);
     assert(node != NULL);
 
-    fprintf(stream, "\tnode%p [label=\"%s\"]\n", (void *) node, AST_node_to_string(node));
+    fprintf(stream, "\tnode%p [label=\"%s\"]\n", (void*) node, AST_node_to_string(node));
 
     if (node->children == NULL) {
         return;
     }
 
-    for (size_t i = 0; i < node->children->len; i++) {
-        AST_fprint_graphviz_node_definition(stream, AST_get_node(node, i));
+    for (size_t i = 0; i < node->child_count; i++) {
+        AST_fprint_graphviz_node_definition(stream, node->children[i]);
     }
 }
 
-static void AST_fprint_graphviz_node_connection(FILE *stream, AST_NODE_PTR node) {
+static void AST_fprint_graphviz_node_connection(FILE* stream, const struct AST_Node_t* node) {
     DEBUG("Printing graphviz connection of %p", node);
 
     assert(stream != NULL);
@@ -301,14 +284,13 @@ static void AST_fprint_graphviz_node_connection(FILE *stream, AST_NODE_PTR node)
         return;
     }
 
-    for (size_t i = 0; i < node->children->len; i++) {
-        AST_NODE_PTR child = AST_get_node(node, i);
-        fprintf(stream, "\tnode%p -- node%p\n", (void *) node, (void *) child);
-        AST_fprint_graphviz_node_connection(stream, child);
+    for (size_t i = 0; i < node->child_count; i++) {
+        fprintf(stream, "\tnode%p -- node%p\n", (void*) node, (void*) node->children[i]);
+        AST_fprint_graphviz_node_connection(stream, node->children[i]);
     }
 }
 
-void AST_fprint_graphviz(FILE *stream, AST_NODE_PTR root) {
+void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* root) {
     DEBUG("Starting print of graphviz graph of %p", root);
 
     assert(stream != NULL);

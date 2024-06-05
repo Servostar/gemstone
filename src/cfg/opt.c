@@ -8,6 +8,7 @@
 #include <io/files.h>
 #include <assert.h>
 #include <toml.h>
+#include <mem/cache.h>
 
 static GHashTable* args = NULL;
 
@@ -17,8 +18,8 @@ static void clean(void) {
     g_hash_table_iter_init(&iter, args);
 
     while (g_hash_table_iter_next(&iter, &key, &value)) {
-        free(value);
-        free(key);
+        mem_free(value);
+        mem_free(key);
     }
 
     g_hash_table_destroy(args);
@@ -30,9 +31,9 @@ void parse_options(int argc, char* argv[]) {
     atexit(clean);
 
     for (int i = 0; i < argc; i++) {
-        Option* option = malloc(sizeof(Option));
+        Option* option = mem_alloc(MemoryNamespaceOpt, sizeof(Option));
         option->is_opt = g_str_has_prefix(argv[i], "--");
-        option->string = strdup(argv[i] + (option->is_opt ? 2 : 0));
+        option->string = mem_strdup(MemoryNamespaceOpt, argv[i] + (option->is_opt ? 2 : 0));
         option->index = i;
         option->value = NULL;
 
@@ -91,15 +92,15 @@ GArray* get_non_options_after(const char* command) {
 TargetConfig* default_target_config() {
     DEBUG("generating default target config...");
 
-    TargetConfig* config = malloc(sizeof(TargetConfig));
+    TargetConfig* config = mem_alloc(MemoryNamespaceOpt, sizeof(TargetConfig));
 
-    config->name = strdup("out");
+    config->name = mem_strdup(MemoryNamespaceOpt, "out");
     config->print_ast = false;
     config->print_asm = false;
     config->print_ir = false;
     config->mode = Application;
-    config->archive_directory = strdup("archive");
-    config->output_directory = strdup("bin");
+    config->archive_directory = mem_strdup(MemoryNamespaceOpt, "archive");
+    config->output_directory = mem_strdup(MemoryNamespaceOpt, "bin");
     config->optimization_level = 1;
     config->root_module = NULL;
 
@@ -141,7 +142,7 @@ TargetConfig* default_target_config_from_args() {
         const Option* opt = get_option("output");
 
         if (opt->value != NULL) {
-            config->name = strdup(opt->value);
+            config->name = mem_strdup(MemoryNamespaceOpt, (char*) opt->value);
         }
     }
 
@@ -155,7 +156,7 @@ TargetConfig* default_target_config_from_args() {
             print_message(Warning, "Got more than one file to compile, using first, ignoring others.");
         }
 
-        config->root_module = strdup( ((char**) files->data) [0]);
+        config->root_module = mem_strdup(MemoryNamespaceOpt, ((char**) files->data) [0]);
 
         g_array_free(files, TRUE);
     }
@@ -178,10 +179,11 @@ void print_help(void) {
         "    --mode=[app|lib] set the compilation mode to either application or library",
         "    --output=name    name of output files without extension",
         "Options:",
-        "    --verbose        print logs with level information or higher",
-        "    --debug          print debug logs (if not disabled at compile time)",
-        "    --version        print the version",
-        "    --help           print this hel dialog",
+        "    --verbose            print logs with level information or higher",
+        "    --debug              print debug logs (if not disabled at compile time)",
+        "    --version            print the version",
+        "    --help               print this hel dialog",
+        "    --print-memory-stats print statistics of the garbage collector"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
@@ -361,32 +363,32 @@ int load_project_config(ProjectConfig *config) {
 
 void delete_target_config(TargetConfig* config) {
     if (config->root_module != NULL) {
-        free(config->root_module);
+        mem_free(config->root_module);
     }
     if (config->archive_directory != NULL) {
-        free(config->archive_directory);
+        mem_free(config->archive_directory);
     }
     if (config->name != NULL) {
-        free(config->name);
+        mem_free(config->name);
     }
     if (config->output_directory != NULL) {
-        free(config->output_directory);
+        mem_free(config->output_directory);
     }
-    free(config);
+    mem_free(config);
 }
 
 void delete_project_config(ProjectConfig* config) {
     if (config->name != NULL) {
-        free(config->name);
+        mem_free(config->name);
     }
     if (config->authors != NULL) {
         g_array_free(config->authors, TRUE);
     }
     if (config->desc != NULL) {
-        free(config->desc);
+        mem_free(config->desc);
     }
     if (config->license != NULL) {
-        free(config->license);
+        mem_free(config->license);
     }
     if (config->targets != NULL) {
         GHashTableIter iter;
@@ -402,11 +404,11 @@ void delete_project_config(ProjectConfig* config) {
         g_hash_table_destroy(config->targets);
     }
 
-    free(config);
+    mem_free_from(MemoryNamespaceOpt, config);
 }
 
 ProjectConfig* default_project_config() {
-    ProjectConfig* config = malloc(sizeof(ProjectConfig));
+    ProjectConfig* config = mem_alloc(MemoryNamespaceOpt, sizeof(ProjectConfig));
 
     config->authors = NULL;
     config->name = NULL;

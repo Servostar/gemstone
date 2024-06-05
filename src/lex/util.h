@@ -18,10 +18,6 @@ void lex_init(void);
 
 void lex_reset(void);
 
-char* lex_cached_strdup(char* string);
-
-void lex_purge_str_cache();
-
 /**
  * @brief Begin counting a new token. This will fill the global struct yylloc.
  * @param t the text of the token. Must be null terminated

@@ -3,6 +3,7 @@
     #include <yacc/parser.tab.h>
     #include <sys/log.h>
     #include <lex/util.h>
+    #include <mem/cache.h>
 
     int yyLineNumber = 1;
   
@@ -89,20 +90,20 @@
 "lineno" {DEBUG("\"%s\" tokenized with \'FunLineno\'", yytext); return(FunLineno);};
 "extsupport" {DEBUG("\"%s\" tokenized with \'FunExtsupport\'", yytext); return(FunExtsupport);};
 
-[0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = lex_cached_strdup(yytext); return(ValInt); };
-[0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = lex_cached_strdup(yytext); return(ValFloat);};
-[a-zA-Z_0-9]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = lex_cached_strdup(yytext); return(Ident); };
+[0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValInt); };
+[0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValFloat);};
+[a-zA-Z_0-9]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(Ident); };
 
 \"([^\"\n])*\" {
     yytext = yytext +1;
     yytext[yyleng - 2] = 0;
     
-    DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = lex_cached_strdup(yytext); return(ValStr);};
+    DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValStr);};
 \"\"\"[^\"]*\"\"\" {
     yytext = yytext +3;
     yytext[yyleng - 4] = 0;
 
-    DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = lex_cached_strdup(yytext); return(ValMultistr);};
+    DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValMultistr);};
 [ \r\t] { /* ignore whitespace */ };
 . { return yytext[0]; /* passthrough unknown token, let parser handle the error */ };
 %%

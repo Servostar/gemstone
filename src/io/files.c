@@ -6,6 +6,7 @@
 #include <sys/log.h>
 #include <assert.h>
 #include <sys/col.h>
+#include <mem/cache.h>
 
 #ifdef __unix__
 
@@ -120,7 +121,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
     printf("%s%s:%ld:%s %s%s:%s %s\n", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET,
            message);
 
-    free((void *) absolute_path);
+    mem_free((void *) absolute_path);
 
     const size_t lines = location->line_end - location->line_start + 1;
 
@@ -305,7 +306,7 @@ int create_directory(const char *path) {
 }
 
 const char *get_last_error() {
-    return strdup(strerror(errno));
+    return mem_strdup(MemoryNamespaceIo, strerror(errno));
 }
 
 const char *get_absolute_path(const char *path) {
@@ -323,7 +324,7 @@ const char *get_absolute_path(const char *path) {
     _fullpath(path, absolute_path, _MAX_PATH);
 #endif
 
-    return strdup(absolute_path);
+    return mem_strdup(MemoryNamespaceIo, absolute_path);
 }
 
 const char* make_file_path(const char* name, const char* ext, int count, ...) {

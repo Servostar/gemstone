@@ -5,10 +5,12 @@
 #include "sys/log.h"
 #include <sys/col.h>
 #include <cfg/opt.h>
+#include <mem/cache.h>
 
 #define LOG_LEVEL LOG_LEVEL_WARNING
 
 int main(int argc, char* argv[]) {
+    mem_init();
     parse_options(argc, argv);
     log_init();
     set_log_level(LOG_LEVEL_DEBUG);

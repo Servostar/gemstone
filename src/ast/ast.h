@@ -1,6 +1,6 @@
 
-#ifndef AST_H_
-#define AST_H_
+#ifndef _AST_H_
+#define _AST_H_
 
 #include <stdio.h>
 #include <io/files.h>
@@ -12,74 +12,74 @@
  *            variants of this enum.
  */
 enum AST_SyntaxElement_t {
-  AST_Stmt = 0,
-  AST_Module,
-  AST_Expr,
-  // Literals
-  AST_Int,
-  AST_Float,
-  AST_String,
-  // Control flow
-  AST_While,
-  AST_If,
-  AST_IfElse,
-  AST_Else,
-  AST_Condition,
-  // Variable management
-  AST_Decl,
-  AST_Assign,
-  AST_Def,
-  AST_Ident,
-  // Arithmetic operators
-  AST_Add,
-  AST_Sub,
-  AST_Mul,
-  AST_Div,
-  // Bitwise operators
-  AST_BitAnd,
-  AST_BitOr,
-  AST_BitXor,
-  AST_BitNot,
-  // Boolean operators
-  AST_BoolAnd,
-  AST_BoolOr,
-  AST_BoolXor,
-  AST_BoolNot,
-  // Logical operators
-  AST_Eq,
-  AST_Greater,
-  AST_Less,
-  // Casts
-  AST_Typecast,   // type cast
-  AST_Transmute,  // reinterpret cast
-  AST_Call,       // function call
-  AST_Macro,      // builtin functions: lineno(), filename(), ...
-  // Defintions
-  AST_Typedef,
-  AST_Box,
-  AST_Fun,
-  AST_Import,
-  // amount of variants
-  // in this enums
-  AST_List,
-  AST_ExprList,
-  AST_ArgList,
-  AST_ParamList,
-  AST_StmtList,
-  AST_IdentList,
-  AST_Storage,
-  AST_Type,
-  AST_Typekind,
-  AST_Sign,
-  AST_Scale,
-  AST_Negate,
-  AST_Parameter,
-  AST_Qualifyier,
-  AST_ParamDecl,
-  AST_AddressOf,
-  AST_Dereference,
-  AST_Reference,
-  AST_ELEMENT_COUNT
+    AST_Stmt = 0,
+    AST_Module,
+    AST_Expr,
+    // Literals
+    AST_Int,
+    AST_Float,
+    AST_String,
+    // Control flow
+    AST_While,
+    AST_If,
+    AST_IfElse,
+    AST_Else,
+    AST_Condition,
+    // Variable management
+    AST_Decl,
+    AST_Assign,
+    AST_Def,
+    AST_Ident,
+    // Arithmetic operators
+    AST_Add,
+    AST_Sub,
+    AST_Mul,
+    AST_Div,
+    // Bitwise operators
+    AST_BitAnd,
+    AST_BitOr,
+    AST_BitXor,
+    AST_BitNot,
+    // Boolean operators
+    AST_BoolAnd,
+    AST_BoolOr,
+    AST_BoolXor,
+    AST_BoolNot,
+    // Logical operators
+    AST_Eq,
+    AST_Greater,
+    AST_Less,
+    // Casts
+    AST_Typecast,   // type cast
+    AST_Transmute,  // reinterpret cast
+    AST_Call,       // function call
+    AST_Macro,      // builtin functions: lineno(), filename(), ...
+    // Defintions
+    AST_Typedef,
+    AST_Box,
+    AST_Fun,
+    AST_Import,
+    // amount of variants
+    // in this enums
+    AST_List,
+    AST_ExprList,
+    AST_ArgList,
+    AST_ParamList,
+    AST_StmtList,
+    AST_IdentList,
+    AST_Storage,
+    AST_Type,
+    AST_Typekind,
+    AST_Sign,
+    AST_Scale,
+    AST_Negate,
+    AST_Parameter,
+    AST_Qualifyier,
+    AST_ParamDecl,
+    AST_AddressOf,
+    AST_Dereference,
+    AST_Reference,
+    AST_ELEMENT_COUNT
 };
 
 /**
@@ -89,7 +89,23 @@ enum AST_SyntaxElement_t {
  *  - kind: The type of the node. Such as AST_Expr, AST_Add, ...
  *  - value: A string representing an optional value. Can be a integer literal for kind AST_int
  */
-struct AST_Node_t;
+struct AST_Node_t {
+    // parent node that owns this node
+    struct AST_Node_t *parent;
+
+    // type of AST node: if, declaration, ...
+    enum AST_SyntaxElement_t kind;
+    // optional value: integer literal, string literal, ...
+    const char* value;
+
+    TokenLocation location;
+
+    // number of child nodes ownd by this node
+    // length of children array
+    size_t child_count;
+    // variable amount of child nodes
+    struct AST_Node_t **children;
+};
 
 /**
  * Shorthand type for a single AST node
@@ -110,21 +126,7 @@ void AST_init(void);
  */
 [[maybe_unused]]
 [[gnu::nonnull(1)]]
-const char* AST_node_to_string(AST_NODE_PTR node);
-
-/**
- * @brief Return the amount of children
- * @param node
- * @return
- */
-size_t AST_child_count(AST_NODE_PTR node);
-
-/**
- * @brief Return the last node of the children
- * @param node
- * @return
- */
-AST_NODE_PTR AST_get_last_node(AST_NODE_PTR node);
+const char* AST_node_to_string(const struct AST_Node_t* node);
 
 /**
  * @brief Create a new node struct on the system heap. Initializes the struct with the given values.
@@ -137,7 +139,7 @@ AST_NODE_PTR AST_get_last_node(AST_NODE_PTR node);
 [[maybe_unused]]
 [[nodiscard("pointer must be freed")]]
 [[gnu::returns_nonnull]]
-AST_NODE_PTR AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value);
+struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value);
 
 /**
  * @brief Deallocate this node and all of its children.
@@ -147,7 +149,7 @@ AST_NODE_PTR AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind,
  */
 [[maybe_unused]]
 [[gnu::nonnull(1)]]
-void AST_delete_node(AST_NODE_PTR  node);
+void AST_delete_node(struct AST_Node_t * node);
 
 /**
  * @brief Add a new child node to a parent node
@@ -157,7 +159,7 @@ void AST_delete_node(AST_NODE_PTR  node);
  */
 [[maybe_unused]]
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void AST_push_node(AST_NODE_PTR owner, AST_NODE_PTR child);
+void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
 
 /**
  * @brief Remove the specified child from the owner.
@@ -170,18 +172,19 @@ void AST_push_node(AST_NODE_PTR owner, AST_NODE_PTR child);
 [[maybe_unused]]
 [[nodiscard("pointer must be freed")]]
 [[gnu::nonnull(1)]]
-AST_NODE_PTR AST_remove_child(AST_NODE_PTR owner, size_t idx);
+struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, size_t idx);
 
 /**
  * @brief Detach a child from its parent. This involves removing the child from its parent
  *        and marking the parent of the child as NULL.
  * @attention The returned pointer is still valid. It must be freed at some pointer later.
+ * @param owner the owner to remove the child from
  * @param child the child to detach
  * @return a pointer to child detached
  */
 [[nodiscard("pointer must be freed")]]
 [[gnu::nonnull(1), gnu::nonnull(1)]]
-AST_NODE_PTR AST_detach_child(AST_NODE_PTR child);
+struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_Node_t* child);
 
 /**
  * @brief Return a pointer to the n-th child of a node
@@ -194,7 +197,7 @@ AST_NODE_PTR AST_detach_child(AST_NODE_PTR child);
  */
 [[maybe_unused]]
 [[gnu::nonnull(1)]]
-AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, size_t idx);
+struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
 
 /**
  * @brief Execute a function for every child, grandchild, ... and the supplied node as topmost ancestor
@@ -203,8 +206,8 @@ AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, size_t idx);
  */
 [[maybe_unused]]
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void AST_visit_nodes_recurse(AST_NODE_PTR root,
-                             void (*for_each)(AST_NODE_PTR node,
+void AST_visit_nodes_recurse(struct AST_Node_t *root,
+                             void (*for_each)(struct AST_Node_t *node,
                                               size_t depth));
 
 /**
@@ -214,6 +217,6 @@ void AST_visit_nodes_recurse(AST_NODE_PTR root,
  */
 [[maybe_unused]]
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void AST_fprint_graphviz(FILE* stream, AST_NODE_PTR node);
+void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* node);
 
-#endif // AST_H_
+#endif
