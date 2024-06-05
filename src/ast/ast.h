@@ -113,6 +113,20 @@ void AST_init(void);
 const char* AST_node_to_string(AST_NODE_PTR node);
 
 /**
+ * @brief Return the amount of children
+ * @param node
+ * @return
+ */
+size_t AST_child_count(AST_NODE_PTR node);
+
+/**
+ * @brief Return the last node of the children
+ * @param node
+ * @return
+ */
+AST_NODE_PTR AST_get_last_node(AST_NODE_PTR node);
+
+/**
  * @brief Create a new node struct on the system heap. Initializes the struct with the given values.
  *        All other fields are set to either NULL or 0. No allocation for children array is preformed.
 *  @attention parameter value can be NULL in case no value can be provided for the node
@@ -162,13 +176,12 @@ AST_NODE_PTR AST_remove_child(AST_NODE_PTR owner, size_t idx);
  * @brief Detach a child from its parent. This involves removing the child from its parent
  *        and marking the parent of the child as NULL.
  * @attention The returned pointer is still valid. It must be freed at some pointer later.
- * @param owner the owner to remove the child from
  * @param child the child to detach
  * @return a pointer to child detached
  */
 [[nodiscard("pointer must be freed")]]
 [[gnu::nonnull(1), gnu::nonnull(1)]]
-AST_NODE_PTR AST_detach_child(AST_NODE_PTR owner, AST_NODE_PTR child);
+AST_NODE_PTR AST_detach_child(AST_NODE_PTR child);
 
 /**
  * @brief Return a pointer to the n-th child of a node

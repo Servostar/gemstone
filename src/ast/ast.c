@@ -41,6 +41,20 @@ AST_NODE_PTR AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind,
     return node;
 }
 
+size_t AST_child_count(AST_NODE_PTR node) {
+    assert(node != NULL);
+    assert(node->children != NULL);
+
+    return node->children->len;
+}
+
+AST_NODE_PTR AST_get_last_node(AST_NODE_PTR node) {
+    assert(node != NULL);
+    assert(node->children != NULL);
+
+    return AST_get_node(node, AST_child_count(node) - 1);
+}
+
 static const char *lookup_table[AST_ELEMENT_COUNT] = {"__UNINIT__"};
 
 void AST_init() {
@@ -175,7 +189,7 @@ AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, const size_t idx) {
         PANIC("AST owner node has no children");
     }
 
-    AST_NODE_PTR child = ((AST_NODE_PTR*) owner->children->data)[idx];
+    AST_NODE_PTR child = ((AST_NODE_PTR *) owner->children->data)[idx];
 
     if (child == NULL) {
         PANIC("child node is NULL");
@@ -198,14 +212,12 @@ AST_NODE_PTR AST_remove_child(AST_NODE_PTR owner, const size_t idx) {
     return child;
 }
 
-AST_NODE_PTR AST_detach_child(AST_NODE_PTR owner, AST_NODE_PTR child) {
-    assert(owner != NULL);
+AST_NODE_PTR AST_detach_child(AST_NODE_PTR child) {
     assert(child != NULL);
-    assert(owner->children != NULL);
 
-    for (size_t i = 0; i < owner->children->len; i++) {
-        if (AST_get_node(owner, i) == child) {
-            return AST_remove_child(owner, i);
+    for (size_t i = 0; i < AST_child_count(child->parent); i++) {
+        if (AST_get_node(child->parent, i) == child) {
+            return AST_remove_child(child->parent, i);
         }
     }
 
@@ -217,23 +229,22 @@ void AST_delete_node(AST_NODE_PTR node) {
 
     DEBUG("Deleting AST node: %p", node);
 
-    if (node->children == NULL) {
-        return;
-    }
-
     if (node->parent != NULL) {
-        AST_NODE_PTR child = AST_detach_child(node->parent, node);
+        AST_NODE_PTR child = AST_detach_child(node);
         assert(child == node);
     }
 
-    for (size_t i = 0; i < node->children->len; i++) {
-        // prevent detach of children node
-        AST_NODE_PTR child = AST_get_node(node, i);
-        child->parent = NULL;
-        AST_delete_node(child);
+    if (node->children != NULL) {
+        for (size_t i = 0; i < AST_child_count(node); i++) {
+            AST_NODE_PTR child = AST_get_node(node, i);
+            // prevent detach of children node
+            child->parent = NULL;
+            AST_delete_node(child);
+        }
+
+        g_array_free(node->children, TRUE);
     }
 
-    g_array_free(node->children, TRUE);
     free(node);
 }
 
