@@ -93,7 +93,7 @@ int scale_factor_from(const char* string, double* factor) {
 int check_scale_factor(AST_NODE_PTR node, Scale scale) {
     assert(node != NULL);
 
-    if (8 > scale) {
+    if (8 < scale) {
         print_diagnostic(current_file, &node->location, Error, "Composite scale overflow");
         return SEMANTIC_ERROR;
     }
@@ -222,6 +222,7 @@ int get_type_impl(AST_NODE_PTR currentNode, Type** type) {
     assert(currentNode != NULL);
     assert(currentNode->kind == AST_Type);
     assert(currentNode->child_count > 0);
+    DEBUG("start Type");
 
     int status;
 
@@ -340,7 +341,8 @@ int createDef(AST_NODE_PTR currentNode, GArray** variables) {
 
     AST_NODE_PTR declaration = currentNode->children[0];
     AST_NODE_PTR expression = currentNode->children[1];
-    AST_NODE_PTR ident_list = currentNode->children[0]->children[currentNode->child_count - 1];
+    AST_NODE_PTR ident_list = declaration->children[currentNode->child_count - 1];
+
 
     *variables = g_array_new(FALSE, FALSE, sizeof(Variable*));
 
@@ -351,20 +353,20 @@ int createDef(AST_NODE_PTR currentNode, GArray** variables) {
     int status = SEMANTIC_OK;
 
     DEBUG("Child Count: %i", declaration->child_count);
-    for (size_t i = 0; i < declaration->children[i]->child_count; i++){
+    for (size_t i = 0; i < declaration->child_count; i++){
         switch(declaration->children[i]->kind) {
             case AST_Storage:
                 DEBUG("fill Qualifier");
-                decl.qualifier = Qualifier_from_string(currentNode->children[i]->value);
+                decl.qualifier = Qualifier_from_string(declaration->children[i]->value);
                 break;
             case AST_Type:
                 DEBUG("fill Type");
-                status = get_type_impl(currentNode->children[i], &decl.type);
+                status = get_type_impl(declaration->children[i], &decl.type);
                 break;
             case AST_IdentList:
                 break;
             default:
-                PANIC("invalid node type: %ld", currentNode->children[i]->kind);
+                PANIC("invalid node type: %ld", declaration->children[i]->kind);
                 break;
             }
     }
@@ -1087,6 +1089,7 @@ int createTransmute(Expression* ParentExpression, AST_NODE_PTR currentNode){
 
 
 Expression *createExpression(AST_NODE_PTR currentNode){
+    DEBUG("create Expression");
     Expression *expression = malloc(sizeof(Expression));
     expression->nodePtr = currentNode;
     switch(currentNode->kind){
@@ -1222,6 +1225,7 @@ Expression *createExpression(AST_NODE_PTR currentNode){
 int createStatement(Block * block, AST_NODE_PTR currentNode);
 
 int fillBlock(Block * block,AST_NODE_PTR currentNode){
+    DEBUG("start filling Block");
     block->nodePtr = currentNode;
 
     GHashTable * lowerScope = g_hash_table_new(g_str_hash,g_str_equal);
@@ -1238,6 +1242,7 @@ int fillBlock(Block * block,AST_NODE_PTR currentNode){
     g_hash_table_destroy(lowerScope);
     g_array_remove_index(Scope, Scope->len-1);
     
+    DEBUG("created Block successfully");
     return SEMANTIC_OK;
 }
 
@@ -1349,7 +1354,7 @@ int createBranch(Statement* ParentStatement,AST_NODE_PTR currentNode){
 }
 
 int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
-
+    DEBUG("create Statement");
         
     switch(currentNode->kind){
         case AST_Decl:{
@@ -1433,12 +1438,18 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
 
 
 int createParam(GArray * Paramlist ,AST_NODE_PTR currentNode){
+    DEBUG("start param");
+    DEBUG("current node child count: %i",currentNode->kind);
+    if( currentNode->kind == AST_Parameter){
+        DEBUG("current n");
+    }
     AST_NODE_PTR paramdecl = currentNode->children[1];
     AST_NODE_PTR ioQualifierList =  currentNode->children[0];
 
     ParameterDeclaration decl;
     decl.nodePtr = paramdecl;
 
+    DEBUG("paramnode child count: %i", ioQualifierList->child_count );
     if(ioQualifierList->child_count == 2){
         decl.qualifier = InOut;
     }else if(ioQualifierList->child_count == 1){
@@ -1452,7 +1463,7 @@ int createParam(GArray * Paramlist ,AST_NODE_PTR currentNode){
     }else{
         PANIC("IO_Qualifier has not the right amount of children");
     }
-
+    
     int signal = get_type_impl(paramdecl->children[0],&decl.type);
     if(signal){
         return SEMANTIC_ERROR;
@@ -1466,12 +1477,13 @@ int createParam(GArray * Paramlist ,AST_NODE_PTR currentNode){
     param.name = paramdecl->children[1]->value;
 
     g_array_append_val(Paramlist,param);
+    DEBUG("created param successfully");
     return SEMANTIC_OK;
 }
 
 
 int createFunDef(Function * Parentfunction ,AST_NODE_PTR currentNode){
-    
+    DEBUG("start fundef");
     AST_NODE_PTR nameNode = currentNode->children[0];
     AST_NODE_PTR paramlistlist = currentNode->children[1];
     AST_NODE_PTR statementlist = currentNode->children[2];
@@ -1508,13 +1520,14 @@ int createFunDef(Function * Parentfunction ,AST_NODE_PTR currentNode){
     Parentfunction->nodePtr = currentNode;
     Parentfunction->kind = FunctionDefinitionKind;
     Parentfunction->impl.definition = fundef;
+    Parentfunction->name = fundef.name;
     return SEMANTIC_OK;
 
 
 }
 
 int createFunDecl(Function * Parentfunction ,AST_NODE_PTR currentNode){
-    
+    DEBUG("start fundecl");
     AST_NODE_PTR nameNode = currentNode->children[0];
     AST_NODE_PTR paramlistlist = currentNode->children[1];
 
@@ -1545,29 +1558,34 @@ int createFunDecl(Function * Parentfunction ,AST_NODE_PTR currentNode){
     Parentfunction->nodePtr = currentNode;
     Parentfunction->kind = FunctionDefinitionKind;
     Parentfunction->impl.declaration = fundecl;
+    Parentfunction->name = fundecl.name;
     return SEMANTIC_OK;
 }
 //TODO check if a function is present and if a declaration is present and identical.
 
-Function * createFunction( AST_NODE_PTR currentNode){
+int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
+    assert(currentNode->kind == AST_Fun);
     Function * fun = malloc(sizeof(Function));
 
-
+     
     if(currentNode->child_count == 2){
         int signal = createFunDecl(fun, currentNode);
         if (signal){
-            return NULL;
+            return SEMANTIC_ERROR;
         }
     }else if(currentNode->child_count == 3){
         int signal = createFunDef(fun, currentNode);
         if (signal){
-            return NULL;
+            return SEMANTIC_ERROR;
         }
     }else {
         PANIC("function should have 2 or 3 children");
     }
-    
-    return fun;
+    if(g_hash_table_contains(functions,fun->name)){
+        return SEMANTIC_ERROR;
+    }
+    g_hash_table_insert(functions,(gpointer)fun->name, fun);
+    return SEMANTIC_OK;
 } 
 
 
@@ -1682,6 +1700,7 @@ int createBox(GHashTable *boxes, AST_NODE_PTR currentNode){
 }
     
 int createTypeDef(GHashTable *types, AST_NODE_PTR currentNode){
+    DEBUG("create Type define");
     AST_NODE_PTR typeNode = currentNode->children[0];
     AST_NODE_PTR nameNode = currentNode->children[1];
     
@@ -1701,6 +1720,11 @@ int createTypeDef(GHashTable *types, AST_NODE_PTR currentNode){
         return SEMANTIC_ERROR;
     }
     g_hash_table_insert(types, (gpointer)def->name, def);
+    if(g_hash_table_contains(declaredComposites, (gpointer)def->name)){
+        return SEMANTIC_ERROR;
+    }
+    g_hash_table_insert(declaredComposites, (gpointer)def->name, def);
+
     return SEMANTIC_OK;
 }
 
@@ -1771,7 +1795,16 @@ Module *create_set(AST_NODE_PTR currentNode){
             DEBUG("created Box successfully");
             break;
             }
-        case AST_Fun:
+        case AST_Fun:{
+             DEBUG("start function");
+            int status = createFunction(functions,currentNode->children[i]);
+            if (status){
+                return NULL;
+            }
+            DEBUG("created function successfully");
+            break;
+
+            }
         case AST_Typedef:{
             int status = createTypeDef(types, currentNode->children[i]);
             if (status){

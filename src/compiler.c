@@ -11,6 +11,7 @@
 #include <io/files.h>
 #include <assert.h>
 #include <cfg/opt.h>
+#include <set/set.h>
 
 extern void yyrestart(FILE *);
 
@@ -140,7 +141,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
         if (setup_target_environment(target) == 0) {
 
             print_ast_to_file(ast, target);
-
+            Module * test = create_set(ast);
             // TODO: parse AST to semantic values
             // TODO: backend codegen
         }

@@ -233,6 +233,7 @@ typedef struct Function_t {
         FunctionDeclaration declaration;
     } impl;
     AST_NODE_PTR nodePtr;
+    const char * name;
 } Function;
 
 // .------------------------------------------------.
