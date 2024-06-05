@@ -122,7 +122,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
     printf("%s%s:%ld:%s %s%s:%s ", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET);
 
     va_list args;
-    va_start(args, format);
+    va_start(args, message);
 
     vprintf(message, args);
 
