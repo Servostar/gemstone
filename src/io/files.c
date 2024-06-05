@@ -13,6 +13,8 @@
 
 #define MAX_PATH_BYTES PATH_MAX
 
+#define min(a, b) ((a) > (b) ? (b) : (a))
+
 #elif defined(_WIN32) || defined(WIN32)
 
 #include <Windows.h>
@@ -68,8 +70,6 @@ void delete_files(ModuleFileStack *stack) {
 // Number of bytes to read at once whilest
 // seeking the current line in print_diagnostic()
 #define SEEK_BUF_BYTES 256
-
-#define min(a, b) ((a) > (b) ? (b) : (a))
 
 // behaves like fgets except that it has defined behavior when n == 1
 static void custom_fgets(char *buffer, size_t n, FILE *stream) {
