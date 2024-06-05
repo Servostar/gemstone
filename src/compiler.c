@@ -148,6 +148,8 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
 
     AST_delete_node(ast);
 
+    lex_purge_str_cache();
+
     print_file_statistics(file);
 }
 

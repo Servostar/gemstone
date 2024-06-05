@@ -2,6 +2,7 @@
 #include <lex/util.h>
 #include <string.h>
 #include <stdlib.h>
+#include <glib.h>
 
 // implementation based on:
 // https://github.com/sunxfancy/flex-bison-examples/blob/master/error-handling/ccalc.c
@@ -16,12 +17,37 @@ static int nTokenStart = 0;
 static int nTokenLength = 0;
 static int nTokenNextStart = 0;
 
+static GArray* stringCache = NULL;
+
+char* lex_cached_strdup(char* string) {
+    char* dup = strdup(string);
+
+    g_array_append_val(stringCache, dup);
+
+    return dup;
+}
+
+void lex_purge_str_cache() {
+    DEBUG("purging string cache...");
+
+    const guint count = stringCache->len;
+
+    for (guint i = 0; i < count; i++) {
+        free(((char**) stringCache->data)[i]);
+    }
+
+    g_array_remove_range(stringCache, 0, count);
+}
+
 static void lex_deinit(void) {
+    lex_purge_str_cache();
+    g_array_free(stringCache, TRUE);
   free(buffer);
 }
 
 void lex_init(void) {
   buffer = malloc(MAX_READ_BUFFER_SIZE);
+    stringCache = g_array_new(FALSE, FALSE, sizeof(char*));
   atexit(lex_deinit);
 }
 
