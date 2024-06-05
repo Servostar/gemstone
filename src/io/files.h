@@ -15,9 +15,9 @@
 #endif
 
 typedef struct FileDiagnosticStatistics_t {
-    size_t error_count;
-    size_t warning_count;
-    size_t info_count;
+    unsigned long int error_count;
+    unsigned long int warning_count;
+    unsigned long int info_count;
 } FileDiagnosticStatistics;
 
 typedef struct ModuleFile_t {
