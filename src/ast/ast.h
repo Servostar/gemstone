@@ -1,6 +1,6 @@
 
-#ifndef _AST_H_
-#define _AST_H_
+#ifndef AST_H_
+#define AST_H_
 
 #include <stdio.h>
 #include <io/files.h>
@@ -89,23 +89,7 @@ enum AST_SyntaxElement_t {
  *  - kind: The type of the node. Such as AST_Expr, AST_Add, ...
  *  - value: A string representing an optional value. Can be a integer literal for kind AST_int
  */
-struct AST_Node_t {
-  // parent node that owns this node
-  struct AST_Node_t *parent;
-
-  // type of AST node: if, declaration, ...
-  enum AST_SyntaxElement_t kind;
-  // optional value: integer literal, string literal, ...
-  const char* value;
-
-  TokenLocation location;
-
-  // number of child nodes ownd by this node
-  // length of children array
-  size_t child_count;
-  // variable amount of child nodes
-  struct AST_Node_t **children;
-};
+struct AST_Node_t;
 
 /**
  * Shorthand type for a single AST node
@@ -126,7 +110,7 @@ void AST_init(void);
  */
 [[maybe_unused]]
 [[gnu::nonnull(1)]]
-const char* AST_node_to_string(const struct AST_Node_t* node);
+const char* AST_node_to_string(AST_NODE_PTR node);
 
 /**
  * @brief Create a new node struct on the system heap. Initializes the struct with the given values.
@@ -139,7 +123,7 @@ const char* AST_node_to_string(const struct AST_Node_t* node);
 [[maybe_unused]]
 [[nodiscard("pointer must be freed")]]
 [[gnu::returns_nonnull]]
-struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value);
+AST_NODE_PTR AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value);
 
 /**
  * @brief Deallocate this node and all of its children.
@@ -149,7 +133,7 @@ struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t
  */
 [[maybe_unused]]
 [[gnu::nonnull(1)]]
-void AST_delete_node(struct AST_Node_t * node);
+void AST_delete_node(AST_NODE_PTR  node);
 
 /**
  * @brief Add a new child node to a parent node
@@ -159,7 +143,7 @@ void AST_delete_node(struct AST_Node_t * node);
  */
 [[maybe_unused]]
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
+void AST_push_node(AST_NODE_PTR owner, AST_NODE_PTR child);
 
 /**
  * @brief Remove the specified child from the owner.
@@ -172,7 +156,7 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child);
 [[maybe_unused]]
 [[nodiscard("pointer must be freed")]]
 [[gnu::nonnull(1)]]
-struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, size_t idx);
+AST_NODE_PTR AST_remove_child(AST_NODE_PTR owner, size_t idx);
 
 /**
  * @brief Detach a child from its parent. This involves removing the child from its parent
@@ -184,7 +168,7 @@ struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, size_t idx);
  */
 [[nodiscard("pointer must be freed")]]
 [[gnu::nonnull(1), gnu::nonnull(1)]]
-struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_Node_t* child);
+AST_NODE_PTR AST_detach_child(AST_NODE_PTR owner, AST_NODE_PTR child);
 
 /**
  * @brief Return a pointer to the n-th child of a node
@@ -197,7 +181,7 @@ struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_N
  */
 [[maybe_unused]]
 [[gnu::nonnull(1)]]
-struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
+AST_NODE_PTR AST_get_node(AST_NODE_PTR owner, size_t idx);
 
 /**
  * @brief Execute a function for every child, grandchild, ... and the supplied node as topmost ancestor
@@ -206,8 +190,8 @@ struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
  */
 [[maybe_unused]]
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void AST_visit_nodes_recurse(struct AST_Node_t *root,
-                             void (*for_each)(struct AST_Node_t *node,
+void AST_visit_nodes_recurse(AST_NODE_PTR root,
+                             void (*for_each)(AST_NODE_PTR node,
                                               size_t depth));
 
 /**
@@ -217,6 +201,6 @@ void AST_visit_nodes_recurse(struct AST_Node_t *root,
  */
 [[maybe_unused]]
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* node);
+void AST_fprint_graphviz(FILE* stream, AST_NODE_PTR node);
 
-#endif
+#endif // AST_H_
