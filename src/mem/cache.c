@@ -221,7 +221,7 @@ void mem_purge_namespace(MemoryNamespaceName name) {
 
         namespace_purge(cache);
     } else {
-        PANIC("purging invalid namespace: %s", name);
+        WARN("purging invalid namespace: %s", name);
     }
 }
 

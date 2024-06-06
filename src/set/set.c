@@ -10,6 +10,7 @@
 #include <glib.h>
 #include <assert.h>
 #include <set/set.h>
+#include <mem/cache.h>
 
 
 extern ModuleFile * current_file;
@@ -218,6 +219,7 @@ int impl_composite_type(AST_NODE_PTR ast_type, CompositeType* composite) {
 /**
  * @brief Converts the given AST node to a gemstone type implementation.
  * @param currentNode AST node of type kind type
+ * @param type pointer output for the type
  * @return the gemstone type implementation
  */
 int get_type_impl(AST_NODE_PTR currentNode, Type** type) {
@@ -241,7 +243,7 @@ int get_type_impl(AST_NODE_PTR currentNode, Type** type) {
     }
     // type is not yet declared, make a new one
 
-    Type* new_type = malloc(sizeof(Type));
+    Type* new_type = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     new_type->nodePtr = currentNode;
 
     // only one child means either composite or primitive
@@ -294,6 +296,7 @@ int createDecl(AST_NODE_PTR currentNode, GArray** variables) {
 
     VariableDeclaration decl;
     decl.nodePtr = currentNode;
+    decl.qualifier = Static;
 
     int status = SEMANTIC_OK;
 
@@ -318,7 +321,7 @@ int createDecl(AST_NODE_PTR currentNode, GArray** variables) {
     }
 
     for(size_t i = 0; i < ident_list->child_count; i++) {
-        Variable* variable = malloc(sizeof(Variable));
+        Variable* variable = mem_alloc(MemoryNamespaceSet,sizeof(Variable));
 
         variable->kind = VariableKindDeclaration;
         variable->nodePtr = currentNode;
@@ -354,6 +357,8 @@ int createDef(AST_NODE_PTR currentNode, GArray** variables) {
     VariableDeclaration decl;
     VariableDefiniton def;
     def.nodePtr = currentNode;
+    decl.qualifier = Static;
+    decl.nodePtr = AST_get_node(currentNode, 0);
 
     int status = SEMANTIC_OK;
 
@@ -385,7 +390,7 @@ int createDef(AST_NODE_PTR currentNode, GArray** variables) {
     
 
     for(size_t i = 0; i < ident_list->child_count; i++) {
-        Variable* variable = malloc(sizeof(Variable));
+        Variable* variable = mem_alloc(MemoryNamespaceSet,sizeof(Variable));
 
         variable->kind = VariableKindDefinition;
         variable->nodePtr = currentNode;
@@ -484,7 +489,7 @@ int addVarToScope(Variable * variable){
     return SEMANTIC_OK;
 }
 
-int fillTablesWithVars(GHashTable *variableTable,  GArray* variables) {
+int fillTablesWithVars(GHashTable *variableTable, const GArray* variables) {
     DEBUG("filling vars in scope and table");
 
     for(size_t i = 0; i < variables->len; i++) {
@@ -507,7 +512,7 @@ int fillTablesWithVars(GHashTable *variableTable,  GArray* variables) {
 TypeValue createTypeValue(AST_NODE_PTR currentNode){
     DEBUG("create TypeValue");
     TypeValue value;
-    Type *type = malloc(sizeof(Type));
+    Type *type = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     value.type = type;
     type->kind = TypeKindPrimitive;
     type->nodePtr = currentNode;
@@ -532,7 +537,7 @@ TypeValue createTypeValue(AST_NODE_PTR currentNode){
 }
 
 static inline void* clone(int size, void* ptr) {
-    char* data = malloc(size);
+    char* data = mem_alloc(MemoryNamespaceSet,size);
     memcpy(data, ptr, size);
     return data;
 }
@@ -551,7 +556,7 @@ TypeValue createString(AST_NODE_PTR currentNode) {
 
 Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_NODE_PTR currentNode) {
     DEBUG("create type from operands");
-    Type *result = malloc(sizeof(Type));
+    Type *result = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     result->nodePtr = currentNode;
     DEBUG("LeftOperandType->kind: %i", LeftOperandType->kind);
     DEBUG("RightOperandType->kind: %i", RightOperandType->kind);
@@ -589,7 +594,7 @@ Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_
         result->impl.composite.primitive = MAX(Int, LeftOperandType->impl.composite.primitive);
         result->impl.composite.nodePtr = currentNode;
     } else {
-        free(result);
+        mem_free(result);
         return NULL;
     }
     DEBUG("Succsessfully created type");
@@ -692,7 +697,7 @@ int createRelationalOperation(Expression* ParentExpression, AST_NODE_PTR current
             break;
     }
 
-    Type* result = malloc(sizeof(Type));
+    Type* result = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     result->impl.primitive = Int;
     result->kind = TypeKindPrimitive;
     result->nodePtr = currentNode;
@@ -789,7 +794,7 @@ int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNod
 
     Type* Operand = ((Expression**)ParentExpression->impl.operation.operands)[0]->result;
 
-    Type* result = malloc(sizeof(Type));
+    Type* result = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     result->nodePtr = currentNode;
 
     if (Operand->kind == TypeKindBox || Operand->kind == TypeKindReference) {
@@ -856,7 +861,7 @@ int createBitOperation(Expression* ParentExpression, AST_NODE_PTR currentNode) {
             break;
     }
 
-    Type *result = malloc(sizeof(Type));
+    Type *result = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     result->nodePtr = currentNode;
 
     Expression* lhs = ((Expression**) ParentExpression->impl.operation.operands->data)[0];
@@ -963,7 +968,7 @@ int createBitNotOperation(Expression* ParentExpression, AST_NODE_PTR currentNode
 
     Type* Operand = ((Expression**) ParentExpression->impl.operation.operands)[0]->result;
     
-    Type* result = malloc(sizeof(Type));
+    Type* result = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     result->nodePtr = currentNode;
     
     if (Operand->kind  == TypeKindPrimitive) {
@@ -1056,7 +1061,7 @@ int createBoxAccess(Expression* ParentExpression,AST_NODE_PTR currentNode) {
     ParentExpression->impl.variable->impl.member.variable = boxVariable;
 
     //first one is the box itself
-    GArray* names = malloc(sizeof(GArray));
+    GArray* names = mem_alloc(MemoryNamespaceSet,sizeof(GArray));
     if(currentNode->kind == AST_IdentList){
         for (size_t i = 1; i < currentNode->child_count; i++){
             g_array_append_val(names, currentNode->children[i]->value);
@@ -1085,7 +1090,7 @@ int createTypeCast(Expression* ParentExpression, AST_NODE_PTR currentNode){
         return SEMANTIC_ERROR;
     }
 
-    Type* target = malloc(sizeof(Type));
+    Type* target = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     int status = get_type_impl(currentNode->children[1], &target);
     if (status) {
         print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
@@ -1104,7 +1109,7 @@ int createTransmute(Expression* ParentExpression, AST_NODE_PTR currentNode){
         return SEMANTIC_ERROR;
     }
 
-    Type* target = malloc(sizeof(Type));
+    Type* target = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     int status = get_type_impl(currentNode->children[1], &target);
     if (status){
         print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
@@ -1122,7 +1127,7 @@ int createTransmute(Expression* ParentExpression, AST_NODE_PTR currentNode){
 
 Expression *createExpression(AST_NODE_PTR currentNode){
     DEBUG("create Expression");
-    Expression *expression = malloc(sizeof(Expression));
+    Expression *expression = mem_alloc(MemoryNamespaceSet,sizeof(Expression));
     expression->nodePtr = currentNode;
     switch(currentNode->kind){
     
@@ -1404,7 +1409,7 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
                 }
                 for(size_t i = 0; i < variable->len ; i++){
 
-                    Statement * statement = malloc(sizeof(Statement));
+                    Statement * statement = mem_alloc(MemoryNamespaceSet,sizeof(Statement));
                 statement->nodePtr = currentNode;
                 statement->kind = StatementKindDeclaration;
 
@@ -1425,7 +1430,7 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
                 }
                 for(size_t i = 0; i < variable->len ; i++){
 
-                Statement * statement = malloc(sizeof(Statement));
+                Statement * statement = mem_alloc(MemoryNamespaceSet,sizeof(Statement));
                 statement->nodePtr = currentNode;
                 statement->kind = StatementKindDefinition;
                 
@@ -1436,7 +1441,7 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
             }
             break;
         case AST_While:{
-                Statement * statement = malloc(sizeof(Statement));
+                Statement * statement = mem_alloc(MemoryNamespaceSet,sizeof(Statement));
                 statement->nodePtr = currentNode;
                 statement->kind = StatementKindWhile;
                 if(createWhile(statement, currentNode)){
@@ -1446,7 +1451,7 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
             }
             break;
         case AST_Stmt:{
-                Statement * statement = malloc(sizeof(Statement));
+                Statement * statement = mem_alloc(MemoryNamespaceSet,sizeof(Statement));
                 statement->nodePtr = currentNode;
                 statement->kind = StatementKindBranch;
                 if(createBranch(statement, currentNode)){
@@ -1456,7 +1461,7 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
             }
             break;
         case AST_Assign:{
-                Statement * statement = malloc(sizeof(Statement));
+                Statement * statement = mem_alloc(MemoryNamespaceSet,sizeof(Statement));
                 statement->nodePtr = currentNode;
                 statement->kind = StatementKindAssignment;
                 if(createAssign(statement, currentNode)){
@@ -1516,7 +1521,7 @@ int createParam(GArray * Paramlist ,AST_NODE_PTR currentNode){
 
     DEBUG("create var for param");
 
-    Variable * paramvar = malloc(sizeof(Variable));
+    Variable * paramvar = mem_alloc(MemoryNamespaceSet,sizeof(Variable));
     paramvar->kind = VariableKindDeclaration;
     paramvar->name = param.name;
     paramvar->nodePtr = currentNode;
@@ -1547,7 +1552,7 @@ int createFunDef(Function * Parentfunction ,AST_NODE_PTR currentNode){
 
     fundef.nodePtr = currentNode;
     fundef.name = nameNode->value;
-    fundef.body = malloc(sizeof(Block));
+    fundef.body = mem_alloc(MemoryNamespaceSet,sizeof(Block));
     fundef.parameter = g_array_new(FALSE, FALSE, sizeof(Parameter));
 
     DEBUG("paramlistlist child count: %i", paramlistlist->child_count);
@@ -1593,7 +1598,7 @@ int createFunDecl(Function * Parentfunction ,AST_NODE_PTR currentNode){
 
     fundecl.nodePtr = currentNode;
     fundecl.name = nameNode->value;
-    fundecl.parameter = malloc(sizeof(GArray));
+    fundecl.parameter = mem_alloc(MemoryNamespaceSet,sizeof(GArray));
 
     
     for(size_t i = 0; i < paramlistlist->child_count; i++){
@@ -1621,7 +1626,7 @@ int createFunDecl(Function * Parentfunction ,AST_NODE_PTR currentNode){
 
 int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
     assert(currentNode->kind == AST_Fun);
-    Function * fun = malloc(sizeof(Function));
+    Function * fun = mem_alloc(MemoryNamespaceSet,sizeof(Function));
     functionParameter = g_hash_table_new(g_str_hash,g_str_equal);
      
     if(currentNode->child_count == 2){
@@ -1650,7 +1655,7 @@ int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
 
 int createDeclMember(BoxType * ParentBox, AST_NODE_PTR currentNode){
 
-    Type * declType = malloc(sizeof(Type));
+    Type * declType = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     int status = get_type_impl(currentNode->children[0],&declType);
     if(status){
     return SEMANTIC_ERROR;
@@ -1658,7 +1663,7 @@ int createDeclMember(BoxType * ParentBox, AST_NODE_PTR currentNode){
 
     AST_NODE_PTR nameList = currentNode->children[1];
     for(size_t i = 0; i < nameList->child_count; i++){
-        BoxMember * decl = malloc(sizeof(BoxMember));
+        BoxMember * decl = mem_alloc(MemoryNamespaceSet,sizeof(BoxMember));
         decl->name = nameList->children[i]->value;
         decl->nodePtr = currentNode;
         decl->box = ParentBox;
@@ -1677,7 +1682,7 @@ int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode){
     AST_NODE_PTR expressionNode = currentNode->children[1];
     AST_NODE_PTR nameList = declNode->children[1];
 
-    Type * declType = malloc(sizeof(Type));
+    Type * declType = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     int status = get_type_impl(currentNode->children[0],&declType);
     if(status){
     return SEMANTIC_ERROR;
@@ -1689,7 +1694,7 @@ int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode){
     }
     
     for (size_t i = 0; i < nameList->child_count; i++){
-    BoxMember *def = malloc(sizeof(BoxMember));
+    BoxMember *def = mem_alloc(MemoryNamespaceSet,sizeof(BoxMember));
     def->box = ParentBox;
     def->type = declType;
     def->initalizer = init;
@@ -1704,7 +1709,7 @@ int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode){
 }
 
 int createBox(GHashTable *boxes, AST_NODE_PTR currentNode){
-    BoxType * box = malloc(sizeof(BoxType));
+    BoxType * box = mem_alloc(MemoryNamespaceSet,sizeof(BoxType));
     
     box->nodePtr = currentNode;
     const char * boxName = currentNode->children[0]->value;
@@ -1763,13 +1768,13 @@ int createTypeDef(GHashTable *types, AST_NODE_PTR currentNode){
     AST_NODE_PTR nameNode = currentNode->children[1];
     
     
-    Type * type = malloc(sizeof(Type));
+    Type * type = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     int status = get_type_impl( typeNode, &type);
     if(status){
         return SEMANTIC_ERROR;
     }
     
-    Typedefine *def = malloc(sizeof(Typedefine));
+    Typedefine *def = mem_alloc(MemoryNamespaceSet,sizeof(Typedefine));
     def->name = nameNode->value;
     def->nodePtr = currentNode;
     def->type = type;
@@ -1797,11 +1802,11 @@ Module *create_set(AST_NODE_PTR currentNode){
 
 
     //building current scope for module
-    GHashTable *globalscope = malloc(sizeof(GHashTable*));
+    GHashTable *globalscope = mem_alloc(MemoryNamespaceSet,sizeof(GHashTable*));
     globalscope = g_hash_table_new(g_str_hash,g_str_equal);
     g_array_append_val(Scope, globalscope);
 
-    Module *rootModule = malloc(sizeof(Module));
+    Module *rootModule = mem_alloc(MemoryNamespaceSet,sizeof(Module));
 
     GHashTable *boxes = g_hash_table_new(g_str_hash,g_str_equal);
     GHashTable *types = g_hash_table_new(g_str_hash,g_str_equal);
@@ -1881,7 +1886,7 @@ Module *create_set(AST_NODE_PTR currentNode){
 
         }
     }
-    DEBUG("created set  successfully");
+    DEBUG("created set successfully");
     return rootModule;
 }
 
