@@ -107,32 +107,6 @@ TargetConfig* default_target_config() {
     return config;
 }
 
-const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
-
-    for (guint i = 0; i < config->link_search_paths->len; i++) {
-        const char* link_directory_path = g_array_index(config->link_search_paths, char*, i);
-
-        char* path = g_build_filename(link_directory_path, link_target_name, NULL);
-        char* cwd = g_get_current_dir();
-        char* canonical = g_canonicalize_filename(path, cwd);
-
-        const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
-        const gboolean is_dir = g_file_test(canonical, G_FILE_TEST_IS_DIR);
-
-        g_free(path);
-        g_free(cwd);
-
-        if (exists && !is_dir) {
-            return canonical;
-        }
-
-        g_free(canonical);
-    }
-
-    // file not found
-    return NULL;
-}
-
 TargetConfig* default_target_config_from_args() {
     DEBUG("generating default target from command line...");
 

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/log.h>
+#include <llvm/link/lld.h>
 
 BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
                        const TargetConfig* config) {
@@ -241,6 +242,12 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
         Target target = create_target_from_config(config);
 
         export_module(unit, &target, config);
+
+        TargetLinkConfig* link_config = lld_create_link_config(&target, target, module);
+
+        lld_link_target(link_config);
+
+        lld_delete_link_config(link_config);
 
         delete_target(target);
     }

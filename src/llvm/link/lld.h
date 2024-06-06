@@ -8,12 +8,10 @@
 #include <codegen/backend.h>
 #include <llvm/backend.h>
 
-/**
- * @brief Link the target by its configuration to the final output.
- * @param target
- * @param config
- * @return
- */
-BackendError link_target(const Target* target, const TargetConfig* config);
+TargetLinkConfig* lld_create_link_config(const Target * target, const TargetConfig* target_config, const Module* module);
+
+BackendError lld_link_target(TargetLinkConfig* config);
+
+void lld_delete_link_config(TargetLinkConfig* config);
 
 #endif // LLVM_BACKEND_LLD_H

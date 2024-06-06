@@ -48,12 +48,21 @@ LLVMCodeGenOptLevel llvm_opt_from_int(int level) {
     PANIC("invalid code generation optimization level: %d", level);
 }
 
+static char* create_target_output_name(const TargetConfig* config) {
+    char* prefix = "";
+    if (config->mode == Library) {
+        prefix = "lib";
+    }
+
+    return g_strjoin("", prefix, config->name, NULL);
+}
+
 Target create_target_from_config(const TargetConfig* config) {
     DEBUG("Building target from configuration");
 
     Target target = create_native_target();
 
-    target.name.str = config->name;
+    target.name.str = create_target_output_name(config);
     target.name.allocation = NONE;  // freed later by compiler
 
     target.opt = llvm_opt_from_int(config->optimization_level);
