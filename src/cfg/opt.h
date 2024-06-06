@@ -19,7 +19,7 @@
 typedef struct TargetLinkConfig_t {
     // name of object files to link
     GArray* object_file_names;
-} TargetLinktConfig;
+} TargetLinkConfig;
 
 typedef enum TargetCompilationMode_t {
     // output an executable binary

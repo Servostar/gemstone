@@ -234,13 +234,14 @@ void print_help(void) {
         "    --print-ir            print resulting LLVM-IR to a file",
         "    --mode=[app|lib]      set the compilation mode to either application or library",
         "    --output=name         name of output files without extension",
-        "    --link-paths=[paths,] set a list of directories to for libraries in"
+        "    --link-paths=[paths,] set a list of directories to for libraries in",
         "Options:",
         "    --verbose        print logs with level information or higher",
         "    --debug          print debug logs (if not disabled at compile time)",
         "    --version        print the version",
-        "    --list-targets   print a list of all available targets supported"
-        "    --help           print this help dialog"
+        "    --list-targets   print a list of all available targets supported",
+        "    --help           print this help dialog",
+        "    --color-always   always colorize output"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
