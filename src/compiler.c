@@ -11,6 +11,7 @@
 #include <io/files.h>
 #include <assert.h>
 #include <cfg/opt.h>
+#include <mem/cache.h>
 
 extern void yyrestart(FILE *);
 
@@ -147,6 +148,9 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     }
 
     AST_delete_node(ast);
+
+    mem_purge_namespace(MemoryNamespaceLex);
+    mem_purge_namespace(MemoryNamespaceAst);
 
     print_file_statistics(file);
 }

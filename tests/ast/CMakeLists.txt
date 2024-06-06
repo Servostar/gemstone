@@ -26,6 +26,7 @@ add_executable(ast_build_tree
         ${PROJECT_SOURCE_DIR}/src/io/files.c
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
         build_tree.c)
 set_target_properties(ast_build_tree
@@ -47,6 +48,7 @@ add_executable(ast_print_node
         ${PROJECT_SOURCE_DIR}/src/io/files.c
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
         print_node.c)
 set_target_properties(ast_print_node
@@ -68,6 +70,7 @@ add_executable(ast_graphviz
         ${PROJECT_SOURCE_DIR}/src/io/files.c
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         ${PROJECT_SOURCE_DIR}/dep/tomlc99/toml.c
         print_graphviz.c)
 set_target_properties(ast_graphviz
