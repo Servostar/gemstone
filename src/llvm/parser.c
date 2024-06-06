@@ -207,9 +207,7 @@ static BackendError build_module(LLVMBackendCompileUnit* unit,
     err = impl_functions(unit, global_scope, module->functions);
 
     char* error = NULL;
-    LLVMVerifyModule(unit->module, LLVMAbortProcessAction, &error);
-
-    if (error) {
+    if (LLVMVerifyModule(unit->module, LLVMAbortProcessAction, &error)) {
         print_message(Error, "Unable to compile due to: %s", error);
         LLVMDisposeMessage(error);
         err = new_backend_impl_error(Implementation, NULL, "LLVM backend verification error, see stdout");

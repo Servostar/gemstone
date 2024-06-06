@@ -1,10 +1,10 @@
 #include <codegen/backend.h>
-#include <set/types.h>
-#include <sys/log.h>
-#include <llvm/parser.h>
-#include <llvm/llvm-ir/types.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Types.h>
+#include <llvm/llvm-ir/types.h>
+#include <llvm/parser.h>
+#include <set/types.h>
+#include <sys/log.h>
 
 #define BASE_BYTES 4
 #define BITS_PER_BYTE 8
@@ -358,6 +358,7 @@ BackendError get_reference_default_value(LLVMTypeRef llvm_type,
 
 BackendError get_box_default_value(LLVMBackendCompileUnit* unit,
                                    LLVMGlobalScope* scope, BoxType* type,
+                                   LLVMTypeRef llvm_type,
                                    LLVMValueRef* llvm_value) {
     DEBUG("building box default value...");
     GHashTableIter iterator;
@@ -383,8 +384,8 @@ BackendError get_box_default_value(LLVMBackendCompileUnit* unit,
 
     DEBUG("build %ld member default values", constants->len);
 
-    *llvm_value = LLVMConstStructInContext(
-        unit->context, (LLVMValueRef*)constants->data, constants->len, 0);
+    *llvm_value = LLVMConstNamedStruct(
+        llvm_type, (LLVMValueRef*)constants->data, constants->len);
 
     g_array_free(constants, FALSE);
 
@@ -417,7 +418,7 @@ BackendError get_type_default_value(LLVMBackendCompileUnit* unit,
             break;
         case TypeKindBox:
             err = get_box_default_value(unit, scope, &gemstone_type->impl.box,
-                                        llvm_value);
+                                        llvm_type, llvm_value);
             break;
         default:
             PANIC("invalid type kind: %ld", gemstone_type->kind);
