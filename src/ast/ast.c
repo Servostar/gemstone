@@ -219,6 +219,7 @@ void AST_delete_node(struct AST_Node_t *node) {
   }
 
   if (node->parent != NULL) {
+    [[maybe_unused]]
     const struct AST_Node_t* child = AST_detach_child(node->parent, node);
     assert(child == node);
   }
