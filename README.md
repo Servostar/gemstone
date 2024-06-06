@@ -9,7 +9,7 @@
 ## Gemstone
 
 Gemstone is a programming language compiler (short: GSC) written in C based on flex and GNU bison.
-Is uses LLVM to produce optimized native binaries for many platforms and uses its own builtin build system for more complex project management.
+It uses LLVM to produce optimized native binaries for many platforms and uses its own builtin build system for more complex project management.
 
 ## Dependencies (build)
 
