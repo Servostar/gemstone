@@ -3,9 +3,10 @@
 //
 
 #include <ast/ast.h>
+#include <mem/cache.h>
 
 int main(void) {
-
+    mem_init();
     AST_init();
 
     const AST_NODE_PTR node = AST_new_node(empty_location(), 0, "value");

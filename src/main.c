@@ -5,6 +5,7 @@
 #include <lex/util.h>
 #include <cfg/opt.h>
 #include <compiler.h>
+#include <mem/cache.h>
 
 /**
  * @brief Log a debug message to inform about beginning exit procedures
@@ -17,6 +18,8 @@ void notify_exit(void) { DEBUG("Exiting gemstone..."); }
  *
  */
 void setup(int argc, char *argv[]) {
+    mem_init();
+
     // setup preample
     parse_options(argc, argv);
 
@@ -56,6 +59,10 @@ int main(int argc, char *argv[]) {
     }
 
     run_compiler();
-    
+
+    if (is_option_set("print-memory-stats")) {
+        print_memory_statistics();
+    }
+
     return 0;
 }

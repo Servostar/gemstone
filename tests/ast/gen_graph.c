@@ -4,8 +4,10 @@
 
 #include <ast/ast.h>
 #include <sys/log.h>
+#include <mem/cache.h>
 
 int main(void) {
+    mem_init();
 
     struct AST_Node_t* node = AST_new_node(empty_location(), AST_If, NULL);
 

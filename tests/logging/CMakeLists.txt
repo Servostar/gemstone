@@ -25,6 +25,7 @@ add_executable(logging_output
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         output.c)
 set_target_properties(logging_output
         PROPERTIES
@@ -45,6 +46,7 @@ add_executable(logging_panic
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         panic.c)
 set_target_properties(logging_panic
         PROPERTIES
@@ -65,6 +67,7 @@ add_executable(logging_streams
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         streams.c)
 set_target_properties(logging_streams
         PROPERTIES
@@ -85,6 +88,7 @@ add_executable(logging_level
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         level.c)
 set_target_properties(logging_level
         PROPERTIES
