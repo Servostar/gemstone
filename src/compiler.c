@@ -14,6 +14,8 @@
 #include <codegen/backend.h>
 #include <llvm/backend.h>
 
+#define GRAPHVIZ_FILE_EXTENSION "gv"
+
 extern void yyrestart(FILE *);
 
 // Module AST node used by the parser for AST construction.
@@ -94,6 +96,8 @@ static int setup_target_environment(const TargetConfig *target) {
         return EXIT_FAILURE;
     }
 
+    INFO("setup environment successfully");
+
     return EXIT_SUCCESS;
 }
 
@@ -105,26 +109,38 @@ static int setup_target_environment(const TargetConfig *target) {
 static void print_ast_to_file(const AST_NODE_PTR ast, const TargetConfig *target) {
     assert(ast != NULL);
     assert(target != NULL);
+    DEBUG("printing AST to file: %s", target->name);
 
-    if (!target->print_ast)
+    if (!target->print_ast) {
+        INFO("no need to print AST");
         return;
+    }
 
     // create file path to write graphviz to
-    const char *path = make_file_path(target->name, ".gv", 1, target->archive_directory);
+    // basename of ile
+    char* filename = g_strjoin(".", target->name, GRAPHVIZ_FILE_EXTENSION, NULL);
+    // relative path to file
+    char *path = g_build_filename(target->archive_directory, filename, NULL);
 
-    FILE *output = fopen((const char *) path, "w");
+    DEBUG("Opening file to graph: %s", path);
+
+    FILE *output = fopen(path, "w");
     if (output == NULL) {
-        const char *message = get_last_error();
+        char *message = (char*) get_last_error();
         print_message(Error, "Unable to open file for syntax tree at: %s: %s", path, message);
-        free((void *) message);
+        free(message);
     } else {
+        DEBUG("writing graph to file...");
 
         AST_fprint_graphviz(output, ast);
 
         fclose(output);
+
+        print_message(Info, "AST graph was written to: %s", path);
     }
 
-    free((void *) path);
+    g_free(filename);
+    g_free(path);
 }
 
 static void run_backend_codegen(const Module* module, const TargetConfig* target) {

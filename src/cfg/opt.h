@@ -16,6 +16,11 @@
 
 #define TOML_ERROR_MSG_BUF 256
 
+typedef struct TargetLinkConfig_t {
+    // name of object files to link
+    GArray* object_file_names;
+} TargetLinktConfig;
+
 typedef enum TargetCompilationMode_t {
     // output an executable binary
     Application,
@@ -44,6 +49,9 @@ typedef struct TargetConfig_t {
     TargetCompilationMode mode;
     // number between 1 and 3
     int optimization_level;
+    // path to look for object files
+    // (can be extra library paths, auto included is output_directory)
+    GArray* link_search_paths;
 } TargetConfig;
 
 /**

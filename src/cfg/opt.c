@@ -102,8 +102,35 @@ TargetConfig* default_target_config() {
     config->output_directory = strdup("bin");
     config->optimization_level = 1;
     config->root_module = NULL;
+    config->link_search_paths = g_array_new(FALSE, FALSE, sizeof(char*));
 
     return config;
+}
+
+const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
+
+    for (guint i = 0; i < config->link_search_paths->len; i++) {
+        const char* link_directory_path = g_array_index(config->link_search_paths, char*, i);
+
+        char* path = g_build_filename(link_directory_path, link_target_name, NULL);
+        char* cwd = g_get_current_dir();
+        char* canonical = g_canonicalize_filename(path, cwd);
+
+        const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
+        const gboolean is_dir = g_file_test(canonical, G_FILE_TEST_IS_DIR);
+
+        g_free(path);
+        g_free(cwd);
+
+        if (exists && !is_dir) {
+            return canonical;
+        }
+
+        g_free(canonical);
+    }
+
+    // file not found
+    return NULL;
 }
 
 TargetConfig* default_target_config_from_args() {
@@ -145,6 +172,36 @@ TargetConfig* default_target_config_from_args() {
         }
     }
 
+    if (is_option_set("link-paths")) {
+        const Option* opt = get_option("link-paths");
+
+        if (opt->value != NULL) {
+
+            const char* start = opt->value;
+            const char* end = NULL;
+            while((end = strchr(start, ',')) != NULL) {
+
+                const int len = end - start;
+                char* link_path = malloc(len + 1);
+                memcpy(link_path, start, len);
+                link_path[len] = 0;
+
+                g_array_append_val(config->link_search_paths, link_path);
+
+                start = end;
+            }
+
+            const int len = strlen(start);
+            if (len > 0) {
+                char* link_path = malloc(len + 1);
+                memcpy(link_path, start, len);
+                link_path[len] = 0;
+
+                g_array_append_val(config->link_search_paths, link_path);
+            }
+        }
+    }
+
     GArray* files = get_non_options_after("compile");
 
     if (files == NULL) {
@@ -172,11 +229,12 @@ void print_help(void) {
         "Compile non-project file: gsc compile <target-options> [file]",
         "Output information: gsc <option>",
         "Target options:",
-        "    --print-ast      print resulting abstract syntax tree to a file",
-        "    --print-asm      print resulting assembly language to a file",
-        "    --print-ir       print resulting LLVM-IR to a file",
-        "    --mode=[app|lib] set the compilation mode to either application or library",
-        "    --output=name    name of output files without extension",
+        "    --print-ast           print resulting abstract syntax tree to a file",
+        "    --print-asm           print resulting assembly language to a file",
+        "    --print-ir            print resulting LLVM-IR to a file",
+        "    --mode=[app|lib]      set the compilation mode to either application or library",
+        "    --output=name         name of output files without extension",
+        "    --link-paths=[paths,] set a list of directories to for libraries in"
         "Options:",
         "    --verbose        print logs with level information or higher",
         "    --debug          print debug logs (if not disabled at compile time)",
@@ -372,6 +430,12 @@ void delete_target_config(TargetConfig* config) {
     }
     if (config->output_directory != NULL) {
         free(config->output_directory);
+    }
+    if (config->link_search_paths) {
+        for (guint i = 0; i < config->link_search_paths->len; i++) {
+            free(g_array_index(config->link_search_paths, char*, i));
+        }
+        g_array_free(config->link_search_paths, TRUE);
     }
     free(config);
 }

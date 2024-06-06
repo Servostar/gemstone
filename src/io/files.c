@@ -294,14 +294,7 @@ int create_directory(const char *path) {
 
     DEBUG("creating directory: %s", path);
 
-    int result;
-#ifdef __unix__
-    result = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-#elif defined(_WIN32) || defined(WIN32)
-    result = _mkdir(path);
-#endif
-
-    return result;
+    return g_mkdir_with_parents(path, 0755);
 }
 
 const char *get_last_error() {
@@ -313,44 +306,9 @@ const char *get_absolute_path(const char *path) {
 
     DEBUG("resolving absolute path of: %s", path);
 
-#ifdef __unix__
-    // use unix specific function
-    char absolute_path[MAX_PATH_BYTES];
-    realpath(path, absolute_path);
-#elif defined(_WIN32) || defined(WIN32)
-    // use Windows CRT specific function
-    char absolute_path[MAX_PATH_BYTES];
-    _fullpath(path, absolute_path, _MAX_PATH);
-#endif
+    char* cwd = g_get_current_dir();
+    char* canoical = g_canonicalize_filename(path, cwd);
+    g_free(cwd);
 
-    return strdup(absolute_path);
-}
-
-const char* make_file_path(const char* name, const char* ext, int count, ...) {
-    DEBUG("building file path...");
-
-    va_list args;
-    va_start(args, count); // Initialize the va_list with the first variadic argument
-
-    char* path = calloc(MAX_PATH_BYTES, sizeof(char));
-
-    for (int i = 0; i < count; i++) {
-        const char* arg = va_arg(args, const char*);
-        assert(arg != NULL);
-
-        strcat(path, arg);
-        strcat(path, PATH_SEPARATOR);
-    }
-
-    va_end(args); // Clean up the va_list
-
-    if (name != NULL) {
-        strcat(path, name);
-    }
-
-    if (name != NULL) {
-        strcat(path, ext);
-    }
-
-    return path;
+    return canoical;
 }

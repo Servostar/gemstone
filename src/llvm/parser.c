@@ -24,9 +24,9 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
     // convert module to LLVM-IR
     char* ir = LLVMPrintModuleToString(unit->module);
 
+    char* basename = g_strjoin(".", target->name.str, "ll", NULL);
     // construct file name
-    const char* filename =
-        make_file_path(target->name.str, ".ll", 1, config->archive_directory);
+    const char* filename = g_build_filename(config->archive_directory, basename, NULL);
 
     INFO("Writing LLVM-IR to %s", filename);
 
@@ -49,7 +49,8 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
 
     INFO("%ld bytes written to %s", bytes, filename);
 
-    free((char*)filename);
+    g_free((char*)filename);
+    g_free(basename);
 
     // clean up LLVM-IR string
     LLVMDisposeMessage(ir);
@@ -64,15 +65,16 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
     BackendError err = SUCCESS;
     DEBUG("Generating code...");
 
+    const char* basename;
     const char* filename;
     switch (file_type) {
         case LLVMAssemblyFile:
-            filename = make_file_path(config->name, ".s", 1,
-                                      config->archive_directory);
+            basename = g_strjoin(".", config->name, "s", NULL);
+            filename = g_build_filename(config->archive_directory, basename, NULL);
             break;
         case LLVMObjectFile:
-            filename = make_file_path(config->name, ".o", 1,
-                                      config->archive_directory);
+            basename = g_strjoin("", config->name, "o", NULL);
+            filename = g_build_filename(config->archive_directory, basename, NULL);
             break;
         default:
             return new_backend_impl_error(Implementation, NULL,
@@ -87,8 +89,8 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
         LLVMDisposeMessage(error);
     }
 
-    free((void*)filename);
-
+    g_free((void*) filename);
+    g_free((void*) basename);
     return err;
 }
 

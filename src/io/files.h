@@ -142,15 +142,4 @@ const char* get_last_error();
 [[nodiscard("pointer must be freed")]]
 const char* get_absolute_path(const char* path);
 
-/**
- * @brief Create a file path from a base name, extension a variable amount of directory path segments.
- * @param count Amount of path segments to prepend to the basename
- * @param name Basename of the file
- * @param ext Extension of the file
- * @param ... Path segments without path separator
- * @return A relative path of a file
- */
-[[nodiscard("pointer must be freed")]]
-const char* make_file_path(const char* name, const char* ext, int count, ...);
-
 #endif //GEMSTONE_FILES_H
