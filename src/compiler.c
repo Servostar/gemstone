@@ -142,6 +142,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
 
             print_ast_to_file(ast, target);
             Module * test = create_set(ast);
+            free(test);
             // TODO: parse AST to semantic values
             // TODO: backend codegen
         }

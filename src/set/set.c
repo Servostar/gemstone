@@ -15,6 +15,7 @@
 extern ModuleFile * current_file;
 static GHashTable *declaredComposites = NULL;//pointer to composites with names 
 static GHashTable *declaredBoxes = NULL;//pointer to typeboxes
+static GHashTable *functionParameter = NULL;
 static GArray *Scope = NULL;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
 
 const Type ShortShortUnsingedIntType = {
@@ -63,16 +64,17 @@ int sign_from_string(const char* string, Sign* sign) {
 int primitive_from_string(const char* string, PrimitiveType* primitive) {
     assert(string != NULL);
     assert(primitive != NULL);
+    DEBUG("find primitive in string");
 
     if (strcmp(string, "int") == 0) {
         *primitive = Int;
-        return 0;
+        return SEMANTIC_OK;
     } else if (strcmp(string, "float") == 0) {
         *primitive = Float;
-        return 0;
+        return SEMANTIC_OK;
     }
 
-    return 1;
+    return SEMANTIC_ERROR;
 }
 
 int scale_factor_from(const char* string, double* factor) {
@@ -237,7 +239,6 @@ int get_type_impl(AST_NODE_PTR currentNode, Type** type) {
         *type = g_hash_table_lookup(declaredBoxes, typekind);
         return SEMANTIC_OK;
     }
-
     // type is not yet declared, make a new one
 
     Type* new_type = malloc(sizeof(Type));
@@ -251,17 +252,21 @@ int get_type_impl(AST_NODE_PTR currentNode, Type** type) {
         new_type->kind = TypeKindPrimitive;
 
         status = primitive_from_string(typekind, &new_type->impl.primitive);
-        
+
         // if err continue at composite construction
         if (status == SEMANTIC_OK) {
+            *type = new_type;
             return SEMANTIC_OK;
         }
+        return SEMANTIC_ERROR;
     }
 
     new_type->kind = TypeKindComposite;
     new_type->impl.composite.nodePtr = currentNode;
     status = impl_composite_type(currentNode, &new_type->impl.composite);
     *type = new_type;
+
+    
 
     return status;
 }
@@ -432,19 +437,38 @@ int getVariableFromScope(const char* name, Variable** variable) {
     assert(name != NULL);
     assert(variable != NULL);
     assert(Scope != NULL);
+    DEBUG("getting var from scope");
+    int found = 0;
 
     // loop through all variable scope and find a variable
+    if(functionParameter != NULL) {
+        if(g_hash_table_contains(functionParameter, name)) {
+            *variable = g_hash_table_lookup(functionParameter, name);
+            found += 1;
+        }
+    }
     for(size_t i = 0; i < Scope->len; i++) {
 
 
         GHashTable* variable_table = g_array_index(Scope,GHashTable* ,i );
         
         if(g_hash_table_contains(variable_table, name)) {
-            *variable = g_hash_table_lookup(variable_table, name);
-            return SEMANTIC_OK;
+            if(found == 0){
+                 *variable = g_hash_table_lookup(variable_table, name);
+            }           
+            found += 1;
         }
     }
-
+    if (found == 1){
+        DEBUG("Var: %s",(*variable)->name);
+        DEBUG("Var Typekind: %d", (*variable)->kind);
+        DEBUG("Found var");
+      return SEMANTIC_OK;  
+    }else if (found > 1) {
+        WARN("Variable %s is a parameter and a declared variable. Returning parameter", name);
+     return SEMANTIC_OK;  
+    }
+    DEBUG("nothing found");
     return SEMANTIC_ERROR;
 }
 
@@ -481,6 +505,7 @@ int fillTablesWithVars(GHashTable *variableTable,  GArray* variables) {
 
 [[nodiscard("type must be freed")]]
 TypeValue createTypeValue(AST_NODE_PTR currentNode){
+    DEBUG("create TypeValue");
     TypeValue value;
     Type *type = malloc(sizeof(Type));
     value.type = type;
@@ -515,6 +540,7 @@ static inline void* clone(int size, void* ptr) {
 #define CLONE(x) clone(sizeof(x), (void*)&(x))
 
 TypeValue createString(AST_NODE_PTR currentNode) {
+    DEBUG("create String");
     TypeValue value;
     Type *type = CLONE(StringLiteralType);
     value.type = type;
@@ -524,8 +550,11 @@ TypeValue createString(AST_NODE_PTR currentNode) {
 }
 
 Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_NODE_PTR currentNode) {
+    DEBUG("create type from operands");
     Type *result = malloc(sizeof(Type));
     result->nodePtr = currentNode;
+    DEBUG("LeftOperandType->kind: %i", LeftOperandType->kind);
+    DEBUG("RightOperandType->kind: %i", RightOperandType->kind);
     
     if (LeftOperandType->kind == TypeKindComposite && RightOperandType->kind == TypeKindComposite) {
         result->kind = TypeKindComposite;
@@ -539,6 +568,7 @@ Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_
         result->impl.composite = resultImpl;
         
     } else if (LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindPrimitive) {
+        DEBUG("both operands are primitive");
         result->kind = TypeKindPrimitive;
         
         result->impl.primitive = MAX(LeftOperandType->impl.primitive , RightOperandType->impl.primitive);
@@ -562,26 +592,28 @@ Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_
         free(result);
         return NULL;
     }
+    DEBUG("Succsessfully created type");
     return result;
 }
 
 int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode, [[maybe_unused]] size_t expectedChildCount) {
-    
+    DEBUG("create arithmetic operation");
     ParentExpression->impl.operation.kind = Arithmetic;
     ParentExpression->impl.operation.nodePtr = currentNode;
+    ParentExpression->impl.operation.operands = g_array_new(FALSE, FALSE,sizeof(Expression*));
 
-    assert(expectedChildCount > currentNode->child_count);
+    assert(expectedChildCount == currentNode->child_count);
 
     for (size_t i = 0; i < currentNode->child_count; i++) {
         Expression* expression = createExpression(currentNode->children[i]);
 
         if(NULL == expression) {
-            return SEMANTIC_OK;
+            return SEMANTIC_ERROR;
         }
 
         g_array_append_val(ParentExpression->impl.operation.operands, expression);
     }
-
+    DEBUG("created all Expressions");
     switch (currentNode->kind) {
         case AST_Add:
             ParentExpression->impl.operation.impl.arithmetic = Add;
@@ -604,7 +636,8 @@ int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode,
     }
 
     if (ParentExpression->impl.operation.impl.arithmetic == Negate) {
-        Type* result = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
+        
+        Type* result = g_array_index(ParentExpression->impl.operation.operands,Expression *,0)->result;
         result->nodePtr = currentNode;
         
         if (result->kind == TypeKindReference || result->kind == TypeKindBox) {
@@ -616,9 +649,8 @@ int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode,
         ParentExpression->result = result;
         
     } else {
-
-        Type* LeftOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[0]->result;
-        Type* RightOperandType = ((Expression**) ParentExpression->impl.operation.operands->data)[1]->result;
+        Type* LeftOperandType = g_array_index(ParentExpression->impl.operation.operands,Expression *,0)->result;
+        Type* RightOperandType = g_array_index(ParentExpression->impl.operation.operands,Expression *,1)->result;
 
         ParentExpression->result = createTypeFromOperands(LeftOperandType, RightOperandType, currentNode);
     }
@@ -634,7 +666,7 @@ int createRelationalOperation(Expression* ParentExpression, AST_NODE_PTR current
     // fill kind and Nodeptr
     ParentExpression->impl.operation.kind = Relational;
     ParentExpression->impl.operation.nodePtr = currentNode;
-
+    ParentExpression->impl.operation.operands = g_array_new(FALSE,FALSE,sizeof(Expression*));
     // fill Operands
     for (size_t i = 0; i < currentNode->child_count; i++) {
         Expression* expression = createExpression(currentNode->children[i]);
@@ -1045,6 +1077,7 @@ int createBoxAccess(Expression* ParentExpression,AST_NODE_PTR currentNode) {
 }
 
 int createTypeCast(Expression* ParentExpression, AST_NODE_PTR currentNode){
+    DEBUG("create type cast");
     ParentExpression->impl.typecast.nodePtr = currentNode;
     
     ParentExpression->impl.typecast.operand = createExpression(currentNode->children[0]);
@@ -1060,7 +1093,6 @@ int createTypeCast(Expression* ParentExpression, AST_NODE_PTR currentNode){
     }
     ParentExpression->impl.typecast.targetType = target;
     ParentExpression->result = target;
-    
     return SEMANTIC_OK;
 }
 
@@ -1106,16 +1138,18 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         expression->result = expression->impl.constant.type;
         break;
     case AST_Ident:
+        DEBUG("find var");
         expression->kind = ExpressionKindVariable;
-        int status = getVariableFromScope(currentNode->value, &expression->impl.variable  );             
+        int status = getVariableFromScope(currentNode->value, &(expression->impl.variable)  );             
         if(status == SEMANTIC_ERROR){
             DEBUG("Identifier is not in current scope");
             print_diagnostic(current_file, &currentNode->location, Error, "Variable not found");
             return NULL;
         }
         switch (expression->impl.variable->kind) {
-            case VariableKindDeclaration:
+            case VariableKindDeclaration:          
                 expression->result = expression->impl.variable->impl.declaration.type;
+                DEBUG("%d",expression->impl.variable->impl.declaration.type->kind ); 
                 break;
             case VariableKindDefinition:
                 expression->result = expression->impl.variable->impl.definiton.declaration.type;
@@ -1200,11 +1234,15 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         PANIC("Node is not an expression but from kind: %i", currentNode->kind);
         break;
     }
+
+    DEBUG("expression result typekind: %d",expression->result->kind);
+    DEBUG("successfully created Expression");
     return expression;
 }
  
 
  int createAssign(Statement* ParentStatement, AST_NODE_PTR currentNode){
+    DEBUG("create Assign");
     Assignment assign;
     assign.nodePtr = currentNode;
     const char* varName = currentNode->children[0]->value;
@@ -1220,20 +1258,20 @@ Expression *createExpression(AST_NODE_PTR currentNode){
     }
 
     ParentStatement->impl.assignment = assign;
-    return SEMANTIC_ERROR;
+    return SEMANTIC_OK;
  }
 int createStatement(Block * block, AST_NODE_PTR currentNode);
 
 int fillBlock(Block * block,AST_NODE_PTR currentNode){
     DEBUG("start filling Block");
     block->nodePtr = currentNode;
-
+    block->statemnts = g_array_new(FALSE,FALSE,sizeof(Statement*));
     GHashTable * lowerScope = g_hash_table_new(g_str_hash,g_str_equal);
     g_array_append_val(Scope, lowerScope);
 
 
     for(size_t i = 0; i < currentNode->child_count; i++){
-        int signal = createStatement(block, currentNode->children[i]);
+        int signal = createStatement(block, AST_get_node(currentNode, i));
         if(signal){
             return SEMANTIC_ERROR;
         }
@@ -1247,8 +1285,8 @@ int fillBlock(Block * block,AST_NODE_PTR currentNode){
 }
 
 int createWhile(Statement * ParentStatement, AST_NODE_PTR currentNode){
-    assert(ParentStatement == NULL);
-    assert(currentNode == NULL);
+    assert(ParentStatement != NULL);
+    assert(currentNode != NULL);
     assert(currentNode->kind == AST_While);
 
     While whileStruct;
@@ -1438,24 +1476,23 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
 
 
 int createParam(GArray * Paramlist ,AST_NODE_PTR currentNode){
+    assert(currentNode->kind == AST_Parameter);
     DEBUG("start param");
-    DEBUG("current node child count: %i",currentNode->kind);
-    if( currentNode->kind == AST_Parameter){
-        DEBUG("current n");
-    }
+    DEBUG("current node child count: %i",currentNode->child_count);
+
     AST_NODE_PTR paramdecl = currentNode->children[1];
     AST_NODE_PTR ioQualifierList =  currentNode->children[0];
 
     ParameterDeclaration decl;
     decl.nodePtr = paramdecl;
 
-    DEBUG("paramnode child count: %i", ioQualifierList->child_count );
+    DEBUG("iolistnode child count: %i", ioQualifierList->child_count );
     if(ioQualifierList->child_count == 2){
         decl.qualifier = InOut;
     }else if(ioQualifierList->child_count == 1){
-        if(strcmp(ioQualifierList->children[0]->value , "in")){
+        if(strcmp(ioQualifierList->children[0]->value , "in") == 0){
             decl.qualifier = In;
-        }else if(strcmp(ioQualifierList->children[0]->value , "out")){
+        }else if(strcmp(ioQualifierList->children[0]->value , "out") == 0){
             decl.qualifier = Out;
         }else{
             PANIC("IO_Qualifier is not in or out");
@@ -1464,19 +1501,35 @@ int createParam(GArray * Paramlist ,AST_NODE_PTR currentNode){
         PANIC("IO_Qualifier has not the right amount of children");
     }
     
-    int signal = get_type_impl(paramdecl->children[0],&decl.type);
+    int signal = get_type_impl(paramdecl->children[0], &(decl.type));
     if(signal){
         return SEMANTIC_ERROR;
     }
-
-    
     Parameter param;
     param.nodePtr = currentNode;
     param.kind = ParameterDeclarationKind;
     param.impl.declaration = decl;
     param.name = paramdecl->children[1]->value;
+    
+    DEBUG("param name: %s", param.name);
+    g_array_append_val(Paramlist, param);
 
-    g_array_append_val(Paramlist,param);
+    DEBUG("create var for param");
+
+    Variable * paramvar = malloc(sizeof(Variable));
+    paramvar->kind = VariableKindDeclaration;
+    paramvar->name = param.name;
+    paramvar->nodePtr = currentNode;
+    paramvar->impl.declaration.nodePtr = currentNode;
+    paramvar->impl.declaration.qualifier = Local;
+    paramvar->impl.declaration.type = param.impl.declaration.type;
+
+
+    if (g_hash_table_contains(functionParameter, param.name)){
+        return SEMANTIC_ERROR;
+    }
+    g_hash_table_insert(functionParameter, (gpointer)param.name, paramvar);
+
     DEBUG("created param successfully");
     return SEMANTIC_OK;
 }
@@ -1495,28 +1548,31 @@ int createFunDef(Function * Parentfunction ,AST_NODE_PTR currentNode){
     fundef.nodePtr = currentNode;
     fundef.name = nameNode->value;
     fundef.body = malloc(sizeof(Block));
-    fundef.parameter = malloc(sizeof(GArray));
+    fundef.parameter = g_array_new(FALSE, FALSE, sizeof(Parameter));
 
+    DEBUG("paramlistlist child count: %i", paramlistlist->child_count);
+    for(size_t i = 0; i < paramlistlist->child_count; i++){
+
+        //all parameterlists
+        AST_NODE_PTR paramlist = paramlistlist->children[i];
+        DEBUG("paramlist child count: %i", paramlist->child_count);
+        for (size_t j = 0; j < paramlist->child_count; j++){
+
+            DEBUG("param child count: %i", AST_get_node(paramlist, j)->child_count);
+            int signal = createParam(fundef.parameter ,AST_get_node(paramlist, j));
+            //all params per list
+           
+            if (signal){
+                return SEMANTIC_ERROR;
+            }
+        }
+        DEBUG("End of Paramlist");
+    }   
     int signal = fillBlock(fundef.body, statementlist);
     if(signal){
         return SEMANTIC_ERROR;
     }
     
-    for(size_t i = 0; i < paramlistlist->child_count; i++){
-
-        //all parameterlists
-        AST_NODE_PTR paramlist = paramlistlist->children[i];
-
-        for (size_t j = 0; j < paramlistlist->child_count; j++){
-
-            int signal = createParam(fundef.parameter ,paramlist->children[i]);
-            //all params per list
-            if (signal){
-                return SEMANTIC_ERROR;
-            }
-        }
-    }   
-
     Parentfunction->nodePtr = currentNode;
     Parentfunction->kind = FunctionDefinitionKind;
     Parentfunction->impl.definition = fundef;
@@ -1566,7 +1622,7 @@ int createFunDecl(Function * Parentfunction ,AST_NODE_PTR currentNode){
 int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
     assert(currentNode->kind == AST_Fun);
     Function * fun = malloc(sizeof(Function));
-
+    functionParameter = g_hash_table_new(g_str_hash,g_str_equal);
      
     if(currentNode->child_count == 2){
         int signal = createFunDecl(fun, currentNode);
@@ -1585,6 +1641,8 @@ int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
         return SEMANTIC_ERROR;
     }
     g_hash_table_insert(functions,(gpointer)fun->name, fun);
+    
+    g_hash_table_destroy(functionParameter);
     return SEMANTIC_OK;
 } 
 
@@ -1823,7 +1881,7 @@ Module *create_set(AST_NODE_PTR currentNode){
 
         }
     }
-
+    DEBUG("created set  successfully");
     return rootModule;
 }
 
