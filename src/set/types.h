@@ -543,4 +543,38 @@ typedef struct Module_t {
     GArray* imports;
 } Module;
 
+// .------------------------------------------------.
+// |                 Cleanup Code                   |
+// '------------------------------------------------'
+
+void delete_box_access(BoxAccess* access);
+
+void delete_variable(Variable* variable);
+
+void delete_type(Type* type);
+
+void delete_box(BoxType* box);
+
+void delete_declaration(VariableDeclaration* decl);
+
+void delete_definition(VariableDefiniton* definition);
+
+void delete_expression(Expression* expr);
+
+void delete_operation(Operation* operation);
+
+void delete_type_value(TypeValue* value);
+
+void delete_transmute(Transmute* trans);
+
+void delete_typecast(TypeCast* cast);
+
+void delete_box_member(BoxMember* member);
+
+void delete_box_type(BoxType *box_type);
+
+void delete_composite([[maybe_unused]] CompositeType* composite);
+
+void delete_module(Module* module);
+
 #endif // SET_TYPES_H_

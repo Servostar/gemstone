@@ -12,12 +12,87 @@
 #include <set/set.h>
 #include <mem/cache.h>
 
-
 extern ModuleFile * current_file;
 static GHashTable *declaredComposites = NULL;//pointer to composites with names 
 static GHashTable *declaredBoxes = NULL;//pointer to typeboxes
 static GHashTable *functionParameter = NULL;
 static GArray *Scope = NULL;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
+
+static void delete_declared_composites() {
+    if (declaredComposites == NULL) {
+        return;
+    }
+
+    GHashTableIter iter;
+    char *name = NULL;
+    Type* type = NULL;
+
+    g_hash_table_iter_init(&iter, declaredComposites);
+
+    while (g_hash_table_iter_next(&iter, (gpointer)&name, (gpointer)&type)) {
+        delete_type(type);
+        mem_free(name);
+    }
+
+    g_hash_table_destroy(declaredComposites);
+}
+
+static void delete_declared_boxes() {
+    if (declaredBoxes == NULL) {
+        return;
+    }
+
+    GHashTableIter iter;
+    char *name = NULL;
+    Type* type = NULL;
+
+    g_hash_table_iter_init(&iter, declaredBoxes);
+
+    while (g_hash_table_iter_next(&iter, (gpointer)&name, (gpointer)&type)) {
+        delete_type(type);
+        mem_free(name);
+    }
+
+    g_hash_table_destroy(declaredBoxes);
+}
+
+static void delete_scopes() {
+    if (Scope == NULL) {
+        return;
+    }
+
+    for (guint i = 0; i < Scope->len; i++) {
+        GHashTable* scope = g_array_index(Scope, GHashTable*, i);
+
+        GHashTableIter iter;
+        char *name = NULL;
+        Variable* variable = NULL;
+
+        g_hash_table_iter_init(&iter, scope);
+
+        while (g_hash_table_iter_next(&iter, (gpointer)&name, (gpointer)&variable)) {
+            delete_variable(variable);
+            mem_free(name);
+        }
+
+        g_hash_table_destroy(scope);
+    }
+
+    g_array_free(Scope, TRUE);
+}
+
+void delete_set(Module* module) {
+    assert(module != NULL);
+    assert(declaredBoxes != NULL);
+    assert(declaredComposites != NULL);
+    assert(functionParameter != NULL);
+
+    delete_module(module);
+
+    delete_declared_composites();
+    delete_declared_boxes();
+    delete_scopes();
+}
 
 const Type ShortShortUnsingedIntType = {
     .kind = TypeKindComposite,
@@ -70,7 +145,9 @@ int primitive_from_string(const char* string, PrimitiveType* primitive) {
     if (strcmp(string, "int") == 0) {
         *primitive = Int;
         return SEMANTIC_OK;
-    } else if (strcmp(string, "float") == 0) {
+    }
+
+    if (strcmp(string, "float") == 0) {
         *primitive = Float;
         return SEMANTIC_OK;
     }
@@ -85,7 +162,9 @@ int scale_factor_from(const char* string, double* factor) {
     if (strcmp(string, "half") == 0 || strcmp(string, "short") == 0) {
         *factor = 0.5;
         return SEMANTIC_OK;
-    } else if (strcmp(string, "double") == 0 || strcmp(string, "long") == 0) {
+    }
+
+    if (strcmp(string, "double") == 0 || strcmp(string, "long") == 0) {
         *factor = 2.0;
         return SEMANTIC_OK;
     }
@@ -1637,6 +1716,7 @@ int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
         PANIC("function should have 2 or 3 children");
     }
     if(g_hash_table_contains(functions,fun->name)){
+        // TODO: delete fun
         return SEMANTIC_ERROR;
     }
     g_hash_table_insert(functions,(gpointer)fun->name, fun);
@@ -1796,7 +1876,7 @@ Module *create_set(AST_NODE_PTR currentNode){
 
 
     //building current scope for module
-    GHashTable *globalscope = mem_alloc(MemoryNamespaceSet,sizeof(GHashTable*));
+    GHashTable *globalscope = g_hash_table_new(g_str_hash, g_str_equal);
     globalscope = g_hash_table_new(g_str_hash,g_str_equal);
     g_array_append_val(Scope, globalscope);
 
@@ -1825,13 +1905,20 @@ Module *create_set(AST_NODE_PTR currentNode){
             GArray* vars;
             int status = createDecl(currentNode->children[i], &vars);
             if (status){
+                // TODO: free vars
                 return NULL;
             }
             if (fillTablesWithVars(variables,  vars) == SEMANTIC_ERROR) {
+                // TODO: this diagnostic will highlight entire declaration of
+                //       of variables even if just one of the declared variables
+                //       is duplicate. Consider moving this diagnostic to
+                //       `fillTablesWithVars` for more precise messaging.
                 print_diagnostic(current_file, &currentNode->children[i]->location, Error, "Variable already declared");
                 INFO("var already exists");
+                // TODO: free vars
                 break;
             }
+            // TODO: free vars
             DEBUG("filled successfull the module and scope with vars");
             break;
         }
@@ -1839,14 +1926,18 @@ Module *create_set(AST_NODE_PTR currentNode){
             GArray* vars;
             int status = createDef(currentNode->children[i], &vars);
             if (status){
+                // TODO: free vars
+                // TODO: cleanup global memory
                 return NULL;
             }
+            // TODO: free vars
             DEBUG("created Definition successfully");
             break;
         }
         case AST_Box:{
             int status = createBox(boxes, currentNode->children[i]);
             if (status){
+                // TODO: cleanup global memory
                 return NULL;
             }
             DEBUG("created Box successfully");
@@ -1856,6 +1947,7 @@ Module *create_set(AST_NODE_PTR currentNode){
              DEBUG("start function");
             int status = createFunction(functions,currentNode->children[i]);
             if (status){
+                // TODO: cleanup global memory
                 return NULL;
             }
             DEBUG("created function successfully");
@@ -1865,6 +1957,7 @@ Module *create_set(AST_NODE_PTR currentNode){
         case AST_Typedef:{
             int status = createTypeDef(types, currentNode->children[i]);
             if (status){
+                // TODO: cleanup global memory
                 return NULL;
             }
             DEBUG("created Typedef successfully");

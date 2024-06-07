@@ -147,7 +147,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
             // TODO: parse AST to semantic values
             // TODO: backend codegen
 
-            mem_free(test);
+            delete_set(test);
         }
     }
 
@@ -155,6 +155,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
 
     mem_purge_namespace(MemoryNamespaceLex);
     mem_purge_namespace(MemoryNamespaceAst);
+    mem_purge_namespace(MemoryNamespaceSet);
 
     print_file_statistics(file);
 }

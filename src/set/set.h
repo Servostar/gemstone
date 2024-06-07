@@ -9,4 +9,6 @@
 
 Module * create_set(AST_NODE_PTR rootNodePtr );
 
+void delete_set(Module* module);
+
 #endif
