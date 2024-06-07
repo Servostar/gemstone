@@ -536,13 +536,7 @@ TypeValue createTypeValue(AST_NODE_PTR currentNode){
     return value;
 }
 
-static inline void* clone(int size, void* ptr) {
-    char* data = mem_alloc(MemoryNamespaceSet,size);
-    memcpy(data, ptr, size);
-    return data;
-}
-
-#define CLONE(x) clone(sizeof(x), (void*)&(x))
+#define CLONE(x) mem_clone(MemoryNamespaceSet, (void*)&(x), sizeof(x))
 
 TypeValue createString(AST_NODE_PTR currentNode) {
     DEBUG("create String");
