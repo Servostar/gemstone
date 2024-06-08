@@ -307,8 +307,9 @@ int createRef(AST_NODE_PTR currentNode, Type** reftype) {
 
 
     Type * type = malloc(sizeof(Type));
-    (*reftype)->kind = TypeKindReference;
-    (*reftype)->nodePtr = currentNode;
+    Type * referenceType = malloc(sizeof(Type));
+    referenceType->kind = TypeKindReference;
+    referenceType->nodePtr = currentNode;
 
 
     int signal = get_type_impl(currentNode->children[0],&type);
@@ -316,8 +317,8 @@ int createRef(AST_NODE_PTR currentNode, Type** reftype) {
         //TODO free type
         return SEMANTIC_ERROR;
     }
-    (*reftype)->impl.reference = type;
-
+    referenceType->impl.reference = type;
+    *reftype = referenceType;
     return SEMANTIC_OK;
 
 }
