@@ -311,13 +311,20 @@ int get_type_impl(AST_NODE_PTR currentNode, Type** type) {
 
     const char *typekind = currentNode->children[currentNode->child_count -1]->value;
 
+    //find type in composites
     if (g_hash_table_contains(declaredComposites, typekind) == TRUE) {
         *type = g_hash_table_lookup(declaredComposites, typekind);
         return SEMANTIC_OK;
+        //TODO change composite based on other nodes
     }
+
 
     if (g_hash_table_contains(declaredBoxes, typekind) == TRUE) {
         *type = g_hash_table_lookup(declaredBoxes, typekind);
+        if(currentNode->child_count > 1) {
+            //TODO free
+            return SEMANTIC_ERROR;
+        }
         return SEMANTIC_OK;
     }
     // type is not yet declared, make a new one
@@ -366,6 +373,29 @@ StorageQualifier Qualifier_from_string(const char *str) {
 }
 int addVarToScope(Variable * variable);
 
+int createRef(AST_NODE_PTR currentNode, Type** reftype) {
+    assert(currentNode != NULL);
+    assert(currentNode->child_count = 1);
+    assert(AST_get_node(currentNode,0)->kind = AST_Type);
+
+
+
+    Type * type = malloc(sizeof(Type));
+    (*reftype)->kind = TypeKindReference;
+    (*reftype)->nodePtr = currentNode;
+
+
+    int signal = get_type_impl(currentNode->children[0],&type);
+    if(signal) {
+        //TODO free type
+        return SEMANTIC_ERROR;
+    }
+    (*reftype)->impl.reference = type;
+
+    return SEMANTIC_OK;
+
+}
+
 int createDecl(AST_NODE_PTR currentNode, GArray** variables) {
     DEBUG("create declaration");
 
@@ -385,14 +415,16 @@ int createDecl(AST_NODE_PTR currentNode, GArray** variables) {
         switch(currentNode->children[i]->kind){
             case AST_Storage:
                 DEBUG("fill Qualifier");
-                decl.qualifier = Qualifier_from_string(currentNode->children[i]->value);
+                decl.qualifier = Qualifier_from_string(AST_get_node(currentNode,i)->value);
                 break;
             case AST_Type:
                 DEBUG("fill Type");
-                status = get_type_impl(currentNode->children[i], &decl.type);
+                status = get_type_impl(AST_get_node(currentNode,i), &decl.type);
                 break;
             case AST_IdentList:
                 break;
+            case AST_Reference:
+                status = createRef(AST_get_node(currentNode,i), &decl.type);
             default:
                 PANIC("invalid node type: %ld", currentNode->children[i]->kind);
                 break;
@@ -1075,7 +1107,7 @@ int createBitNotOperation(Expression* ParentExpression, AST_NODE_PTR currentNode
 GArray* getBoxMember(Type* currentBoxType, GArray *names) {
     
     GArray *members = g_array_new(FALSE, FALSE, sizeof(BoxMember));    
-    GHashTable* memberList = currentBoxType->impl.box.member;
+    GHashTable* memberList = currentBoxType->impl.box->member;
     
     const char* currentName = g_array_index(names,const char *,0);
     if(!g_hash_table_contains(memberList, currentName)) {
@@ -1163,12 +1195,25 @@ int createTypeCast(Expression* ParentExpression, AST_NODE_PTR currentNode){
         return SEMANTIC_ERROR;
     }
 
+    if (ParentExpression->impl.typecast.operand->result->kind != TypeKindComposite
+        && ParentExpression->impl.typecast.operand->result->kind != TypeKindPrimitive){
+        //TODO free everything
+        return SEMANTIC_ERROR;
+    }
+
     Type* target = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     int status = get_type_impl(currentNode->children[1], &target);
     if (status) {
         print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
     }
+
+    if (target->kind != TypeKindComposite
+    && target->kind != TypeKindPrimitive){
+        //TODO free everything
+        return SEMANTIC_ERROR;
+    }
+
     ParentExpression->impl.typecast.targetType = target;
     ParentExpression->result = target;
     return SEMANTIC_OK;
@@ -1182,10 +1227,38 @@ int createTransmute(Expression* ParentExpression, AST_NODE_PTR currentNode){
         return SEMANTIC_ERROR;
     }
 
+    //cand cast from box
+    if (ParentExpression->impl.transmute.operand->result->kind == TypeKindBox){
+        //TODO free everything
+        return SEMANTIC_ERROR;
+    }
+    Type * inputExpressionType = ParentExpression->impl.transmute.operand->result;
+    double inputSize = 1;
+    if(inputExpressionType->kind == TypeKindComposite) {
+        inputSize= inputExpressionType->impl.composite.scale;
+    }
+
+
     Type* target = mem_alloc(MemoryNamespaceSet,sizeof(Type));
     int status = get_type_impl(currentNode->children[1], &target);
     if (status){
         print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
+        return SEMANTIC_ERROR;
+    }
+
+    if (target->kind != TypeKindComposite
+        && target->kind != TypeKindPrimitive){
+        //TODO free everything
+        return SEMANTIC_ERROR;
+    }
+    double targetSize = 1;
+    if(target->kind == TypeKindComposite) {
+        targetSize = target->impl.composite.scale;
+    }
+
+
+    if(inputSize != targetSize) {
+        //TODO free everything
         return SEMANTIC_ERROR;
     }
 
@@ -1196,7 +1269,69 @@ int createTransmute(Expression* ParentExpression, AST_NODE_PTR currentNode){
 
 }
 
+int createDeref(Expression* ParentExpression, AST_NODE_PTR currentNode) {
+    assert(currentNode->child_count = 2);
+    Dereference deref;
+    deref.nodePtr = currentNode;
+    deref.index = createExpression(AST_get_node(currentNode,0));
 
+    //index has to be made
+    if(deref.index == NULL) {
+        return SEMANTIC_ERROR;
+    }
+    Type * indexType = deref.index->result;
+    //indexType can only be a composite or a primitive
+    if(indexType->kind != TypeKindComposite && indexType->kind != TypeKindPrimitive) {
+        //TODO free deref index
+        return SEMANTIC_ERROR;
+    }
+
+    //indexType can only be int
+    if(indexType->kind == TypeKindPrimitive) {
+        if (indexType->impl.primitive != Int) {
+            //TODO free deref index
+            return SEMANTIC_ERROR;
+        }
+    }
+    if(indexType->kind == TypeKindComposite) {
+        if (indexType->impl.composite.primitive != Int) {
+            //TODO free deref index
+            return SEMANTIC_ERROR;
+        }
+    }
+
+    deref.variable = createExpression(AST_get_node(currentNode,1));
+
+    //variable has to be made
+    if(deref.index == NULL) {
+        //TODO free deref index
+        return SEMANTIC_ERROR;
+    }
+    //variable can only be a reference
+    if(deref.variable->result->kind != TypeKindReference) {
+        //TODO free deref index and variable
+        return SEMANTIC_ERROR;
+    }
+
+    ParentExpression->impl.dereference = deref;
+    ParentExpression->result = deref.variable->result->impl.reference;
+    return SEMANTIC_OK;
+}
+
+int createAddressOf(Expression* ParentExpression, AST_NODE_PTR currentNode) {
+    assert(currentNode != NULL);
+    assert(currentNode->child_count == 1);
+
+    AddressOf address_of;
+    address_of.node_ptr = currentNode;
+    address_of.variable = createExpression(AST_get_node(currentNode,0));
+
+    if (address_of.variable == NULL) {
+        //TODO free
+        return SEMANTIC_ERROR;
+    }
+    return SEMANTIC_OK;
+}
 
 Expression *createExpression(AST_NODE_PTR currentNode){
     DEBUG("create Expression");
@@ -1308,6 +1443,20 @@ Expression *createExpression(AST_NODE_PTR currentNode){
             return NULL;
         }
         break;
+    case AST_Dereference:
+        expression->kind = ExpressionKindDereference;
+        if(createDeref(expression, currentNode)) {
+            //TODO free expression
+            return NULL;
+        }
+        break;
+    case AST_AddressOf:
+        expression->kind = ExpressionKindAddressOf;
+        if(createAddressOf(expression,currentNode)) {
+            //TODO free space
+            return NULL;
+        }
+        break;
     default:
         PANIC("Node is not an expression but from kind: %i", currentNode->kind);
         break;
@@ -1317,7 +1466,47 @@ Expression *createExpression(AST_NODE_PTR currentNode){
     DEBUG("successfully created Expression");
     return expression;
 }
- 
+
+
+bool compareTypes(Type * leftType, Type * rightType) {
+    if (leftType->kind != rightType->kind) {
+        return FALSE;
+    }
+    if (leftType->kind == TypeKindPrimitive) {
+        if(leftType->impl.primitive != rightType->impl.primitive) {
+            return FALSE;
+        }
+        return TRUE;
+    }
+    if ( leftType->kind == TypeKindComposite) {
+        CompositeType leftComposite = leftType->impl.composite;
+        CompositeType rightComposite = leftType->impl.composite;
+        if(leftComposite.primitive != rightComposite.primitive) {
+            return FALSE;
+        }
+        if(leftComposite.sign != rightComposite.sign) {
+            return FALSE;
+        }
+        if(leftComposite.scale != rightComposite.scale) {
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    if(leftType->kind == TypeKindBox) {
+        if(leftType->impl.box != rightType->impl.box) {
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    if(leftType->kind == TypeKindReference) {
+        bool result = compareTypes(leftType->impl.reference, rightType->impl.reference);
+        return result;
+    }
+
+    return FALSE;
+}
 
  int createAssign(Statement* ParentStatement, AST_NODE_PTR currentNode){
     DEBUG("create Assign");
@@ -1335,6 +1524,19 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         return SEMANTIC_ERROR;
     }
 
+    Type * varType = NULL;
+    if(assign.variable->kind == VariableKindDeclaration) {
+        varType = assign.variable->impl.declaration.type;
+    }else if(assign.variable->kind == VariableKindDefinition) {
+        varType = assign.variable->impl.definiton.declaration.type;
+    }else {
+        PANIC("the vartype should be a declaration or a definition");
+    }
+
+    if(!compareTypes(varType,assign.value->result)) {
+        //TODO free everything
+        return SEMANTIC_ERROR;
+    }
     ParentStatement->impl.assignment = assign;
     return SEMANTIC_OK;
  }
@@ -1812,6 +2014,16 @@ int createBox(GHashTable *boxes, AST_NODE_PTR currentNode){
     }
     g_hash_table_insert(boxes, (gpointer)boxName, box);
 
+    Type* boxType = malloc(sizeof(Type));
+    boxType->nodePtr = currentNode;
+    boxType->kind = TypeKindBox;
+    boxType->impl.box = box;
+
+    if(g_hash_table_contains(declaredBoxes, (gpointer)boxName)){
+        return SEMANTIC_ERROR;
+    }
+    g_hash_table_insert(declaredBoxes, (gpointer)boxName, boxType);
+
     return SEMANTIC_OK;
 
     
@@ -1898,7 +2110,7 @@ Module *create_set(AST_NODE_PTR currentNode){
 
 
     for (size_t i = 0; i < currentNode->child_count; i++){
-        DEBUG("created Child: %i" ,currentNode->children[i]->kind);
+        DEBUG("created Child with type: %i" ,currentNode->children[i]->kind);
         switch(currentNode->children[i]->kind){
             
         case AST_Decl: {
@@ -1940,6 +2152,7 @@ Module *create_set(AST_NODE_PTR currentNode){
                 // TODO: cleanup global memory
                 return NULL;
             }
+
             DEBUG("created Box successfully");
             break;
             }

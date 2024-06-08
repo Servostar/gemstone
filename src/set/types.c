@@ -54,7 +54,7 @@ void delete_composite([[maybe_unused]] CompositeType *composite) {}
 void delete_type(Type *type) {
   switch (type->kind) {
   case TypeKindBox:
-    delete_box_type(&type->impl.box);
+    delete_box_type(type->impl.box);
     break;
   case TypeKindReference:
     delete_type(type->impl.reference);
@@ -155,6 +155,8 @@ void delete_expression(Expression *expr) {
     break;
   case ExpressionKindVariable:
     delete_variable(expr->impl.variable);
+  default:
+    //TODO free Reference and AddressOf
     break;
   }
 }

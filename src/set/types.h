@@ -114,7 +114,7 @@ typedef struct Type_t {
     union TypeImplementation_t {
         PrimitiveType primitive;
         CompositeType composite;
-        BoxType box;
+        BoxType* box;
         ReferenceType reference;
     } impl;
     AST_NODE_PTR nodePtr;
@@ -281,6 +281,17 @@ typedef struct Variable_t {
     AST_NODE_PTR nodePtr;
 } Variable;
 
+typedef struct Dereference_t {
+    Expression* index;
+    Expression* variable;
+    AST_NODE_PTR nodePtr;
+}Dereference;
+
+typedef struct AddressOf_t {
+    Expression* variable;
+    AST_NODE_PTR node_ptr;
+}AddressOf;
+
 // .------------------------------------------------.
 // |                 Casts                          |
 // '------------------------------------------------'
@@ -412,7 +423,9 @@ typedef enum ExpressionKind_t {
     ExpressionKindTypeCast,
     ExpressionKindTransmute,
     ExpressionKindConstant,
-    ExpressionKindVariable
+    ExpressionKindVariable,
+    ExpressionKindDereference,
+    ExpressionKindAddressOf,
 } ExpressionKind;
 
 typedef struct Expression_t {
@@ -425,6 +438,8 @@ typedef struct Expression_t {
         Transmute transmute;
         TypeValue constant;
         Variable* variable;
+        Dereference dereference;
+        AddressOf addressOf;
     } impl;
     AST_NODE_PTR nodePtr;
 } Expression;
@@ -542,6 +557,7 @@ typedef struct Module_t {
     // to be resolved after the module has been parsed completely
     GArray* imports;
 } Module;
+
 
 // .------------------------------------------------.
 // |                 Cleanup Code                   |
