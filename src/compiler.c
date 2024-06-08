@@ -179,10 +179,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
         if (setup_target_environment(target) == 0) {
 
             print_ast_to_file(ast, target);
-            Module* test = create_set(ast);
-
-            // TODO: parse AST to semantic values
-            Module* module = NULL;
+            Module* module = create_set(ast);
 
             run_backend_codegen(module, target);
         }

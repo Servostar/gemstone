@@ -198,7 +198,7 @@ BackendError get_type_impl(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
             break;
         case TypeKindBox:
             err =
-                impl_box_type(unit, scope, &gemstone_type->impl.box, llvm_type);
+                impl_box_type(unit, scope, gemstone_type->impl.box, llvm_type);
             break;
         default:
             PANIC("invalid type kind: %ld", gemstone_type->kind);
@@ -279,6 +279,16 @@ BackendError impl_type(LLVMBackendCompileUnit* unit, Type* gemstone_type,
     return err;
 }
 
+BackendError impl_type_define(LLVMBackendCompileUnit* unit, Typedefine* gemstone_type,
+                       const char* alias, LLVMGlobalScope* scope) {
+    BackendError err = SUCCESS;
+    DEBUG("implementing type of kind: %ld as %s", gemstone_type->type->kind, alias);
+
+    err = impl_type(unit, gemstone_type->type, alias, scope);
+
+    return err;
+}
+
 BackendError impl_types(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
                         GHashTable* types) {
     DEBUG("implementing given types of %p", types);
@@ -291,7 +301,7 @@ BackendError impl_types(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
     BackendError err;
 
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
-        err = impl_type(unit, (Type*)val, (const char*)key, scope);
+        err = impl_type_define(unit, (Typedefine*) val, (const char*)key, scope);
 
         if (err.kind != Success) {
             break;
@@ -417,7 +427,7 @@ BackendError get_type_default_value(LLVMBackendCompileUnit* unit,
             err = get_reference_default_value(llvm_type, llvm_value);
             break;
         case TypeKindBox:
-            err = get_box_default_value(unit, scope, &gemstone_type->impl.box,
+            err = get_box_default_value(unit, scope, gemstone_type->impl.box,
                                         llvm_type, llvm_value);
             break;
         default:

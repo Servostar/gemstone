@@ -150,7 +150,7 @@ int get_type_decl(const char *name, Type **type) {
     return SEMANTIC_ERROR;
 }
 
-int impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
+int set_impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
     assert(ast_type != NULL);
     assert(composite != NULL);
 
@@ -229,7 +229,7 @@ int impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
  * @param type pointer output for the type
  * @return the gemstone type implementation
  */
-int get_type_impl(AST_NODE_PTR currentNode, Type **type) {
+int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
     assert(currentNode != NULL);
     assert(currentNode->kind == AST_Type);
     assert(currentNode->child_count > 0);
@@ -278,7 +278,7 @@ int get_type_impl(AST_NODE_PTR currentNode, Type **type) {
 
     new_type->kind = TypeKindComposite;
     new_type->impl.composite.nodePtr = currentNode;
-    status = impl_composite_type(currentNode, &new_type->impl.composite);
+    status = set_impl_composite_type(currentNode, &new_type->impl.composite);
     *type = new_type;
 
     return status;
@@ -312,7 +312,7 @@ int createRef(AST_NODE_PTR currentNode, Type** reftype) {
     referenceType->nodePtr = currentNode;
 
 
-    int signal = get_type_impl(currentNode->children[0],&type);
+    int signal = set_get_type_impl(currentNode->children[0], &type);
     if(signal) {
         //TODO free type
         return SEMANTIC_ERROR;
@@ -346,7 +346,7 @@ int createDecl(AST_NODE_PTR currentNode, GArray **variables) {
                 break;
             case AST_Type:
                 DEBUG("fill Type");
-                status = get_type_impl(AST_get_node(currentNode,i), &decl.type);
+                status = set_get_type_impl(AST_get_node(currentNode, i), &decl.type);
                 break;
             case AST_IdentList:
                 break;
@@ -409,7 +409,7 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
                 break;
             case AST_Type:
                 DEBUG("fill Type");
-                status = get_type_impl(declaration->children[i], &decl.type);
+                status = set_get_type_impl(declaration->children[i], &decl.type);
                 break;
             case AST_IdentList:
                 break;
@@ -1114,7 +1114,7 @@ int createTypeCast(Expression* ParentExpression, AST_NODE_PTR currentNode){
     }
 
     Type *target = mem_alloc(MemoryNamespaceSet, sizeof(Type));
-    int status = get_type_impl(currentNode->children[1], &target);
+    int status = set_get_type_impl(currentNode->children[1], &target);
     if (status) {
         print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
@@ -1133,7 +1133,7 @@ int createTransmute(Expression* ParentExpression, AST_NODE_PTR currentNode){
     }
 
     Type* target = mem_alloc(MemoryNamespaceSet,sizeof(Type));
-    int status = get_type_impl(currentNode->children[1], &target);
+    int status = set_get_type_impl(currentNode->children[1], &target);
     if (status){
         print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
@@ -1652,7 +1652,7 @@ int createParam(GArray * Paramlist ,AST_NODE_PTR currentNode){
         PANIC("IO_Qualifier has not the right amount of children");
     }
     
-    int signal = get_type_impl(paramdecl->children[0], &(decl.type));
+    int signal = set_get_type_impl(paramdecl->children[0], &(decl.type));
     if(signal){
         return SEMANTIC_ERROR;
     }
@@ -1803,7 +1803,7 @@ int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
 int createDeclMember(BoxType * ParentBox, AST_NODE_PTR currentNode){
 
     Type * declType = mem_alloc(MemoryNamespaceSet,sizeof(Type));
-    int status = get_type_impl(currentNode->children[0],&declType);
+    int status = set_get_type_impl(currentNode->children[0], &declType);
     if(status){
     return SEMANTIC_ERROR;
     }
@@ -1830,7 +1830,7 @@ int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode){
     AST_NODE_PTR nameList = declNode->children[1];
 
     Type * declType = mem_alloc(MemoryNamespaceSet,sizeof(Type));
-    int status = get_type_impl(currentNode->children[0],&declType);
+    int status = set_get_type_impl(currentNode->children[0], &declType);
     if(status){
     return SEMANTIC_ERROR;
     }
@@ -1916,7 +1916,7 @@ int createTypeDef(GHashTable *types, AST_NODE_PTR currentNode){
     
     
     Type * type = mem_alloc(MemoryNamespaceSet,sizeof(Type));
-    int status = get_type_impl( typeNode, &type);
+    int status = set_get_type_impl(typeNode, &type);
     if(status){
         return SEMANTIC_ERROR;
     }
