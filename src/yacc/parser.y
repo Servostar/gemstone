@@ -135,7 +135,8 @@
 %left '(' ')' '[' ']'
 
 %%
-program: program programbody {AST_push_node(root, $2);}
+program: program programbody {AST_push_node(root, $2); 
+                              }
        | programbody {AST_push_node(root, $1);};
 
 programbody: moduleimport {$$ = $1;}
@@ -376,7 +377,7 @@ decl: type ':' identlist {AST_NODE_PTR decl = AST_new_node(new_loc(), AST_Decl, 
                                            AST_push_node(decl, $1);
                                            AST_push_node(decl, $2);
                                            AST_push_node(decl, $4);
-                                           $$ = decl;}
+                                           $$ = decl;};
 
 
 definition: decl '=' expr { AST_NODE_PTR def = AST_new_node(new_loc(), AST_Def, NULL);

@@ -101,7 +101,7 @@
     DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValStr);};
 \"\"\"[^\"]*\"\"\" {
     yytext = yytext +3;
-    yytext[yyleng - 4] = 0;
+    yytext[yyleng - 6] = 0;
 
     DEBUG("\"%s\" tokenized with \'ValMultistr\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValMultistr);};
 [ \r\t] { /* ignore whitespace */ };

@@ -3,6 +3,8 @@
 //
 
 #include <io/files.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <sys/log.h>
 #include <assert.h>
 #include <sys/col.h>
@@ -82,7 +84,7 @@ static void custom_fgets(char *buffer, size_t n, FILE *stream) {
     }
 }
 
-void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message) {
+void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message, ...) {
     assert(file->handle != NULL);
     assert(location != NULL);
     assert(message != NULL);
@@ -120,8 +122,16 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
 
     const char *absolute_path = get_absolute_path(file->path);
 
-    printf("%s%s:%ld:%s %s%s:%s %s\n", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET,
-           message);
+    printf("%s%s:%ld:%s %s%s:%s ", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET);
+
+    va_list args;
+    va_start(args, message);
+
+    vprintf(message, args);
+
+    va_end(args);
+
+    printf("\n");
 
     mem_free((void *) absolute_path);
 

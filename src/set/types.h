@@ -10,7 +10,7 @@
 
 /**
  * @brief Primitive types form the basis of all other types.
- *
+ * 
  */
 typedef enum PrimitiveType_t {
     // 4 byte signed integer in two's complement
@@ -21,7 +21,7 @@ typedef enum PrimitiveType_t {
 
 /**
  * @brief Represents the sign of a composite type.
- *
+ * 
  */
 typedef enum Sign_t {
     // type has no sign bit
@@ -34,13 +34,13 @@ typedef enum Sign_t {
  * @brief Represents the scale of composite type which is multiplied
  *        with the base size in order to retrieve the the composites size.
  * @attention Valid value are: { 1/8, 1/4, 1/2, 1, 2, 4, 8 }
- *
+ * 
  */
 typedef double Scale;
 
 /**
  * @brief A composite type is an extended definition of a primitive type.
- *
+ * 
  */
 typedef struct CompositeType_t {
     // sign of composite
@@ -52,7 +52,7 @@ typedef struct CompositeType_t {
 
 /**
  * @brief Specifies the specific type of the generic type struct.
- *
+ * 
  */
 typedef enum TypeKind_t {
     TypeKindPrimitive,
@@ -66,7 +66,7 @@ typedef struct Type_t Type;
 /**
  * @brief Reference points to a type.
  * @attention Can be nested. A reference can point to another reference: REF -> REF -> REF -> Primitive
- *
+ * 
  */
 typedef Type* ReferenceType;
 
@@ -86,11 +86,11 @@ typedef struct BoxMember_t {
 
 /**
  * @brief Essentially a g   lorified struct
- *
+ * 
  */
 typedef struct BoxType_t {
     // hashtable of members.
-    // Associates the memebers name (const char*) with its type (BoxMember)
+    // Associates the memebers name (const char*) with its type (BoxMember) 
     GHashTable* member; //BoxMember Pointer
     AST_NODE_PTR nodePtr;
 } BoxType;
@@ -114,7 +114,7 @@ typedef struct Type_t {
     union TypeImplementation_t {
         PrimitiveType primitive;
         CompositeType composite;
-        BoxType box;
+        BoxType* box;
         ReferenceType reference;
     } impl;
     AST_NODE_PTR nodePtr;
@@ -130,7 +130,7 @@ typedef struct Typedefine_t {
 
 /**
  * @brief Reprents the value of type. Can be used to definitions, initialization and for expressions contants.
- *
+ * 
  */
 typedef struct TypeValue_t {
     // the type
@@ -146,7 +146,7 @@ typedef struct TypeValue_t {
 
 /**
  * @brief Specifies a parameters I/O properties
- *
+ * 
  */
 typedef enum IO_Qualifier_t {
     // Can be read from but not written to.
@@ -162,7 +162,7 @@ typedef enum IO_Qualifier_t {
 
 /**
  * @brief A functions parameter declaration.
- *
+ * 
  */
 typedef struct ParameterDeclaration_t {
     Type *type;
@@ -172,7 +172,7 @@ typedef struct ParameterDeclaration_t {
 
 /**
  * @brief A functions parameter.
- *
+ * 
  */
 typedef struct ParameterDefinition_t {
     ParameterDeclaration declaration;
@@ -189,11 +189,11 @@ typedef enum ParameterKind_t {
 
 /**
  * @brief A parameter can either be a declaration or a definition
- *
+ * 
  */
 typedef struct Parameter_t {
     const char* name;
-
+    
     ParameterKind kind;
     union ParameterImplementation {
         ParameterDeclaration declaration;
@@ -254,9 +254,9 @@ typedef struct VariableDeclaration_t {
 
 /**
  * @brief Definition of a variable
- *
+ * 
  * @attention NOTE: The types of the initializer and the declaration must be equal
- *
+ * 
  */
 typedef struct VariableDefiniton_t {
     VariableDeclaration declaration;
@@ -281,17 +281,28 @@ typedef struct Variable_t {
     AST_NODE_PTR nodePtr;
 } Variable;
 
+typedef struct Dereference_t {
+    Expression* index;
+    Expression* variable;
+    AST_NODE_PTR nodePtr;
+}Dereference;
+
+typedef struct AddressOf_t {
+    Expression* variable;
+    AST_NODE_PTR node_ptr;
+}AddressOf;
+
 // .------------------------------------------------.
 // |                 Casts                          |
 // '------------------------------------------------'
 
 /**
  * @brief Perform a type cast, converting a value to different type whilest preserving as much of the original
- *        values information.
+ *        values information. 
  *
  * @attention NOTE: Must check wether the given value's type can be parsed into
  *       the target type without loss.
- *       Lossy mean possibly loosing information such when casting a float into an int (no fraction anymore).
+ *       Lossy mean possibly loosing information such when casting a float into an int (no fraction anymore). 
  *
  */
 typedef struct TypeCast_t {
@@ -305,7 +316,7 @@ typedef struct TypeCast_t {
  *
  * @attention NOTE: The given value's type must have the size in bytes as the target type.
  *                  Transmuting a short int into a float should yield an error.
- *
+ * 
  */
 typedef struct Transmute_t {
     Type *targetType;
@@ -319,7 +330,7 @@ typedef struct Transmute_t {
 
 /**
  * @brief Represents the arithmetic operator.
- *
+ * 
  */
 typedef enum ArithmeticOperator_t {
     Add,
@@ -335,7 +346,7 @@ typedef enum ArithmeticOperator_t {
 
 /**
  * @brief Represents the relational operator.
- *
+ * 
  */
 typedef enum RelationalOperator_t {
     Equal,
@@ -395,7 +406,7 @@ typedef struct Operation_t {
     union OperationImplementation {
         ArithmeticOperator arithmetic;
         RelationalOperator relational;
-        BooleanOperator boolean;
+        BooleanOperator boolean; 
         LogicalOperator logical;
         BitwiseOperator bitwise;
     } impl;
@@ -412,7 +423,9 @@ typedef enum ExpressionKind_t {
     ExpressionKindTypeCast,
     ExpressionKindTransmute,
     ExpressionKindConstant,
-    ExpressionKindVariable
+    ExpressionKindVariable,
+    ExpressionKindDereference,
+    ExpressionKindAddressOf,
 } ExpressionKind;
 
 typedef struct Expression_t {
@@ -425,6 +438,8 @@ typedef struct Expression_t {
         Transmute transmute;
         TypeValue constant;
         Variable* variable;
+        Dereference dereference;
+        AddressOf addressOf;
     } impl;
     AST_NODE_PTR nodePtr;
 } Expression;
@@ -542,5 +557,40 @@ typedef struct Module_t {
     // to be resolved after the module has been parsed completely
     GArray* imports;
 } Module;
+
+
+// .------------------------------------------------.
+// |                 Cleanup Code                   |
+// '------------------------------------------------'
+
+void delete_box_access(BoxAccess* access);
+
+void delete_variable(Variable* variable);
+
+void delete_type(Type* type);
+
+void delete_box(BoxType* box);
+
+void delete_declaration(VariableDeclaration* decl);
+
+void delete_definition(VariableDefiniton* definition);
+
+void delete_expression(Expression* expr);
+
+void delete_operation(Operation* operation);
+
+void delete_type_value(TypeValue* value);
+
+void delete_transmute(Transmute* trans);
+
+void delete_typecast(TypeCast* cast);
+
+void delete_box_member(BoxMember* member);
+
+void delete_box_type(BoxType *box_type);
+
+void delete_composite([[maybe_unused]] CompositeType* composite);
+
+void delete_module(Module* module);
 
 #endif // SET_TYPES_H_

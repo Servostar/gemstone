@@ -14,6 +14,7 @@
 #include <codegen/backend.h>
 #include <llvm/backend.h>
 #include <mem/cache.h>
+#include <set/set.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
 
@@ -178,6 +179,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
         if (setup_target_environment(target) == 0) {
 
             print_ast_to_file(ast, target);
+            Module* test = create_set(ast);
 
             // TODO: parse AST to semantic values
             Module* module = NULL;
@@ -190,6 +192,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
 
     mem_purge_namespace(MemoryNamespaceLex);
     mem_purge_namespace(MemoryNamespaceAst);
+    mem_purge_namespace(MemoryNamespaceSet);
 
     print_file_statistics(file);
 }

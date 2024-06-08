@@ -226,14 +226,13 @@ void print_help(void) {
         "    --lld-fatal-warnings  treat linker warnings as errors",
         "    --gsc-fatal-warnings  treat parser warnings as errors",
         "Options:",
-        "    --verbose            print logs with level information or higher",
-        "    --debug              print debug logs (if not disabled at compile time)",
-        "    --version            print the version",
-        "    --list-targets       print a list of all available targets supported",
-        "    --help               print this help dialog",
-        "    --color-always       always colorize output",
-        "    --version            print the version",
-        "    --print-memory-stats print statistics of the garbage collector"
+        "    --verbose        print logs with level information or higher",
+        "    --debug          print debug logs (if not disabled at compile time)",
+        "    --version        print the version",
+        "    --list-targets   print a list of all available targets supported",
+        "    --help           print this help dialog",
+        "    --color-always   always colorize output",
+        "    --print-gc-stats print statistics of the garbage collector"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
