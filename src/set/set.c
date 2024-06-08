@@ -1418,6 +1418,21 @@ bool compareTypes(Type * leftType, Type * rightType) {
         return SEMANTIC_ERROR;
     }
 
+    Type* varType = NULL;
+
+    if(assign.variable->kind == VariableKindDeclaration) {
+        varType = assign.variable->impl.declaration.type;
+    }else if(assign.variable->kind == VariableKindDefinition) {
+        varType = assign.variable->impl.definiton.declaration.type;
+    }
+
+
+
+    bool result =compareTypes(varType, assign.value->result);
+    if(result ==FALSE ) {
+        return SEMANTIC_ERROR;
+    }
+
     ParentStatement->impl.assignment = assign;
     return SEMANTIC_OK;
  }
