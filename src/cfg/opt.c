@@ -179,11 +179,11 @@ void print_help(void) {
         "    --mode=[app|lib] set the compilation mode to either application or library",
         "    --output=name    name of output files without extension",
         "Options:",
-        "    --verbose            print logs with level information or higher",
-        "    --debug              print debug logs (if not disabled at compile time)",
-        "    --version            print the version",
-        "    --help               print this hel dialog",
-        "    --print-memory-stats print statistics of the garbage collector"
+        "    --verbose        print logs with level information or higher",
+        "    --debug          print debug logs (if not disabled at compile time)",
+        "    --version        print the version",
+        "    --help           print this hel dialog",
+        "    --print-gc-stats print statistics of the garbage collector"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
