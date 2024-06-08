@@ -76,6 +76,8 @@ include(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 
+link_libraries(PkgConfig::GLIB)
+
 # ------------------------------------------------ #
 #  TOML-C99                                        #
 # ------------------------------------------------ #
@@ -96,6 +98,21 @@ set_target_properties(tomlc99
 
 include_directories(${PROJECT_SOURCE_DIR}/dep/tomlc99)
 
+link_libraries(tomlc99)
+
+# ------------------------------------------------ #
+#  LLD-C-Layer                                     #
+# ------------------------------------------------ #
+
+add_subdirectory(dep/lldcl)
+
+# Link lld libs and C++ LIBC
+link_libraries(lldcl
+        lldCommon
+        lldCOFF
+        lldELF
+        lldMinGW
+        stdc++)
 
 # ------------------------------------------------ #
 #  LLVM backend                                    #
@@ -144,10 +161,6 @@ set_target_properties(release
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
 
-target_link_libraries(release PkgConfig::GLIB)
-
-target_link_libraries(release tomlc99)
-
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
     set(RELEASE_FLAGS)
@@ -183,10 +196,6 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
-target_link_libraries(debug PkgConfig::GLIB)
-
-target_link_libraries(debug tomlc99)
-
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
 else()
@@ -215,10 +224,6 @@ set_target_properties(check
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
-
-target_link_libraries(check PkgConfig::GLIB)
-
-target_link_libraries(check tomlc99)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)

@@ -5,6 +5,11 @@
 #include <llvm/link/lld.h>
 #include <sys/log.h>
 
+/*
+ * call the LLD linker
+ */
+extern int lld_main(int Argc, const char **Argv, const char **outstr);
+
 const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
 
     for (guint i = 0; i < config->link_search_paths->len; i++) {
@@ -71,6 +76,18 @@ TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfi
 
 BackendError lld_link_target(TargetLinkConfig* config) {
     BackendError err = SUCCESS;
+
+    const char* message = NULL;
+    int status = lld_main(0, NULL, &message);
+
+    if (message != NULL) {
+        print_message(Warning, "Message from LLD: %s", message);
+        free((void*) message);
+    }
+
+    if (status != 0) {
+        err = new_backend_impl_error(Implementation, NULL, "failed to link target");
+    }
 
     return err;
 }
