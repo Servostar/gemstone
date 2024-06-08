@@ -4,6 +4,7 @@
 
 #include <ast/ast.h>
 #include <sys/log.h>
+#include <mem/cache.h>
 
 void generate_statement(const AST_NODE_PTR stmt) {
     const AST_NODE_PTR add = AST_new_node(empty_location(), AST_Add, NULL);
@@ -29,6 +30,7 @@ void generate_branch(const AST_NODE_PTR stmt) {
 }
 
 int main(void) {
+    mem_init();
 
     const AST_NODE_PTR root = AST_new_node(empty_location(), AST_Stmt, NULL);
 

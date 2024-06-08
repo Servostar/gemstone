@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <string.h>
 #include <cfg/opt.h>
+#include <mem/cache.h>
 
 static struct Logger_t {
     FILE** streams;
@@ -39,7 +40,7 @@ void log_register_stream(FILE* restrict stream)
 
     if (GlobalLogger.stream_count == 0)
     {
-        GlobalLogger.streams = (FILE**) malloc(sizeof(FILE*));
+        GlobalLogger.streams = (FILE**) mem_alloc(MemoryNamespaceLog, sizeof(FILE*));
         GlobalLogger.stream_count = 1;
 
         if (GlobalLogger.streams == NULL)
@@ -51,7 +52,7 @@ void log_register_stream(FILE* restrict stream)
     {
         GlobalLogger.stream_count++;
         size_t bytes = GlobalLogger.stream_count * sizeof(FILE*);
-        GlobalLogger.streams = (FILE**) realloc(GlobalLogger.streams, bytes);
+        GlobalLogger.streams = (FILE**) mem_realloc(MemoryNamespaceLog, GlobalLogger.streams, bytes);
 
         if (GlobalLogger.streams == NULL)
         {

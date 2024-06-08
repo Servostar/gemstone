@@ -76,8 +76,7 @@ int stdout_supports_ansi_esc() {
   HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
   if (!GetConsoleMode(hConsole, &mode)) {
-    ERROR("failed to get console mode");
-    return ANSI_ENABLED;
+    return ASNI_DISABLED;
   }
 
   if ((mode & ENABLE_VIRTUAL_TERMINAL_INPUT) |

@@ -13,6 +13,7 @@
 #include <cfg/opt.h>
 #include <codegen/backend.h>
 #include <llvm/backend.h>
+#include <mem/cache.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
 
@@ -186,6 +187,9 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     }
 
     AST_delete_node(ast);
+
+    mem_purge_namespace(MemoryNamespaceLex);
+    mem_purge_namespace(MemoryNamespaceAst);
 
     print_file_statistics(file);
 }

@@ -2,6 +2,8 @@
 #include <lex/util.h>
 #include <string.h>
 #include <stdlib.h>
+#include <glib.h>
+#include <mem/cache.h>
 
 // implementation based on:
 // https://github.com/sunxfancy/flex-bison-examples/blob/master/error-handling/ccalc.c
@@ -16,13 +18,8 @@ static int nTokenStart = 0;
 static int nTokenLength = 0;
 static int nTokenNextStart = 0;
 
-static void lex_deinit(void) {
-  free(buffer);
-}
-
 void lex_init(void) {
-  buffer = malloc(MAX_READ_BUFFER_SIZE);
-  atexit(lex_deinit);
+  buffer = mem_alloc(MemoryNamespaceStatic, MAX_READ_BUFFER_SIZE);
 }
 
 void lex_reset(void) {

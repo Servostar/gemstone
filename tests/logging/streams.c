@@ -5,6 +5,7 @@
 #include "sys/log.h"
 #include <stdlib.h>
 #include <cfg/opt.h>
+#include <mem/cache.h>
 
 static FILE* file;
 
@@ -15,6 +16,7 @@ void close_file(void) {
 }
 
 int main(int argc, char* argv[]) {
+    mem_init();
     parse_options(argc, argv);
     log_init();
     set_log_level(LOG_LEVEL_DEBUG);

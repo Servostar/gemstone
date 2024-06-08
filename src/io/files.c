@@ -6,6 +6,7 @@
 #include <sys/log.h>
 #include <assert.h>
 #include <sys/col.h>
+#include <mem/cache.h>
 
 #ifdef __unix__
 
@@ -13,9 +14,15 @@
 
 #define MAX_PATH_BYTES PATH_MAX
 
+#define min(a, b) ((a) > (b) ? (b) : (a))
+
 #elif defined(_WIN32) || defined(WIN32)
 
 #include <Windows.h>
+// for _fullpath
+#include <stdlib.h>
+// for _mkdir
+#include <direct.h>
 
 #define MAX_PATH_BYTES _MAX_PATH
 
@@ -64,10 +71,6 @@ void delete_files(ModuleFileStack *stack) {
 // Number of bytes to read at once whilest
 // seeking the current line in print_diagnostic()
 #define SEEK_BUF_BYTES 256
-
-static inline unsigned long int min(unsigned long int a, unsigned long int b) {
-    return a > b ? b : a;
-}
 
 // behaves like fgets except that it has defined behavior when n == 1
 static void custom_fgets(char *buffer, size_t n, FILE *stream) {
@@ -120,17 +123,17 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
     printf("%s%s:%ld:%s %s%s:%s %s\n", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET,
            message);
 
-    free((void *) absolute_path);
+    mem_free((void *) absolute_path);
 
-    const size_t lines = location->line_end - location->line_start + 1;
+    const unsigned long int lines = location->line_end - location->line_start + 1;
 
-    for (size_t l = 0; l < lines; l++) {
+    for (unsigned long int l = 0; l < lines; l++) {
         printf(" %4ld | ", location->line_start + l);
 
-        size_t chars = 0;
+        unsigned long int chars = 0;
 
         // print line before token group start
-        size_t limit = min(location->col_start, SEEK_BUF_BYTES);
+        unsigned long int limit = min(location->col_start, SEEK_BUF_BYTES);
         while (limit > 1) {
             custom_fgets(buffer, (int) limit, file->handle);
             chars += printf("%s", buffer);
@@ -168,13 +171,13 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
     }
 
     printf("      | ");
-    for (size_t i = 1; i < location->col_start; i++) {
+    for (unsigned long int i = 1; i < location->col_start; i++) {
         printf(" ");
     }
 
     printf("%s", accent_color);
     printf("^");
-    for (size_t i = 0; i < location->col_end - location->col_start; i++) {
+    for (unsigned long int i = 0; i < location->col_end - location->col_start; i++) {
         printf("~");
     }
 
@@ -298,7 +301,7 @@ int create_directory(const char *path) {
 }
 
 const char *get_last_error() {
-    return strdup(strerror(errno));
+    return mem_strdup(MemoryNamespaceIo, strerror(errno));
 }
 
 const char *get_absolute_path(const char *path) {

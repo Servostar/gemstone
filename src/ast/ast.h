@@ -12,74 +12,74 @@
  *            variants of this enum.
  */
 enum AST_SyntaxElement_t {
-  AST_Stmt = 0,
-  AST_Module,
-  AST_Expr,
-  // Literals
-  AST_Int,
-  AST_Float,
-  AST_String,
-  // Control flow
-  AST_While,
-  AST_If,
-  AST_IfElse,
-  AST_Else,
-  AST_Condition,
-  // Variable management
-  AST_Decl,
-  AST_Assign,
-  AST_Def,
-  AST_Ident,
-  // Arithmetic operators
-  AST_Add,
-  AST_Sub,
-  AST_Mul,
-  AST_Div,
-  // Bitwise operators
-  AST_BitAnd,
-  AST_BitOr,
-  AST_BitXor,
-  AST_BitNot,
-  // Boolean operators
-  AST_BoolAnd,
-  AST_BoolOr,
-  AST_BoolXor,
-  AST_BoolNot,
-  // Logical operators
-  AST_Eq,
-  AST_Greater,
-  AST_Less,
-  // Casts
-  AST_Typecast,   // type cast
-  AST_Transmute,  // reinterpret cast
-  AST_Call,       // function call
-  AST_Macro,      // builtin functions: lineno(), filename(), ...
-  // Defintions
-  AST_Typedef,
-  AST_Box,
-  AST_Fun,
-  AST_Import,
-  // amount of variants
-  // in this enums
-  AST_List,
-  AST_ExprList,
-  AST_ArgList,
-  AST_ParamList,
-  AST_StmtList,
-  AST_IdentList,
-  AST_Storage,
-  AST_Type,
-  AST_Typekind,
-  AST_Sign,
-  AST_Scale,
-  AST_Negate,
-  AST_Parameter,
-  AST_Qualifyier,
-  AST_ParamDecl,
-  AST_AddressOf,
-  AST_Dereference,
-  AST_Reference,
-  AST_ELEMENT_COUNT
+    AST_Stmt = 0,
+    AST_Module,
+    AST_Expr,
+    // Literals
+    AST_Int,
+    AST_Float,
+    AST_String,
+    // Control flow
+    AST_While,
+    AST_If,
+    AST_IfElse,
+    AST_Else,
+    AST_Condition,
+    // Variable management
+    AST_Decl,
+    AST_Assign,
+    AST_Def,
+    AST_Ident,
+    // Arithmetic operators
+    AST_Add,
+    AST_Sub,
+    AST_Mul,
+    AST_Div,
+    // Bitwise operators
+    AST_BitAnd,
+    AST_BitOr,
+    AST_BitXor,
+    AST_BitNot,
+    // Boolean operators
+    AST_BoolAnd,
+    AST_BoolOr,
+    AST_BoolXor,
+    AST_BoolNot,
+    // Logical operators
+    AST_Eq,
+    AST_Greater,
+    AST_Less,
+    // Casts
+    AST_Typecast,   // type cast
+    AST_Transmute,  // reinterpret cast
+    AST_Call,       // function call
+    AST_Macro,      // builtin functions: lineno(), filename(), ...
+    // Defintions
+    AST_Typedef,
+    AST_Box,
+    AST_Fun,
+    AST_Import,
+    // amount of variants
+    // in this enums
+    AST_List,
+    AST_ExprList,
+    AST_ArgList,
+    AST_ParamList,
+    AST_StmtList,
+    AST_IdentList,
+    AST_Storage,
+    AST_Type,
+    AST_Typekind,
+    AST_Sign,
+    AST_Scale,
+    AST_Negate,
+    AST_Parameter,
+    AST_Qualifyier,
+    AST_ParamDecl,
+    AST_AddressOf,
+    AST_Dereference,
+    AST_Reference,
+    AST_ELEMENT_COUNT
 };
 
 /**
@@ -90,21 +90,21 @@ enum AST_SyntaxElement_t {
  *  - value: A string representing an optional value. Can be a integer literal for kind AST_int
  */
 struct AST_Node_t {
-  // parent node that owns this node
-  struct AST_Node_t *parent;
+    // parent node that owns this node
+    struct AST_Node_t *parent;
 
-  // type of AST node: if, declaration, ...
-  enum AST_SyntaxElement_t kind;
-  // optional value: integer literal, string literal, ...
-  const char* value;
+    // type of AST node: if, declaration, ...
+    enum AST_SyntaxElement_t kind;
+    // optional value: integer literal, string literal, ...
+    const char* value;
 
-  TokenLocation location;
+    TokenLocation location;
 
-  // number of child nodes ownd by this node
-  // length of children array
-  size_t child_count;
-  // variable amount of child nodes
-  struct AST_Node_t **children;
+    // number of child nodes ownd by this node
+    // length of children array
+    size_t child_count;
+    // variable amount of child nodes
+    struct AST_Node_t **children;
 };
 
 /**
