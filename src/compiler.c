@@ -142,12 +142,10 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
         if (setup_target_environment(target) == 0) {
 
             print_ast_to_file(ast, target);
-            Module * test = create_set(ast);
+            Module* test = create_set(ast);
 
             // TODO: parse AST to semantic values
             // TODO: backend codegen
-
-            delete_set(test);
         }
     }
 

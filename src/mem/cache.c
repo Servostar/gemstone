@@ -7,6 +7,7 @@
 #include <glib.h>
 #include <string.h>
 #include <assert.h>
+#include <cfg/opt.h>
 
 static GHashTable* namespaces = NULL;
 
@@ -19,6 +20,17 @@ typedef struct MemoryNamespaceStatistic_t {
     size_t faulty_allocations;
     size_t purged_free_count;
 } MemoryNamespaceStatistic;
+
+typedef enum MemoryBlockType_t {
+    GenericBlock,
+    GLIB_Array,
+    GLIB_HashTable
+} MemoryBlockType;
+
+typedef struct MemoryBlock_t {
+    void* block_ptr;
+    MemoryBlockType kind;
+} MemoryBlock;
 
 typedef struct MemoryNamespace_t {
     MemoryNamespaceStatistic statistic;
@@ -44,9 +56,11 @@ static void* namespace_malloc(MemoryNamespaceRef memoryNamespace, size_t size) {
     assert(memoryNamespace != NULL);
     assert(size != 0);
 
-    void* block = malloc(size);
+    MemoryBlock block;
+    block.block_ptr = malloc(size);
+    block.kind = GenericBlock;
 
-    if (block == NULL) {
+    if (block.block_ptr == NULL) {
         memoryNamespace->statistic.faulty_allocations ++;
     } else {
         g_array_append_val(memoryNamespace->blocks, block);
@@ -55,20 +69,36 @@ static void* namespace_malloc(MemoryNamespaceRef memoryNamespace, size_t size) {
         memoryNamespace->statistic.bytes_allocated += size;
     }
 
-    return block;
+    return block.block_ptr;
+}
+
+static void namespace_free_block(MemoryBlock block) {
+    switch (block.kind) {
+        case GenericBlock:
+            free(block.block_ptr);
+            break;
+        case GLIB_Array:
+            g_array_free(block.block_ptr, TRUE);
+            break;
+        case GLIB_HashTable:
+            g_hash_table_destroy(block.block_ptr);
+            break;
+    }
 }
 
 static gboolean namespace_free(MemoryNamespaceRef memoryNamespace, void* block) {
     for (guint i = 0; i < memoryNamespace->blocks->len; i++) {
-        void* current_block = g_array_index(memoryNamespace->blocks, void*, i);
+        MemoryBlock current_block = g_array_index(memoryNamespace->blocks, MemoryBlock, i);
 
-        if (current_block == block) {
+        if (current_block.block_ptr == block) {
             assert(block != NULL);
 
-            free(block);
+            namespace_free_block(current_block);
+
             g_array_remove_index(memoryNamespace->blocks, i);
 
             memoryNamespace->statistic.manual_free_count++;
+
             return TRUE;
         }
     }
@@ -79,13 +109,13 @@ static void* namespace_realloc(MemoryNamespaceRef memoryNamespace, void* block, 
     void* reallocated_block = NULL;
 
     for (guint i = 0; i < memoryNamespace->blocks->len; i++) {
-        void* current_block = g_array_index(memoryNamespace->blocks, void*, i);
+        MemoryBlock current_block = g_array_index(memoryNamespace->blocks, MemoryBlock, i);
 
-        if (current_block == block) {
-            reallocated_block = realloc(block, size);
+        if (current_block.block_ptr == block) {
+            reallocated_block = realloc(current_block.block_ptr, size);
 
             if (reallocated_block != NULL) {
-                g_array_index(memoryNamespace->blocks, void*, i) = reallocated_block;
+                g_array_index(memoryNamespace->blocks, MemoryBlock, i).block_ptr = reallocated_block;
                 memoryNamespace->statistic.bytes_allocated += size;
                 memoryNamespace->statistic.reallocation_count ++;
             } else {
@@ -107,9 +137,9 @@ static void namespace_delete(MemoryNamespaceRef memoryNamespace) {
 static void namespace_purge(MemoryNamespaceRef memoryNamespace) {
 
     for (guint i = 0; i < memoryNamespace->blocks->len; i++) {
-        void* current_block = g_array_index(memoryNamespace->blocks, void*, i);
+        MemoryBlock current_block = g_array_index(memoryNamespace->blocks, MemoryBlock, i);
 
-        free(current_block);
+        namespace_free_block(current_block);
 
         memoryNamespace->statistic.purged_free_count ++;
     }
@@ -120,7 +150,7 @@ static void namespace_purge(MemoryNamespaceRef memoryNamespace) {
 static MemoryNamespaceRef namespace_new() {
     MemoryNamespaceRef memoryNamespace = malloc(sizeof(MemoryNamespace));
 
-    memoryNamespace->blocks = g_array_new(FALSE, FALSE, sizeof(void*));
+    memoryNamespace->blocks = g_array_new(FALSE, FALSE, sizeof(MemoryBlock));
     memoryNamespace->statistic.bytes_allocated = 0;
     memoryNamespace->statistic.allocation_count = 0;
     memoryNamespace->statistic.manual_free_count = 0;
@@ -130,6 +160,30 @@ static MemoryNamespaceRef namespace_new() {
     memoryNamespace->statistic.reallocation_count = 0;
 
     return memoryNamespace;
+}
+
+GArray *namespace_new_g_array(MemoryNamespaceRef namespace, guint size) {
+    MemoryBlock block;
+    block.block_ptr = g_array_new(FALSE, FALSE, size);
+    block.kind = GLIB_Array;
+
+    g_array_append_val(namespace->blocks, block);
+    namespace->statistic.bytes_allocated += sizeof(GArray*);
+    namespace->statistic.allocation_count ++;
+
+    return block.block_ptr;
+}
+
+GHashTable *namespace_new_g_hash_table(MemoryNamespaceRef namespace, GHashFunc hash_func, GEqualFunc key_equal_func) {
+    MemoryBlock block;
+    block.block_ptr = g_hash_table_new(hash_func, key_equal_func);
+    block.kind = GLIB_HashTable;
+
+    g_array_append_val(namespace->blocks, block);
+    namespace->statistic.bytes_allocated += sizeof(GHashTable*);
+    namespace->statistic.allocation_count ++;
+
+    return block.block_ptr;
 }
 
 static void cleanup() {
@@ -267,5 +321,25 @@ void print_memory_statistics() {
 
     namespace_statistics_print(&total, "summary");
 
-    printf("Note: untracked are memory allocations from external libraries.\n");
+    printf("Note: untracked are memory allocations from external libraries and non-gc managed components.\n");
+}
+
+GArray* mem_new_g_array(MemoryNamespaceName name, guint element_size) {
+    MemoryNamespaceRef cache = check_namespace(name);
+
+    if (cache == NULL) {
+        PANIC("memory namespace not created");
+    }
+
+    return namespace_new_g_array(cache, element_size);
+}
+
+GHashTable* mem_new_g_hash_table(MemoryNamespaceName name, GHashFunc hash_func, GEqualFunc key_equal_func) {
+    MemoryNamespaceRef cache = check_namespace(name);
+
+    if (cache == NULL) {
+        PANIC("memory namespace not created");
+    }
+
+    return namespace_new_g_hash_table(cache, hash_func, key_equal_func);
 }

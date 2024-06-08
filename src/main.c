@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
     run_compiler();
 
-    if (is_option_set("print-memory-stats")) {
+    if (is_option_set("print-gc-stats")) {
         print_memory_statistics();
     }
 
