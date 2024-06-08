@@ -450,7 +450,7 @@ typedef struct Expression_t {
 
 typedef struct FunctionCall_t {
     // function to call
-    FunctionDefinition* function;
+    Function* function;
     // list of expression arguments
     GArray* expressions;
     AST_NODE_PTR nodePtr;
@@ -458,7 +458,7 @@ typedef struct FunctionCall_t {
 
 typedef struct FunctionBoxCall_t {
     // function to call
-    FunctionDefinition* function;
+    Function* function;
     // list of expression arguments
     GArray* expressions;
     // box which has the function defined for it
