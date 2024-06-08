@@ -9,14 +9,19 @@
 #include <sys/log.h>
 #include <glib.h>
 #include <assert.h>
+#include <math.h>
 #include <set/set.h>
 #include <mem/cache.h>
 
 extern ModuleFile *current_file;
 static GHashTable *declaredComposites = NULL;//pointer to composites with names 
-static GHashTable *declaredBoxes = NULL;//pointer to typeboxes
+static GHashTable *declaredBoxes = NULL;//pointer to type
 static GHashTable *functionParameter = NULL;
+static GHashTable *definedFunctions = NULL;
+static GHashTable *declaredFunctions = NULL;
 static GArray *Scope = NULL;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
+
+
 
 const Type ShortShortUnsingedIntType = {
         .kind = TypeKindComposite,
@@ -214,6 +219,10 @@ int impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
 
             composite->scale = composite->scale * nested_type->impl.composite.scale;
 
+            if(composite->scale > 8 || composite->scale < 0.25) {
+                return  SEMANTIC_ERROR;
+            }
+
         } else {
             print_diagnostic(current_file, &typeKind->location, Error, "Type must be either composite or primitive");
             return SEMANTIC_ERROR;
@@ -243,13 +252,15 @@ int get_type_impl(AST_NODE_PTR currentNode, Type **type) {
     if (g_hash_table_contains(declaredComposites, typekind) == TRUE) {
         *type = g_hash_table_lookup(declaredComposites, typekind);
         return SEMANTIC_OK;
-        //TODO change composite based on other nodes
+
+
+
     }
 
     if (g_hash_table_contains(declaredBoxes, typekind) == TRUE) {
         *type = g_hash_table_lookup(declaredBoxes, typekind);
         if(currentNode->child_count > 1) {
-            //TODO free
+
             return SEMANTIC_ERROR;
         }
         return SEMANTIC_OK;
@@ -314,7 +325,6 @@ int createRef(AST_NODE_PTR currentNode, Type** reftype) {
 
     int signal = get_type_impl(currentNode->children[0],&type);
     if(signal) {
-        //TODO free type
         return SEMANTIC_ERROR;
     }
     referenceType->impl.reference = type;
@@ -1109,7 +1119,7 @@ int createTypeCast(Expression* ParentExpression, AST_NODE_PTR currentNode){
 
     if (ParentExpression->impl.typecast.operand->result->kind != TypeKindComposite
         && ParentExpression->impl.typecast.operand->result->kind != TypeKindPrimitive){
-        //TODO free everything
+
         return SEMANTIC_ERROR;
     }
 
@@ -1159,20 +1169,20 @@ int createDeref(Expression* ParentExpression, AST_NODE_PTR currentNode) {
     Type * indexType = deref.index->result;
     //indexType can only be a composite or a primitive
     if(indexType->kind != TypeKindComposite && indexType->kind != TypeKindPrimitive) {
-        //TODO free deref index
+
         return SEMANTIC_ERROR;
     }
 
     //indexType can only be int
     if(indexType->kind == TypeKindPrimitive) {
         if (indexType->impl.primitive != Int) {
-            //TODO free deref index
+
             return SEMANTIC_ERROR;
         }
     }
     if(indexType->kind == TypeKindComposite) {
         if (indexType->impl.composite.primitive != Int) {
-            //TODO free deref index
+
             return SEMANTIC_ERROR;
         }
     }
@@ -1181,12 +1191,12 @@ int createDeref(Expression* ParentExpression, AST_NODE_PTR currentNode) {
 
     //variable has to be made
     if(deref.index == NULL) {
-        //TODO free deref index
+
         return SEMANTIC_ERROR;
     }
     //variable can only be a reference
     if(deref.variable->result->kind != TypeKindReference) {
-        //TODO free deref index and variable
+
         return SEMANTIC_ERROR;
     }
 
@@ -1204,7 +1214,7 @@ int createAddressOf(Expression* ParentExpression, AST_NODE_PTR currentNode) {
     address_of.variable = createExpression(AST_get_node(currentNode,0));
 
     if (address_of.variable == NULL) {
-        //TODO free
+
         return SEMANTIC_ERROR;
     }
 
@@ -1330,14 +1340,14 @@ Expression *createExpression(AST_NODE_PTR currentNode){
         case AST_Dereference:
         expression->kind = ExpressionKindDereference;
         if(createDeref(expression, currentNode)) {
-            //TODO free expression
+
             return NULL;
         }
         break;
     case AST_AddressOf:
         expression->kind = ExpressionKindAddressOf;
         if(createAddressOf(expression,currentNode)) {
-            //TODO free space
+
             return NULL;
         }
         break;
@@ -1542,6 +1552,82 @@ int createBranch(Statement* ParentStatement,AST_NODE_PTR currentNode){
     return SEMANTIC_OK;
 }
 
+int getFunction(const char *name, Function **function);
+
+int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
+    assert(currentNode != NULL);
+    assert(currentNode->child_count == 2);
+
+    AST_NODE_PTR argsListNode = AST_get_node(currentNode, 1);
+    AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
+
+
+
+    FunctionCall funcall;
+    Function * fun = NULL;
+    if(nameNode->kind == AST_Ident) {
+        int result = getFunction(nameNode->value, &fun);
+        if (result == SEMANTIC_ERROR) {
+            return SEMANTIC_ERROR;
+        }
+    }
+    if(nameNode->kind == AST_IdentList) {
+        assert(nameNode->child_count > 1);
+
+        //idents.boxname.funname()
+        //only boxname and funname are needed, because the combination is unique
+        const char* boxName = AST_get_node( nameNode, (nameNode->child_count - 2))->value;
+        const char* funName = AST_get_node( nameNode, (nameNode->child_count - 1))->value;
+
+        const char* name = g_strjoin("", boxName, "." , funName, NULL );
+
+        int result = getFunction(name,&fun);
+        if (result) {
+            return SEMANTIC_ERROR;
+        }
+    }
+
+    funcall.function = fun;
+    funcall.nodePtr = currentNode;
+
+    size_t paramCount = 0;
+    if(fun->kind == FunctionDeclarationKind) {
+        paramCount = fun->impl.declaration.parameter->len;
+    }else if(fun->kind == FunctionDefinitionKind) {
+        paramCount = fun->impl.definition.parameter->len;
+    }
+
+    size_t count = 0;
+    for(size_t i  = 0; i < argsListNode->child_count; i++) {
+        count += AST_get_node(argsListNode, i)->child_count;
+    }
+
+    if(count != paramCount) {
+        return SEMANTIC_ERROR;
+    }
+
+    GArray * expressions = mem_new_g_array(MemoryNamespaceSet,(sizeof(Expression*)));
+    //exprlists
+    for( size_t i = 0; i < argsListNode->child_count; i++) {
+        AST_NODE_PTR currentExprList = AST_get_node(argsListNode, i);
+
+        for( size_t j = 0; j < currentExprList->child_count; j++) {
+            Expression *expr = createExpression(AST_get_node(currentExprList, j));
+            if(expr == NULL) {
+                return SEMANTIC_ERROR;
+            }
+            g_array_append_val(expressions, expr);
+        }
+    }
+    funcall.expressions = expressions;
+
+
+    parentStatement->impl.call = funcall;
+    return SEMANTIC_OK;
+
+}
+
+
 int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
     DEBUG("create Statement");
         
@@ -1616,9 +1702,17 @@ int createStatement(Block * Parentblock , AST_NODE_PTR currentNode){
                 g_array_append_val(Parentblock->statemnts,statement);
                 }
                 break;
-        case AST_Call: 
-            //TODO both funcall and boxfuncall
-        default:
+        case AST_Call:
+            Statement * statement = mem_alloc(MemoryNamespaceSet,sizeof(Statement));
+            statement->nodePtr = currentNode;
+            statement->kind = StatementKindFunctionCall;
+            int result = createfuncall(statement, currentNode);
+            if(result == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            break;
+            default:
+                PANIC("Node is not a statement");
          break;
     }
     
@@ -1733,6 +1827,71 @@ int createFunDef(Function * Parentfunction ,AST_NODE_PTR currentNode){
 
 }
 
+bool compareParameter(GArray *leftParameter,GArray *rightParameter) {
+    if(leftParameter->len != rightParameter->len) {
+        return FALSE;
+    }
+    for(size_t i = 0; i < leftParameter->len; i++) {
+        Parameter currentLeftParam = g_array_index(leftParameter,Parameter ,i);
+        Parameter currentRightParam = g_array_index(leftParameter,Parameter ,i);
+        if(strcmp(currentLeftParam.name, currentRightParam.name) !=0 ) {
+            return FALSE;
+        }
+        if(currentLeftParam.kind != currentRightParam.kind) {
+            return FALSE;
+        }
+
+        if(currentLeftParam.kind == ParameterDeclarationKind) {
+            ParameterDeclaration leftDecl =  currentLeftParam.impl.declaration;
+            ParameterDeclaration rightDecl =  currentLeftParam.impl.declaration;
+
+            if(leftDecl.qualifier != rightDecl.qualifier) {
+                return FALSE;
+            }
+            if(compareTypes(leftDecl.type, rightDecl.type) == FALSE) {
+                return FALSE;
+            }
+        }
+
+    }
+    return TRUE;
+}
+
+int addFunction(const char *name, Function *function) {
+    if(function->kind == FunctionDefinitionKind) {
+        if(g_hash_table_contains(definedFunctions, name)) {
+            return SEMANTIC_ERROR;
+        }
+        g_hash_table_insert(declaredFunctions, (gpointer) name, function);
+    }else if(function->kind == FunctionDeclarationKind) {
+        if(g_hash_table_contains(declaredFunctions, name)) {
+            Function * declaredFunction = g_hash_table_lookup(declaredFunctions, name);
+            bool result = compareParameter(declaredFunction->impl.declaration.parameter, function->impl.declaration.parameter);
+            if(result == FALSE) {
+                return SEMANTIC_ERROR;
+            }
+            //a function can have multiple declartations but all have to be identical
+        }
+        g_hash_table_insert(declaredFunctions,(gpointer)name, function);
+    }
+    return SEMANTIC_OK;
+
+}
+
+int getFunction(const char *name, Function **function) {
+    if(g_hash_table_contains(definedFunctions, name)) {
+        Function * fun = g_hash_table_lookup(definedFunctions, name);
+        *function = fun;
+        return SEMANTIC_OK;
+    }
+    if(g_hash_table_contains(declaredFunctions, name)) {
+        Function * fun = g_hash_table_lookup(declaredFunctions, name);
+        *function = fun;
+        return SEMANTIC_OK;
+    }
+    return SEMANTIC_ERROR;
+}
+
 int createFunDecl(Function * Parentfunction ,AST_NODE_PTR currentNode){
     DEBUG("start fundecl");
     AST_NODE_PTR nameNode = currentNode->children[0];
@@ -1768,9 +1927,9 @@ int createFunDecl(Function * Parentfunction ,AST_NODE_PTR currentNode){
     Parentfunction->name = fundecl.name;
     return SEMANTIC_OK;
 }
-//TODO check if a function is present and if a declaration is present and identical.
 
-int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
+
+int createFunction(Function ** function, AST_NODE_PTR currentNode){
     assert(currentNode->kind == AST_Fun);
     Function * fun = mem_alloc(MemoryNamespaceSet,sizeof(Function));
     functionParameter = g_hash_table_new(g_str_hash,g_str_equal);
@@ -1788,13 +1947,17 @@ int createFunction(GHashTable* functions, AST_NODE_PTR currentNode){
     }else {
         PANIC("function should have 2 or 3 children");
     }
-    if(g_hash_table_contains(functions,fun->name)){
-        // TODO: delete fun
+
+
+
+    g_hash_table_destroy(functionParameter);
+
+    int result = addFunction(fun->name,fun);
+    if(result == SEMANTIC_ERROR) {
         return SEMANTIC_ERROR;
     }
-    g_hash_table_insert(functions,(gpointer)fun->name, fun);
-    
-    g_hash_table_destroy(functionParameter);
+
+    *function = fun;
     return SEMANTIC_OK;
 } 
 
@@ -1855,26 +2018,64 @@ int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode){
     return SEMANTIC_OK;
 }
 
+int createBoxFunction(const char* boxName, Type *ParentBoxType, AST_NODE_PTR currentNode) {
+    Function * function = mem_alloc(MemoryNamespaceSet, sizeof(Function));
+
+    int result  = createFunction(&function,currentNode);
+    if( result == SEMANTIC_ERROR) {
+        return SEMANTIC_ERROR;
+    }
+
+    function->name = g_strjoin("", boxName , "." ,  function->name, NULL );
+
+    Parameter param;
+    param.name = "self";
+    param.nodePtr = currentNode;
+    param.kind = ParameterDeclarationKind;
+    param.impl.declaration.qualifier = In;
+    param.impl.declaration.nodePtr = currentNode;
+    param.impl.declaration.type = ParentBoxType;
+
+    if(function->kind == FunctionDeclarationKind) {
+        g_array_prepend_val(function->impl.declaration.parameter,param);
+    }else {
+        g_array_append_val(function->impl.definition.parameter, param);
+    }
+
+    addFunction(function->name,function);
+    return SEMANTIC_OK;
+}
+
 int createBox(GHashTable *boxes, AST_NODE_PTR currentNode){
     BoxType * box = mem_alloc(MemoryNamespaceSet,sizeof(BoxType));
     
     box->nodePtr = currentNode;
     const char * boxName = currentNode->children[0]->value;
     AST_NODE_PTR boxMemberList = currentNode->children[1];
+
+    Type * boxType = mem_alloc(MemoryNamespaceSet, sizeof(Type));
+    boxType->nodePtr = currentNode;
+    boxType->impl.box = box;
+
+
     for (size_t i = 0; boxMemberList->child_count; i++){
         switch (boxMemberList->children[i]->kind) {
             case AST_Decl:
-                if(createDeclMember(box, boxMemberList->children[i]->children[i])){
+                if(createDeclMember(box, boxMemberList->children[i])){
                     return SEMANTIC_ERROR;
                 }
                 break;
             case AST_Def:
-                if(createDeclMember(box, boxMemberList->children[i]->children[i])){
+                if(createDeclMember(box, boxMemberList->children[i])){
                     return SEMANTIC_ERROR;
                 }
                 break;
-            case AST_Fun:
-            //TODO FUNCTION Wait for createFunction()
+            case AST_Fun:{
+                int result = createBoxFunction(boxName,boxType,AST_get_node(boxMemberList, i));
+                if (result == SEMANTIC_ERROR){
+                    return SEMANTIC_ERROR;
+                }
+            }
             default:
                 break;
         }
@@ -1885,27 +2086,9 @@ int createBox(GHashTable *boxes, AST_NODE_PTR currentNode){
     }
     g_hash_table_insert(boxes, (gpointer)boxName, box);
 
+
+
     return SEMANTIC_OK;
-
-    
-    //
-    //box
-    //  name
-    //  list
-    //      decl
-    //      def // change BoxMember to have an 
-    //      fun //create static function
-    // a.b(dsadsadas)
-
-    //type box: boxy {
-    //
-    //long short int: a
-    //
-    //short short float: floaty = 0.54
-    //
-    //fun main (){
-    //int: a = 5
-    //}
     
 }
     
@@ -1943,6 +2126,8 @@ Module *create_set(AST_NODE_PTR currentNode){
     //create tables for types 
     declaredComposites = g_hash_table_new(g_str_hash,g_str_equal);
     declaredBoxes = g_hash_table_new(g_str_hash,g_str_equal);
+    declaredFunctions = g_hash_table_new(g_str_hash,g_str_equal);
+    definedFunctions = g_hash_table_new(g_str_hash,g_str_equal);
 
     //create scope
     Scope = g_array_new(FALSE, FALSE, sizeof(GHashTable*));
@@ -1999,7 +2184,6 @@ Module *create_set(AST_NODE_PTR currentNode){
                 if (status) {
                     return NULL;
                 }
-                // TODO: free vars
                 DEBUG("created Definition successfully");
                 break;
             }
@@ -2013,10 +2197,17 @@ Module *create_set(AST_NODE_PTR currentNode){
                 break;
             }
         case AST_Fun:{
-             DEBUG("start function");
-            int status = createFunction(functions,currentNode->children[i]);
+                DEBUG("start function");
+                Function * function = mem_alloc(MemoryNamespaceSet,sizeof(Function));
+            int status = createFunction(&function,currentNode->children[i]);
+                if(status == SEMANTIC_ERROR) {
+                    return NULL;
+                }
+                if(g_hash_table_contains(functions,function->name)){
+                    return NULL;
+                }
+                g_hash_table_insert(functions,(gpointer)function->name, function);
             if (status){
-                // TODO: cleanup global memory
                 return NULL;
             }
             DEBUG("created function successfully");
@@ -2026,7 +2217,6 @@ Module *create_set(AST_NODE_PTR currentNode){
         case AST_Typedef:{
             int status = createTypeDef(types, currentNode->children[i]);
             if (status){
-                // TODO: cleanup global memory
                 return NULL;
             }
             DEBUG("created Typedef successfully");
