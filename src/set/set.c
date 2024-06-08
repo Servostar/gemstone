@@ -301,8 +301,8 @@ int addVarToScope(Variable *variable);
 
 int createRef(AST_NODE_PTR currentNode, Type** reftype) {
     assert(currentNode != NULL);
-    assert(currentNode->child_count = 1);
-    assert(AST_get_node(currentNode,0)->kind = AST_Type);
+    assert(currentNode->child_count == 1);
+    assert(AST_get_node(currentNode,0)->kind == AST_Type);
 
 
 
@@ -351,6 +351,7 @@ int createDecl(AST_NODE_PTR currentNode, GArray **variables) {
                 break;
             case AST_Reference:
                 status = createRef(AST_get_node(currentNode,i), &decl.type);
+                break;
             default:
                 PANIC("invalid node type: %ld", currentNode->children[i]->kind);
                 break;
@@ -1145,7 +1146,7 @@ int createTransmute(Expression* ParentExpression, AST_NODE_PTR currentNode){
 }
 
 int createDeref(Expression* ParentExpression, AST_NODE_PTR currentNode) {
-    assert(currentNode->child_count = 2);
+    assert(currentNode->child_count == 2);
     Dereference deref;
     deref.nodePtr = currentNode;
     deref.index = createExpression(AST_get_node(currentNode,0));
@@ -1205,6 +1206,14 @@ int createAddressOf(Expression* ParentExpression, AST_NODE_PTR currentNode) {
         //TODO free
         return SEMANTIC_ERROR;
     }
+
+    Type *resultType = malloc(sizeof(Type));
+    resultType->nodePtr = currentNode;
+    resultType->kind = TypeKindReference;
+    resultType->impl.reference = address_of.variable->result;
+
+    ParentExpression->impl.addressOf = address_of;
+    ParentExpression->result = resultType;
     return SEMANTIC_OK;
 }
 
