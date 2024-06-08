@@ -14,7 +14,7 @@ BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
     DEBUG("implementing global declaration: %s", name);
     BackendError err = SUCCESS;
     LLVMTypeRef llvm_type = NULL;
-    err = get_type_impl(unit, scope, &decl->type, &llvm_type);
+    err = get_type_impl(unit, scope, decl->type, &llvm_type);
 
     if (err.kind != Success) {
         return err;
@@ -24,7 +24,7 @@ BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
     LLVMValueRef global = LLVMAddGlobal(unit->module, llvm_type, name);
 
     LLVMValueRef initial_value = NULL;
-    err = get_type_default_value(unit, scope, &decl->type, &initial_value);
+    err = get_type_default_value(unit, scope, decl->type, &initial_value);
 
     if (err.kind == Success) {
         DEBUG("setting default value...");
@@ -43,7 +43,7 @@ BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
     DEBUG("implementing global definition: %s", name);
     BackendError err = SUCCESS;
     LLVMTypeRef llvm_type = NULL;
-    err = get_type_impl(unit, scope, &def->declaration.type, &llvm_type);
+    err = get_type_impl(unit, scope, def->declaration.type, &llvm_type);
 
     if (err.kind != Success) {
         return err;
@@ -54,7 +54,7 @@ BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
 
     // FIXME: resolve initializer expression!
     LLVMValueRef initial_value = NULL;
-    err = get_type_default_value(unit, scope, &def->declaration.type,
+    err = get_type_default_value(unit, scope, def->declaration.type,
                                  &initial_value);
 
     if (err.kind == Success) {
@@ -87,7 +87,6 @@ BackendError impl_global_variable(LLVMBackendCompileUnit* unit,
             break;
         default:
             PANIC("invalid variable kind: %ld", gemstone_var->kind);
-            break;
     }
 
     return err;

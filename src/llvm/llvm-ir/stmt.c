@@ -8,22 +8,31 @@
 #include <llvm/llvm-ir/stmt.h>
 #include <llvm/llvm-ir/expr.h>
 #include <llvm/llvm-ir/func.h>
+#include <llvm/llvm-ir/types.h>
 
-BackendError impl_assign_stmt([[maybe_unused]] LLVMBackendCompileUnit *unit,
-                              const LLVMBuilderRef builder, const LLVMLocalScope *scope,
-                              const Assignment *assignment) {
+BackendError impl_assign_stmt(
+        LLVMBackendCompileUnit *unit,
+        LLVMBuilderRef
+        builder,
+        LLVMLocalScope *scope,
+        const Assignment *assignment
+) {
     BackendError err = SUCCESS;
-    DEBUG("implementing assignment for variabel: %s", assignment->variable->name);
+    DEBUG("implementing assignment for variable: %s", assignment->variable->name);
 
-    // TODO: resolve expression to LLVMValueRef
-    const LLVMValueRef llvm_value = NULL;
+    LLVMValueRef llvm_value = NULL;
+    err = impl_expr(unit, scope, builder, assignment->value, &llvm_value);
+    if (err.kind != Success) {
+        return err;
+    }
 
     switch (assignment->variable->kind) {
         case VariableKindDeclaration:
         case VariableKindDefinition:
-            const LLVMValueRef llvm_ptr =
+            LLVMValueRef llvm_ptr =
                     get_variable(scope, assignment->variable->name);
-            LLVMBuildStore(builder, llvm_value, llvm_ptr);
+            LLVMBuildStore(builder, llvm_value, llvm_ptr
+            );
             break;
         case VariableKindBoxMember:
             // TODO: resolve LLVMValueRef from BoxAccess
@@ -45,10 +54,8 @@ BackendError impl_basic_block(LLVMBackendCompileUnit *unit,
     LLVMPositionBuilderAtEnd(builder, *llvm_block);
 
     for (size_t i = 0; i < block->statemnts->len; i++) {
-        [[maybe_unused]]
         Statement *stmt = ((Statement *) block->statemnts->data) + i;
-
-        // TODO: implement statement
+        impl_stmt(unit, builder, scope, stmt);
     }
 
     delete_local_scope(block_scope);
@@ -67,7 +74,7 @@ BackendError impl_while(LLVMBackendCompileUnit *unit,
     LLVMPositionBuilderAtEnd(builder, while_cond_block);
     // Resolve condition in block to a variable
     LLVMValueRef cond_result = NULL;
-    impl_expr(unit, scope, builder, (Expression*) &while_stmt->conditon, &cond_result);
+    impl_expr(unit, scope, builder, (Expression *) &while_stmt->conditon, &cond_result);
 
     // build body of loop
     LLVMBasicBlockRef while_body_block = NULL;
@@ -88,6 +95,19 @@ BackendError impl_while(LLVMBackendCompileUnit *unit,
     return err;
 }
 
+gboolean is_parameter_out(Parameter *param) {
+    gboolean is_out = FALSE;
+
+    if (param->kind == ParameterDeclarationKind) {
+        is_out = param->impl.declaration.qualifier == Out || param->impl.declaration.qualifier == InOut;
+    } else {
+        is_out = param->impl.definiton.declaration.qualifier == Out ||
+                 param->impl.definiton.declaration.qualifier == InOut;
+    }
+
+    return is_out;
+}
+
 BackendError impl_func_call(LLVMBackendCompileUnit *unit,
                             LLVMBuilderRef builder, LLVMLocalScope *scope,
                             const FunctionCall *call) {
@@ -104,9 +124,12 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
             break;
         }
 
-        [[maybe_unused]]
-        Paramer* parameter = (Paramer*) call->function->parameter->data + i;
-        // TODO: create a pointer to LLVMValueRef in case parameter is `out`
+        Parameter *parameter = g_array_index(call->function->parameter, Parameter*, i);
+
+        if (is_parameter_out(parameter)) {
+            LLVMValueRef zero = LLVMConstInt(LLVMInt32TypeInContext(unit->context), 0, 0);
+            llvm_arg = LLVMBuildGEP2(builder, LLVMTypeOf(llvm_arg), llvm_arg, &zero, 1, "");
+        }
 
         g_array_append_vals(arguments, &llvm_arg, 1);
     }
@@ -157,7 +180,8 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
         LLVMBasicBlockRef body_block = NULL;
         LLVMValueRef cond_value = NULL;
 
-        err = impl_cond_block(unit, builder, scope, (Expression*) &branch->ifBranch.conditon, &branch->ifBranch.block, &cond_block,
+        err = impl_cond_block(unit, builder, scope, (Expression *) &branch->ifBranch.conditon, &branch->ifBranch.block,
+                              &cond_block,
                               &body_block, &cond_value);
 
         g_array_append_val(cond_blocks, cond_block);
@@ -173,7 +197,7 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
 
         ElseIf *elseIf = ((ElseIf *) branch->elseIfBranches->data) + i;
 
-        err = impl_cond_block(unit, builder, scope, &elseIf->conditon, &elseIf->block, &cond_block,
+        err = impl_cond_block(unit, builder, scope, elseIf->conditon, &elseIf->block, &cond_block,
                               &body_block, &cond_value);
 
         g_array_append_val(cond_blocks, cond_block);
@@ -198,10 +222,10 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
     }
 
     for (size_t i = 0; i < cond_blocks->len - 1; i++) {
-        LLVMBasicBlockRef next_block = ((LLVMBasicBlockRef*) cond_blocks->data)[i + 1];
-        LLVMBasicBlockRef cond_block = ((LLVMBasicBlockRef*) cond_blocks->data)[i];
-        LLVMBasicBlockRef body_block = ((LLVMBasicBlockRef*) body_blocks->data)[i];
-        LLVMValueRef cond_value = ((LLVMValueRef*) cond_values->data)[i];
+        LLVMBasicBlockRef next_block = ((LLVMBasicBlockRef *) cond_blocks->data)[i + 1];
+        LLVMBasicBlockRef cond_block = ((LLVMBasicBlockRef *) cond_blocks->data)[i];
+        LLVMBasicBlockRef body_block = ((LLVMBasicBlockRef *) body_blocks->data)[i];
+        LLVMValueRef cond_value = ((LLVMValueRef *) cond_values->data)[i];
 
         LLVMPositionBuilderAtEnd(builder, cond_block);
         LLVMBuildCondBr(builder, cond_value, body_block, next_block);
@@ -217,7 +241,128 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
     return err;
 }
 
-BackendError impl_stmt([[maybe_unused]] LLVMBackendCompileUnit *unit, [[maybe_unused]] Statement *stmt) {
-    // TODO: implement
-    return SUCCESS;
+BackendError impl_decl(LLVMBackendCompileUnit *unit,
+                       LLVMBuilderRef builder,
+                       LLVMLocalScope *scope,
+                       VariableDeclaration *decl,
+                       const char *name) {
+    DEBUG("implementing local declaration: %s", name);
+    BackendError err = SUCCESS;
+    LLVMTypeRef llvm_type = NULL;
+    err = get_type_impl(unit, scope->func_scope->global_scope, decl->type, &llvm_type);
+
+    if (err.kind != Success) {
+        return err;
+    }
+
+    DEBUG("creating local variable...");
+    LLVMValueRef local = LLVMBuildAlloca(builder, llvm_type, name);
+
+    LLVMValueRef initial_value = NULL;
+    err = get_type_default_value(unit, scope->func_scope->global_scope, decl->type, &initial_value);
+
+    if (err.kind == Success) {
+        DEBUG("setting default value...");
+        LLVMBuildStore(builder, initial_value, local);
+        g_hash_table_insert(scope->vars, (gpointer) name, local);
+    } else {
+        ERROR("unable to initialize local variable: %s", err.impl.message);
+    }
+
+    return err;
+}
+
+BackendError impl_def(LLVMBackendCompileUnit *unit,
+                      LLVMBuilderRef builder,
+                      LLVMLocalScope *scope,
+                      VariableDefiniton *def,
+                      const char *name) {
+    DEBUG("implementing local definition: %s", name);
+    BackendError err = SUCCESS;
+    LLVMTypeRef llvm_type = NULL;
+    err = get_type_impl(unit, scope->func_scope->global_scope, def->declaration.type, &llvm_type);
+
+    if (err.kind != Success) {
+        return err;
+    }
+
+    LLVMValueRef initial_value = NULL;
+    err = impl_expr(unit, scope, builder, def->initializer, &initial_value);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    DEBUG("creating local variable...");
+    LLVMValueRef local = LLVMBuildAlloca(builder, llvm_type, name);
+
+    DEBUG("setting default value");
+    LLVMBuildStore(builder, initial_value, local);
+    g_hash_table_insert(scope->vars, (gpointer) name, local);
+    return err;
+}
+
+BackendError impl_var(LLVMBackendCompileUnit *unit,
+                      LLVMBuilderRef builder,
+                      LLVMLocalScope *scope,
+                      Variable *var) {
+    BackendError err;
+
+    switch (var->kind) {
+        VariableKindDeclaration:
+            err = impl_decl(unit, builder, scope, &var->impl.declaration, var->name);
+            break;
+        VariableKindDefinition:
+            err = impl_def(unit, builder, scope, &var->impl.definiton, var->name);
+            break;
+        default:
+            err = new_backend_impl_error(Implementation, NULL, "Unexpected variable kind in statement");
+            break;
+    }
+
+    return err;
+}
+
+BackendError impl_stmt(LLVMBackendCompileUnit *unit, LLVMBuilderRef builder, LLVMLocalScope *scope, Statement *stmt) {
+    BackendError err;
+
+    switch (stmt->kind) {
+        StatementKindAssignment:
+            err = impl_assign_stmt(unit, builder, scope, &stmt->impl.assignment);
+            break;
+        StatementKindBranch:
+            err = impl_branch(unit, builder, scope, &stmt->impl.branch);
+            break;
+        StatementKindDeclaration:
+        StatementKindDefinition:
+            err = impl_var(unit, builder, scope, stmt->impl.variable);
+            break;
+        StatementKindWhile:
+            err = impl_while(unit, builder, scope, &stmt->impl.whileLoop);
+            break;
+        StatementKindFunctionCall:
+            err = impl_func_call(unit, builder, scope, &stmt->impl.call);
+            break;
+        default:
+            err = new_backend_impl_error(Implementation, NULL, "Unexpected statement kind");
+    }
+
+    return err;
+}
+
+BackendError impl_block(LLVMBackendCompileUnit *unit,
+                        LLVMBuilderRef builder, LLVMFuncScope *scope,
+                        const Block *block) {
+    BackendError err = SUCCESS;
+
+    LLVMLocalScope *function_entry_scope = malloc(sizeof(LLVMLocalScope));
+    function_entry_scope->func_scope = scope;
+    function_entry_scope->vars = g_hash_table_new(g_str_hash, g_str_equal);
+    function_entry_scope->parent_scope = NULL;
+
+    LLVMBasicBlockRef llvm_block = NULL;
+    err = impl_basic_block(unit, builder, function_entry_scope, block, &llvm_block);
+
+    delete_local_scope(function_entry_scope);
+
+    return err;
 }

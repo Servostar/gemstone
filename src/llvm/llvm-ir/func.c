@@ -6,6 +6,7 @@
 #include <llvm/llvm-ir/func.h>
 #include <llvm/parser.h>
 #include <llvm/llvm-ir/types.h>
+#include <llvm/llvm-ir/stmt.h>
 #include <set/types.h>
 #include <sys/log.h>
 
@@ -46,18 +47,18 @@ LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name) {
 }
 
 BackendError impl_param_type(LLVMBackendCompileUnit* unit,
-                             LLVMGlobalScope* scope, Paramer* param,
+                             LLVMGlobalScope* scope, Parameter* param,
                              LLVMTypeRef* llvm_type) {
     BackendError err = SUCCESS;
 
     Type* gemstone_type = NULL;
-    IO_Qualifier qualifier = In;
+    IO_Qualifier qualifier;
 
     if (param->kind == ParameterDeclarationKind) {
-        gemstone_type = &param->impl.declaration.type;
+        gemstone_type = param->impl.declaration.type;
         qualifier = param->impl.declaration.qualifier;
     } else {
-        gemstone_type = &param->impl.definiton.declaration.type;
+        gemstone_type = param->impl.definiton.declaration.type;
         qualifier = param->impl.definiton.declaration.qualifier;
     }
 
@@ -82,11 +83,11 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
     DEBUG("implementing function declaration: %s()", name);
     BackendError err = SUCCESS;
 
-    Paramer* params = (Paramer*)fundef->parameter;
+    Parameter* params = (Parameter*)fundef->parameter;
     GArray* llvm_params = g_array_new(FALSE, FALSE, sizeof(LLVMTypeRef));
 
     for (size_t i = 0; i < fundef->parameter->len; i++) {
-        Paramer* param = &params[i];
+        Parameter* param = &params[i];
 
         LLVMTypeRef llvm_type = NULL;
         err = impl_param_type(unit, scope, param, &llvm_type);
@@ -138,12 +139,12 @@ BackendError impl_func(LLVMBackendCompileUnit* unit,
         // create value references for parameter
         const size_t params = fundef->parameter->len;
         for (size_t i = 0; i < params; i++) {
-            const Paramer* param = ((Paramer*)fundef->parameter) + i;
+            const Parameter* param = ((Parameter*)fundef->parameter) + i;
             g_hash_table_insert(func_scope->params, (gpointer)param->name,
                                 LLVMGetParam(llvm_func, i));
         }
 
-        // TODO: parse function body
+        err = impl_block(unit, builder, func_scope, fundef->body);
 
         LLVMDisposeBuilder(builder);
 
@@ -165,7 +166,7 @@ BackendError impl_functions(LLVMBackendCompileUnit* unit,
 
     BackendError err = SUCCESS;
 
-    size_t variable_count = 0;
+    size_t function_count = 0;
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
         err =
             impl_func(unit, scope, (FunctionDefinition*)val, (const char*)key);
@@ -174,8 +175,9 @@ BackendError impl_functions(LLVMBackendCompileUnit* unit,
             break;
         }
 
-        variable_count++;
+        function_count++;
     }
+    INFO("implemented %ld functions", function_count);
 
     return err;
 }

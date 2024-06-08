@@ -41,19 +41,19 @@ BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
         Implementation, gemstone_value->nodePtr, "No default value for type");
 
     LLVMTypeRef llvm_type = NULL;
-    err = get_type_impl(unit, scope, &gemstone_value->type, &llvm_type);
+    err = get_type_impl(unit, scope, gemstone_value->type, &llvm_type);
     if (err.kind != Success) {
         return err;
     }
 
-    switch (gemstone_value->type.kind) {
+    switch (gemstone_value->type->kind) {
         case TypeKindPrimitive:
-            err = get_const_primitive_value(gemstone_value->type.impl.primitive,
+            err = get_const_primitive_value(gemstone_value->type->impl.primitive,
                                             llvm_type, gemstone_value->value,
                                             llvm_value);
             break;
         case TypeKindComposite:
-            err = get_const_composite_value(gemstone_value->type.impl.composite,
+            err = get_const_composite_value(gemstone_value->type->impl.composite,
                                             llvm_type, gemstone_value->value,
                                             llvm_value);
             break;
@@ -68,7 +68,7 @@ BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
                                        "boxes cannot be constant value");
             break;
         default:
-            PANIC("invalid value kind: %ld", gemstone_value->type.kind);
+            PANIC("invalid value kind: %ld", gemstone_value->type->kind);
     }
 
     return err;

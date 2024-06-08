@@ -248,7 +248,7 @@ BackendError impl_transmute(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
     LLVMValueRef operand = NULL;
     LLVMTypeRef target_type = NULL;
     BackendError err = get_type_impl(unit, scope->func_scope->global_scope,
-                                     &transmute->targetType, &target_type);
+                                     transmute->targetType, &target_type);
     // if target type is valid
     if (err.kind == Success) {
         *llvm_result =
@@ -276,13 +276,13 @@ BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
     LLVMValueRef operand = NULL;
     LLVMTypeRef target_type = NULL;
     BackendError err = get_type_impl(unit, scope->func_scope->global_scope,
-                                     &typecast->targetType, &target_type);
+                                     typecast->targetType, &target_type);
     // if target type is valid
     if (err.kind != Success) {
         return err;
     }
 
-    LLVMBool dst_signed = is_type_signed(&typecast->targetType);
+    LLVMBool dst_signed = is_type_signed(typecast->targetType);
     // TODO: derive source type sign
     const LLVMOpcode opcode =
             LLVMGetCastOpcode(operand, 0, target_type, dst_signed);

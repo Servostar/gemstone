@@ -72,12 +72,6 @@ TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfi
 BackendError lld_link_target(TargetLinkConfig* config) {
     BackendError err = SUCCESS;
 
-    char* 
-
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        const char* path = g_array_index(config->object_file_names, const char*, i);
-    }
-
     return err;
 }
 

@@ -5,39 +5,42 @@
 #include <glib.h>
 #include <ast/ast.h>
 
+// with of primitive types (int/float) in bytes
+#define BASE_BYTES 4
+
 /**
  * @brief Primitive types form the basis of all other types.
- * 
+ *
  */
 typedef enum PrimitiveType_t {
     // 4 byte signed integer in two's complement
-    Int,
+    Int =0,
     // 4 byte IEEE-754 single precision
-    Float
+    Float =1
 } PrimitiveType;
 
 /**
  * @brief Represents the sign of a composite type.
- * 
+ *
  */
 typedef enum Sign_t {
-    // type has a sign bit
-    Signed,
     // type has no sign bit
-    Unsigned
+    Unsigned = 0,
+    // type has a sign bit
+    Signed = 1
 } Sign;
 
 /**
  * @brief Represents the scale of composite type which is multiplied
  *        with the base size in order to retrieve the the composites size.
  * @attention Valid value are: { 1/8, 1/4, 1/2, 1, 2, 4, 8 }
- * 
+ *
  */
 typedef double Scale;
 
 /**
- * @brief A composite type is an extended definiton of a primitive type.
- * 
+ * @brief A composite type is an extended definition of a primitive type.
+ *
  */
 typedef struct CompositeType_t {
     // sign of composite
@@ -49,7 +52,7 @@ typedef struct CompositeType_t {
 
 /**
  * @brief Specifies the specific type of the generic type struct.
- * 
+ *
  */
 typedef enum TypeKind_t {
     TypeKindPrimitive,
@@ -63,27 +66,32 @@ typedef struct Type_t Type;
 /**
  * @brief Reference points to a type.
  * @attention Can be nested. A reference can point to another reference: REF -> REF -> REF -> Primitive
- * 
+ *
  */
 typedef Type* ReferenceType;
 
 typedef struct BoxType_t BoxType;
 
+typedef struct Block_t Block;
+
+typedef struct Expression_t Expression;
+
 typedef struct BoxMember_t {
     const char* name;
     Type* type;
     BoxType* box;
+    Expression* initalizer;
     AST_NODE_PTR nodePtr;
 } BoxMember;
 
 /**
- * @brief Essentially a glorified struct
- * 
+ * @brief Essentially a g   lorified struct
+ *
  */
 typedef struct BoxType_t {
     // hashtable of members.
-    // Associates the memebers name (const char*) with its type (BoxMember) 
-    GHashTable* member;
+    // Associates the memebers name (const char*) with its type (BoxMember)
+    GHashTable* member; //BoxMember Pointer
     AST_NODE_PTR nodePtr;
 } BoxType;
 
@@ -93,6 +101,8 @@ typedef struct BoxAccess_t {
     // list of recursive box accesses
     // contains a list of BoxMembers (each specifying their own type, name and box type)
     GArray* member;
+    // box variable to access
+    Variable* variable;
     AST_NODE_PTR nodePtr;
 } BoxAccess;
 
@@ -112,19 +122,19 @@ typedef struct Type_t {
 
 typedef struct Typedefine_t {
     const char* name;
-    Type type;
+    Type *type;
     AST_NODE_PTR nodePtr;
 } Typedefine;
 
 
 
 /**
- * @brief Reprents the value of type. Can be used to definitons, initialization and for expressions contants.
- * 
+ * @brief Reprents the value of type. Can be used to definitions, initialization and for expressions contants.
+ *
  */
 typedef struct TypeValue_t {
     // the type
-    Type type;
+    Type *type;
     // UTF-8 representation of the type's value
     const char* value;
     AST_NODE_PTR nodePtr;
@@ -136,7 +146,7 @@ typedef struct TypeValue_t {
 
 /**
  * @brief Specifies a parameters I/O properties
- * 
+ *
  */
 typedef enum IO_Qualifier_t {
     // Can be read from but not written to.
@@ -152,23 +162,23 @@ typedef enum IO_Qualifier_t {
 
 /**
  * @brief A functions parameter declaration.
- * 
+ *
  */
 typedef struct ParameterDeclaration_t {
-    Type type;
+    Type *type;
     IO_Qualifier qualifier;
     AST_NODE_PTR nodePtr;
 } ParameterDeclaration;
 
 /**
  * @brief A functions parameter.
- * 
+ *
  */
 typedef struct ParameterDefinition_t {
     ParameterDeclaration declaration;
     // value to initalize the declaration with
     // NOTE: type of initializer and declaration MUST be equal
-    TypeValue initializer;
+    Expression *initializer;
     AST_NODE_PTR nodePtr;
 } ParameterDefinition;
 
@@ -178,25 +188,53 @@ typedef enum ParameterKind_t {
 } ParameterKind;
 
 /**
- * @brief A parameter can either be a declaration or a definiton
- * 
+ * @brief A parameter can either be a declaration or a definition
+ *
  */
 typedef struct Parameter_t {
     const char* name;
+
     ParameterKind kind;
     union ParameterImplementation {
         ParameterDeclaration declaration;
         ParameterDefinition definiton;
     } impl;
     AST_NODE_PTR nodePtr;
-} Paramer; 
+} Parameter;    // fix typo
+
+typedef enum FunctionKind_t {
+    FunctionDeclarationKind,
+    FunctionDefinitionKind
+} FunctionKind;
 
 typedef struct FunctionDefinition_t {
     // hashtable of parameters
     // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
-    GArray* parameter;
+    GArray* parameter; // Parameter
     AST_NODE_PTR nodePtr;
+    // body of function
+    Block *body;
+    // name of function
+    const char* name;
 } FunctionDefinition;
+
+typedef struct FunctionDeclaration_t {
+    // hashtable of parameters
+    // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
+    GArray* parameter; // Parameter
+    AST_NODE_PTR nodePtr;
+    const char* name;
+} FunctionDeclaration;
+
+typedef struct Function_t {
+    FunctionKind kind;
+    union FunctionImplementation {
+        FunctionDefinition definition;
+        FunctionDeclaration declaration;
+    } impl;
+    AST_NODE_PTR nodePtr;
+    const char * name;
+} Function;
 
 // .------------------------------------------------.
 // |                 Variables                      |
@@ -210,19 +248,19 @@ typedef enum StorageQualifier_t {
 
 typedef struct VariableDeclaration_t {
     StorageQualifier qualifier;
-    Type type;
+    Type *type;
     AST_NODE_PTR nodePtr;
 } VariableDeclaration;
 
 /**
- * @brief Definiton of a variable
- * 
+ * @brief Definition of a variable
+ *
  * @attention NOTE: The types of the initializer and the declaration must be equal
- * 
+ *
  */
 typedef struct VariableDefiniton_t {
     VariableDeclaration declaration;
-    TypeValue initializer;
+    Expression *initializer;
     AST_NODE_PTR nodePtr;
 } VariableDefiniton;
 
@@ -238,7 +276,7 @@ typedef struct Variable_t {
     union VariableImplementation {
         VariableDeclaration declaration;
         VariableDefiniton definiton;
-        BoxMember member;
+        BoxAccess member;
     } impl;
     AST_NODE_PTR nodePtr;
 } Variable;
@@ -249,15 +287,16 @@ typedef struct Variable_t {
 
 /**
  * @brief Perform a type cast, converting a value to different type whilest preserving as much of the original
- *        values information. 
+ *        values information.
  *
  * @attention NOTE: Must check wether the given value's type can be parsed into
  *       the target type without loss.
- *       Lossy mean possibly loosing information such when casting a float into an int (no fraction anymore). 
+ *       Lossy mean possibly loosing information such when casting a float into an int (no fraction anymore).
  *
  */
 typedef struct TypeCast_t {
-    Type targetType;
+    Type *targetType;
+    Expression* operand;
     AST_NODE_PTR nodePtr;
 } TypeCast;
 
@@ -266,10 +305,11 @@ typedef struct TypeCast_t {
  *
  * @attention NOTE: The given value's type must have the size in bytes as the target type.
  *                  Transmuting a short int into a float should yield an error.
- * 
+ *
  */
 typedef struct Transmute_t {
-    Type targetType;
+    Type *targetType;
+    Expression* operand;
     AST_NODE_PTR nodePtr;
 } Transmute;
 
@@ -279,13 +319,14 @@ typedef struct Transmute_t {
 
 /**
  * @brief Represents the arithmetic operator.
- * 
+ *
  */
 typedef enum ArithmeticOperator_t {
     Add,
     Sub,
     Mul,
-    Div
+    Div,
+    Negate
 } ArithmeticOperator;
 
 // .------------------------------------------------.
@@ -294,7 +335,7 @@ typedef enum ArithmeticOperator_t {
 
 /**
  * @brief Represents the relational operator.
- * 
+ *
  */
 typedef enum RelationalOperator_t {
     Equal,
@@ -358,6 +399,7 @@ typedef struct Operation_t {
         LogicalOperator logical;
         BitwiseOperator bitwise;
     } impl;
+    GArray* operands; //Expression*
     AST_NODE_PTR nodePtr;
 } Operation;
 
@@ -369,17 +411,20 @@ typedef enum ExpressionKind_t {
     ExpressionKindOperation,
     ExpressionKindTypeCast,
     ExpressionKindTransmute,
-    ExpressionKindConstant
+    ExpressionKindConstant,
+    ExpressionKindVariable
 } ExpressionKind;
 
 typedef struct Expression_t {
     ExpressionKind kind;
+    // type of resulting data
+    Type* result;
     union ExpressionImplementation_t {
         Operation operation;
         TypeCast typecast;
         Transmute transmute;
         TypeValue constant;
-        Variable variable;
+        Variable* variable;
     } impl;
     AST_NODE_PTR nodePtr;
 } Expression;
@@ -409,7 +454,7 @@ typedef struct FunctionBoxCall_t {
 
 typedef struct Block_t {
     // array of statements
-    GArray* statemnts;
+    GArray* statemnts; // array of type(Statement)
     AST_NODE_PTR nodePtr;
 } Block;
 
@@ -418,7 +463,7 @@ typedef struct Block_t {
 // '------------------------------------------------'
 
 typedef struct While_t {
-    Expression conditon;
+    Expression *conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } While;
@@ -428,13 +473,13 @@ typedef struct While_t {
 // '------------------------------------------------'
 
 typedef struct If_t {
-    Expression conditon;
+    Expression *conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } If;
 
 typedef struct ElseIf_t {
-    Expression conditon;
+    Expression *conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } ElseIf;
@@ -458,7 +503,7 @@ typedef struct Branch_t {
 
 typedef struct Assignment_t {
     Variable* variable;
-    Expression value;
+    Expression* value;
     AST_NODE_PTR nodePtr;
 } Assignment;
 
@@ -467,16 +512,20 @@ typedef enum StatementKind_t {
     StatementKindFunctionBoxCall,
     StatementKindWhile,
     StatementKindBranch,
-    StatementKindAssignment
+    StatementKindAssignment,
+    StatementKindDeclaration,
+    StatementKindDefinition
 } StatementKind;
 
 typedef struct Statement_t {
+    StatementKind kind;
     union StatementImplementation {
         FunctionCall call;
         FunctionBoxCall boxCall;
         While whileLoop;
         Branch branch;
         Assignment assignment;
+        Variable *variable;
     } impl;
     AST_NODE_PTR nodePtr;
 } Statement;
@@ -486,8 +535,8 @@ typedef struct Statement_t {
 // '------------------------------------------------'
 
 typedef struct Module_t {
-    GHashTable* boxes;
-    GHashTable* types;
+    GHashTable* boxes; //BoxType
+    GHashTable* types; //
     GHashTable* functions;
     GHashTable* variables;
     // to be resolved after the module has been parsed completely

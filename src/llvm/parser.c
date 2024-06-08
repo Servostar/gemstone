@@ -243,7 +243,7 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
 
         export_module(unit, &target, config);
 
-        TargetLinkConfig* link_config = lld_create_link_config(&target, target, module);
+        TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
 
         lld_link_target(link_config);
 
