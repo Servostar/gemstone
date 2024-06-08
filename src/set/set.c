@@ -21,7 +21,7 @@ static GHashTable *definedFunctions = NULL;
 static GHashTable *declaredFunctions = NULL;
 static GArray *Scope = NULL;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
 
-
+bool compareTypes(Type * leftType, Type * rightType);
 
 const Type ShortShortUnsingedIntType = {
         .kind = TypeKindComposite,
@@ -201,7 +201,6 @@ int impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
         // not a primitive try to resolve the type by name (must be a composite)
         Type *nested_type = NULL;
         status = get_type_decl(typeKind->value, &nested_type);
-
         if (status == SEMANTIC_ERROR) {
             print_diagnostic(current_file, &typeKind->location, Error, "Unknown composite type in declaration");
             return SEMANTIC_ERROR;
@@ -611,6 +610,28 @@ Type* createTypeFromOperands(Type* LeftOperandType, Type* RightOperandType, AST_
     return result;
 }
 
+int createTypeCastFromExpression(Expression * expression, Type * resultType, Expression ** result) {
+    Expression * expr = mem_alloc(MemoryNamespaceSet, sizeof(Expression));
+    expr->result = resultType;
+    expr->nodePtr = expression->nodePtr;
+    expr->kind = ExpressionKindTypeCast;
+
+    TypeCast typeCast;
+    typeCast.nodePtr = expression->nodePtr;
+    typeCast.targetType = resultType;
+    typeCast.operand = expression;
+
+    expr->impl.typecast = typeCast;
+
+    if (expression->result->kind != TypeKindComposite
+    && expression->result->kind != TypeKindPrimitive){
+        return SEMANTIC_ERROR;
+    }
+    *result = expr;
+
+    return SEMANTIC_OK;
+}
+
 int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode, [[maybe_unused]] size_t expectedChildCount) {
     DEBUG("create arithmetic operation");
     ParentExpression->impl.operation.kind = Arithmetic;
@@ -674,6 +695,21 @@ int createArithOperation(Expression* ParentExpression, AST_NODE_PTR currentNode,
         return SEMANTIC_ERROR;
     }
 
+
+    for (size_t i = 0 ; i < ParentExpression->impl.operation.operands->len; i++) {
+        Expression * operand = g_array_index(ParentExpression->impl.operation.operands, Expression*, i);
+        if(!compareTypes(operand->result, ParentExpression->result)) {
+            Expression * result;
+            int status = createTypeCastFromExpression(operand, ParentExpression->result, &result);
+            if(status == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            g_array_index(ParentExpression->impl.operation.operands, Expression*, i) = result;
+        }
+    }
+
+
+
     return SEMANTIC_OK;
 }
 
@@ -713,6 +749,19 @@ int createRelationalOperation(Expression* ParentExpression, AST_NODE_PTR current
     result->nodePtr = currentNode;
 
     ParentExpression->result = result;
+
+    for (size_t i = 0 ; i < ParentExpression->impl.operation.operands->len; i++) {
+        Expression * operand = g_array_index(ParentExpression->impl.operation.operands, Expression*, i);
+        if(!compareTypes(operand->result, ParentExpression->result)) {
+            Expression * expr;
+            int status = createTypeCastFromExpression(operand, ParentExpression->result, &expr);
+            if(status == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            g_array_index(ParentExpression->impl.operation.operands, Expression*, i) = expr;
+        }
+    }
+
     return 0;
 }
 
@@ -785,6 +834,17 @@ int createBoolOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) 
 
     ParentExpression->result = createTypeFromOperands(LeftOperandType, RightOperandType, currentNode);
 
+    for (size_t i = 0 ; i < ParentExpression->impl.operation.operands->len; i++) {
+        Expression * operand = g_array_index(ParentExpression->impl.operation.operands, Expression*, i);
+        if(!compareTypes(operand->result, ParentExpression->result)) {
+            Expression * expr;
+            int status = createTypeCastFromExpression(operand, ParentExpression->result, &expr);
+            if(status == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            g_array_index(ParentExpression->impl.operation.operands, Expression*, i) = expr;
+        }
+    }
     return SEMANTIC_OK;
 }
 
@@ -830,6 +890,18 @@ int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNod
     }
 
     ParentExpression->result = result;
+
+    for (size_t i = 0 ; i < ParentExpression->impl.operation.operands->len; i++) {
+        Expression * operand = g_array_index(ParentExpression->impl.operation.operands, Expression*, i);
+        if(!compareTypes(operand->result, ParentExpression->result)) {
+            Expression * expr;
+            int status = createTypeCastFromExpression(operand, ParentExpression->result, &expr);
+            if(status == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            g_array_index(ParentExpression->impl.operation.operands, Expression*, i) = expr;
+        }
+    }
     return SEMANTIC_OK;
 }
 
@@ -959,6 +1031,20 @@ int createBitOperation(Expression* ParentExpression, AST_NODE_PTR currentNode) {
     }
 
     ParentExpression->result = result;
+
+    for (size_t i = 0 ; i < ParentExpression->impl.operation.operands->len; i++) {
+        Expression * operand = g_array_index(ParentExpression->impl.operation.operands, Expression*, i);
+        if(!compareTypes(operand->result, ParentExpression->result)) {
+            Expression * expr;
+            int status = createTypeCastFromExpression(operand, ParentExpression->result, &expr);
+            if(status == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            g_array_index(ParentExpression->impl.operation.operands, Expression*, i) = expr;
+        }
+    }
+
+
     return 0;
 }
 
@@ -1005,6 +1091,18 @@ int createBitNotOperation(Expression* ParentExpression, AST_NODE_PTR currentNode
     }   
     
     ParentExpression->result = result;
+
+    for (size_t i = 0 ; i < ParentExpression->impl.operation.operands->len; i++) {
+        Expression * operand = g_array_index(ParentExpression->impl.operation.operands, Expression*, i);
+        if(!compareTypes(operand->result, ParentExpression->result)) {
+            Expression * expr;
+            int status = createTypeCastFromExpression(operand, ParentExpression->result, &expr);
+            if(status == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            g_array_index(ParentExpression->impl.operation.operands, Expression*, i) = expr;
+        }
+    }
 
     return SEMANTIC_OK;
 }
