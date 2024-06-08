@@ -2116,7 +2116,7 @@ int createTypeDef(GHashTable *types, AST_NODE_PTR currentNode){
     if(g_hash_table_contains(declaredComposites, (gpointer)def->name)){
         return SEMANTIC_ERROR;
     }
-    g_hash_table_insert(declaredComposites, (gpointer)def->name, def);
+    g_hash_table_insert(declaredComposites, (gpointer)def->name, def->type);
 
     return SEMANTIC_OK;
 }
