@@ -16,6 +16,7 @@ typedef char* MemoryNamespaceName;
 #define MemoryNamespaceOpt "Options"
 #define MemoryNamespaceSet "SET"
 #define MemoryNamespaceLlvm "LLVM"
+#define MemoryNamespaceLld "LLD"
 #define MemoryNamespaceIo "I/O"
 #define MemoryNamespaceStatic "Static"
 

@@ -4,6 +4,8 @@
 
 #include <llvm/link/lld.h>
 #include <sys/log.h>
+#include <mem/cache.h>
+#include <sys/col.h>
 
 /*
  * call the LLD linker
@@ -39,9 +41,11 @@ const char* get_absolute_link_path(const TargetConfig* config, const char* link_
 TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfig* target_config, const Module* module) {
     DEBUG("generating link configuration");
 
-    TargetLinkConfig* config = malloc(sizeof(TargetLinkConfig));
+    TargetLinkConfig* config = mem_alloc(MemoryNamespaceLld, sizeof(TargetLinkConfig));
 
+    config->fatal_warnings = target_config->lld_fatal_warnings;
     config->object_file_names = g_array_new(FALSE, FALSE, sizeof(char*));
+    config->colorize = stdout_supports_ansi_esc();
 
     // append build object file
     const char* target_object = get_absolute_link_path(target_config, (const char*) target->name.str);
@@ -74,11 +78,35 @@ TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfi
     return config;
 }
 
+GArray* lld_create_lld_arguments(TargetLinkConfig* config) {
+    GArray* argv = g_array_new(FALSE, FALSE, sizeof(char*));
+
+    if (config->fatal_warnings) {
+        g_array_append_val(argv, "--fatal-warnings");
+    }
+
+    if (config->colorize) {
+        g_array_append_val(argv, "--color-diagnostics=always");
+    }
+
+    for (guint i = 0; i < config->object_file_names->len; i++) {
+        char* object_file_path = g_array_index(config->object_file_names, char*, i);
+        char* argument = g_strjoin("", "-l", object_file_path, NULL);
+        g_array_append_val(argv, argument);
+    }
+
+    return argv;
+}
+
 BackendError lld_link_target(TargetLinkConfig* config) {
     BackendError err = SUCCESS;
 
+    GArray* argv = lld_create_lld_arguments(config);
+
     const char* message = NULL;
-    int status = lld_main(0, NULL, &message);
+    int status = lld_main((int) argv->len, (const char**) argv->data, &message);
+
+    g_array_free(argv, TRUE);
 
     if (message != NULL) {
         print_message(Warning, "Message from LLD: %s", message);
@@ -97,5 +125,5 @@ void lld_delete_link_config(TargetLinkConfig* config) {
         free((void*) g_array_index(config->object_file_names, const char*, i));
     }
     g_array_free(config->object_file_names, TRUE);
-    free(config);
+    mem_free(config);
 }

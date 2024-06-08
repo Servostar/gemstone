@@ -104,6 +104,8 @@ TargetConfig* default_target_config() {
     config->optimization_level = 1;
     config->root_module = NULL;
     config->link_search_paths = g_array_new(FALSE, FALSE, sizeof(char*));
+    config->lld_fatal_warnings = FALSE;
+    config->gsc_fatal_warnings = FALSE;
 
     return config;
 }
@@ -112,6 +114,16 @@ TargetConfig* default_target_config_from_args() {
     DEBUG("generating default target from command line...");
 
     TargetConfig* config = default_target_config();
+
+    gboolean fatal_warnings = is_option_set("all-fatal-warnings");
+
+    if (fatal_warnings || is_option_set("lld-fatal-warnings")) {
+        config->lld_fatal_warnings = true;
+    }
+
+    if (fatal_warnings || is_option_set("gsc-fatal-warnings")) {
+        config->gsc_fatal_warnings = true;
+    }
 
     if (is_option_set("print-ast")) {
         config->print_ast = true;
@@ -210,6 +222,9 @@ void print_help(void) {
         "    --mode=[app|lib]      set the compilation mode to either application or library",
         "    --output=name         name of output files without extension",
         "    --link-paths=[paths,] set a list of directories to for libraries in",
+        "    --all-fatal-warnings  treat all warnings as errors",
+        "    --lld-fatal-warnings  treat linker warnings as errors",
+        "    --gsc-fatal-warnings  treat parser warnings as errors",
         "Options:",
         "    --verbose            print logs with level information or higher",
         "    --debug              print debug logs (if not disabled at compile time)",
@@ -324,6 +339,8 @@ static int parse_target(const ProjectConfig *config, const toml_table_t *target_
     get_str(&target_config->root_module, target_table, "root");
     get_str(&target_config->output_directory, target_table, "output");
     get_str(&target_config->archive_directory, target_table, "archive");
+    get_bool(&target_config->lld_fatal_warnings, target_table, "lld_fatal_warnings");
+    get_bool(&target_config->gsc_fatal_warnings, target_table, "gsc_fatal_warnings");
 
     get_int(&target_config->optimization_level, target_table, "opt");
 

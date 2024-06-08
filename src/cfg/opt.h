@@ -19,6 +19,10 @@
 typedef struct TargetLinkConfig_t {
     // name of object files to link
     GArray* object_file_names;
+    // treat warnings as errors
+    gboolean fatal_warnings;
+    // colorize linker output
+    bool colorize;
 } TargetLinkConfig;
 
 typedef enum TargetCompilationMode_t {
@@ -52,6 +56,10 @@ typedef struct TargetConfig_t {
     // path to look for object files
     // (can be extra library paths, auto included is output_directory)
     GArray* link_search_paths;
+    // treat linker warnings as errors
+    bool lld_fatal_warnings;
+    // treat parser warnings as errors
+    bool gsc_fatal_warnings;
 } TargetConfig;
 
 /**
