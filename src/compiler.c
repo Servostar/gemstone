@@ -57,14 +57,14 @@ static int compile_file_to_ast(AST_NODE_PTR ast, ModuleFile *file) {
     yyrestart(yyin);
     lex_reset();
 
-    yyparse();
+    int status = yyparse();
 
     // clean up global state
     // current_file = NULL;
     root = NULL;
     yyin = NULL;
 
-    return EXIT_SUCCESS;
+    return status;
 }
 
 /**

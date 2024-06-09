@@ -42,9 +42,9 @@ int lld_main(int Argc, const char **Argv, const char **outstr) {
 
     lld::Result result = lld::lldMain(Args, stdout_stream, stderr_stream, LLD_COFF_ELF_MINGW_DRIVER);
 
-    *outstr = strdup(stdout.c_str());
+    *outstr = strdup(stderr.append(stdout).c_str());
 
-    return !result.retCode && result.canRunAgain;
+    return result.retCode;
 }
 
 } // extern "C"

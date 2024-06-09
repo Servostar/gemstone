@@ -23,6 +23,7 @@ typedef struct TargetLinkConfig_t {
     gboolean fatal_warnings;
     // colorize linker output
     bool colorize;
+    char* output_file;
 } TargetLinkConfig;
 
 typedef enum TargetCompilationMode_t {

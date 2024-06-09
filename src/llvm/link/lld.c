@@ -59,6 +59,14 @@ TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfi
         return NULL;
     }
 
+    {
+        // output file after linking
+        gchar* basename = g_strjoin(".", target_config->name, "out", NULL);
+        gchar* filename = g_build_filename(target_config->output_directory, basename, NULL);
+
+        config->output_file = filename;
+    }
+
     g_array_append_val(config->object_file_names, target_object);
     INFO("resolved path of target object: %s", target_object);
 
@@ -83,20 +91,30 @@ TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfi
 }
 
 GArray* lld_create_lld_arguments(TargetLinkConfig* config) {
-    GArray* argv = g_array_new(FALSE, FALSE, sizeof(char*));
+    GArray* argv = g_array_new(TRUE, FALSE, sizeof(char*));
+
+    gchar* arg = g_strdup("ld.lld");
+    g_array_append_val(argv, arg);
 
     if (config->fatal_warnings) {
-        g_array_append_val(argv, "--fatal-warnings");
+        arg = g_strdup("--fatal-warnings");
+        g_array_append_val(argv, arg);
     }
 
     if (config->colorize) {
-        g_array_append_val(argv, "--color-diagnostics=always");
+        arg = g_strdup("--color-diagnostics=always");
+        g_array_append_val(argv, arg);
+    }
+
+    {
+        arg = g_strjoin("", "-o", config->output_file, NULL);
+        g_array_append_val(argv, arg);
     }
 
     for (guint i = 0; i < config->object_file_names->len; i++) {
         char* object_file_path = g_array_index(config->object_file_names, char*, i);
-        char* argument = g_strjoin("", "-l", object_file_path, NULL);
-        g_array_append_val(argv, argument);
+        arg = g_strjoin("", object_file_path, NULL);
+        g_array_append_val(argv, arg);
     }
 
     return argv;
@@ -110,6 +128,10 @@ BackendError lld_link_target(TargetLinkConfig* config) {
 
     INFO("Linking target...");
 
+    char* arguments = g_strjoinv(" ", (char**) argv->data);
+    print_message(Info, "%s", arguments);
+    g_free(arguments);
+
     const char* message = NULL;
     int status = lld_main((int) argv->len, (const char**) argv->data, &message);
 
@@ -118,12 +140,18 @@ BackendError lld_link_target(TargetLinkConfig* config) {
     g_array_free(argv, TRUE);
 
     if (message != NULL) {
-        print_message(Warning, "Message from LLD: %s", message);
+        if (strcmp("", message) != 0) {
+            print_message(Error, "%s", message);
+        }
+
         free((void*) message);
     }
 
-    if (status != 0) {
+    if (status) {
         err = new_backend_impl_error(Implementation, NULL, "failed to link target");
+        print_message(Error, "Linker exited with: %d", status);
+    } else {
+        print_message(Info, "Successfully linked target to: %s", config->output_file);
     }
 
     return err;

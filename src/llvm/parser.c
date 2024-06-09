@@ -83,8 +83,6 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
                                           "invalid codegen file");
     }
 
-    // TODO: add custom link libraries
-
     INFO("export to file: %s", filename);
 
     if (LLVMTargetMachineEmitToFile(target_machine, unit->module, filename,
@@ -208,7 +206,6 @@ static BackendError build_module(LLVMBackendCompileUnit* unit,
         return err;
     }
 
-    // TODO: implement functions
     err = impl_functions(unit, global_scope, module->functions);
 
     char* error = NULL;
@@ -245,13 +242,14 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
         INFO("Module build successfully...");
         Target target = create_target_from_config(config);
 
-        export_module(unit, &target, config);
+        err = export_module(unit, &target, config);
+        if (err.kind == Success) {
+            TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
 
-        TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
+            lld_link_target(link_config);
 
-        lld_link_target(link_config);
-
-        lld_delete_link_config(link_config);
+            lld_delete_link_config(link_config);
+        }
 
         delete_target(target);
     }
