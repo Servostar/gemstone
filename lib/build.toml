@@ -1,0 +1,16 @@
+[project]
+name = "gemstone standard library"
+version = "0.1.0"
+description = "Cross platform standard library for thr gemstone programming language."
+license = "GPL-2.0"
+authors = [ "Sven Vogel <sven.vogel123@web.de>" ]
+
+[target.release]
+root = "src/std.gem"
+mode = "library"
+output = "bin"
+archive = "archive"
+print_ast = false
+print_asm = false
+print_ir = false
+opt = 3

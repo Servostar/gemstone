@@ -1,0 +1,16 @@
+# Author: Sven Vogel
+# Edited: 25.05.2024
+# License: GPL-2.0
+
+# ,----------------------------------------.
+# |       Gemstone Standard Library        |
+# `----------------------------------------`
+
+# standard type definitions
+import "def.gem"
+
+# I/O operations
+import "io.gem"
+
+# memory management
+import "mem.gem"
