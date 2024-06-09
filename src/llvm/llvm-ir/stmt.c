@@ -219,7 +219,7 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
         LLVMBasicBlockRef end_body_block = NULL;
         LLVMValueRef cond_value = NULL;
 
-        err = impl_cond_block(unit, builder, scope, (Expression *) &branch->ifBranch.conditon, &branch->ifBranch.block,
+        err = impl_cond_block(unit, builder, scope, branch->ifBranch.conditon, &branch->ifBranch.block,
                               &cond_block,
                               &start_body_block, &end_body_block, &cond_value);
 
@@ -230,46 +230,52 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
     }
 
     // generate else if(s)
-    for (size_t i = 0; i < branch->elseIfBranches->len; i++) {
-        LLVMBasicBlockRef cond_block = NULL;
-        LLVMBasicBlockRef start_body_block = NULL;
-        LLVMBasicBlockRef end_body_block = NULL;
-        LLVMValueRef cond_value = NULL;
+    if (branch->elseIfBranches != NULL) {
+        for (size_t i = 0; i < branch->elseIfBranches->len; i++) {
+            LLVMBasicBlockRef cond_block = NULL;
+            LLVMBasicBlockRef start_body_block = NULL;
+            LLVMBasicBlockRef end_body_block = NULL;
+            LLVMValueRef cond_value = NULL;
 
-        ElseIf *elseIf = ((ElseIf *) branch->elseIfBranches->data) + i;
+            ElseIf *elseIf = ((ElseIf *) branch->elseIfBranches->data) + i;
 
-        err = impl_cond_block(unit, builder, scope, elseIf->conditon, &elseIf->block, &cond_block,
-                              &start_body_block, &end_body_block, &cond_value);
+            err = impl_cond_block(unit, builder, scope, elseIf->conditon, &elseIf->block, &cond_block,
+                                  &start_body_block, &end_body_block, &cond_value);
 
-        g_array_append_val(cond_blocks, cond_block);
-        g_array_append_val(start_body_blocks, start_body_block);
-        g_array_append_val(end_body_blocks, end_body_block);
-        g_array_append_val(cond_values, cond_value);
+            g_array_append_val(cond_blocks, cond_block);
+            g_array_append_val(start_body_blocks, start_body_block);
+            g_array_append_val(end_body_blocks, end_body_block);
+            g_array_append_val(cond_values, cond_value);
+        }
     }
 
+    LLVMBasicBlockRef after_block = NULL;
+
     // else block
-    if (branch->elseBranch.nodePtr != NULL) {
+    if (branch->elseBranch.block.statemnts != NULL) {
         LLVMBasicBlockRef start_else_block = NULL;
-        LLVMBasicBlockRef end_else_block = NULL;
-        err = impl_basic_block(unit, builder, scope, &branch->elseBranch.block, &start_else_block, &end_else_block);
+        err = impl_basic_block(unit, builder, scope, &branch->elseBranch.block, &start_else_block, &after_block);
         g_array_append_val(cond_blocks, start_else_block);
     }
 
-    LLVMBasicBlockRef after_block = LLVMAppendBasicBlockInContext(unit->context, scope->func_scope->llvm_func,
-                                                                  "stmt.branch.after");
+    if (after_block == NULL) {
+        after_block = LLVMAppendBasicBlockInContext(unit->context, scope->func_scope->llvm_func,
+                                                    "stmt.branch.after");
+    }
+
     LLVMPositionBuilderAtEnd(builder, after_block);
     // in case no else block is present
     // make the after block the else
-    if (branch->elseBranch.nodePtr == NULL) {
+    if (branch->elseBranch.block.statemnts == NULL) {
         g_array_append_val(cond_blocks, after_block);
     }
 
     for (size_t i = 0; i < cond_blocks->len - 1; i++) {
-        LLVMBasicBlockRef next_block = ((LLVMBasicBlockRef *) cond_blocks->data)[i + 1];
-        LLVMBasicBlockRef cond_block = ((LLVMBasicBlockRef *) cond_blocks->data)[i];
-        LLVMBasicBlockRef start_body_block = ((LLVMBasicBlockRef *) start_body_blocks->data)[i];
-        LLVMBasicBlockRef end_body_block = ((LLVMBasicBlockRef *) end_body_blocks->data)[i];
-        LLVMValueRef cond_value = ((LLVMValueRef *) cond_values->data)[i];
+        LLVMBasicBlockRef next_block = g_array_index(cond_blocks, LLVMBasicBlockRef, i + 1);
+        LLVMBasicBlockRef cond_block =  g_array_index(cond_blocks, LLVMBasicBlockRef, i);
+        LLVMBasicBlockRef start_body_block =  g_array_index(start_body_blocks, LLVMBasicBlockRef, i);
+        LLVMBasicBlockRef end_body_block = g_array_index(end_body_blocks, LLVMBasicBlockRef, i);
+        LLVMValueRef cond_value = g_array_index(cond_values, LLVMValueRef, i);
 
         LLVMPositionBuilderAtEnd(builder, cond_block);
         LLVMBuildCondBr(builder, cond_value, start_body_block, next_block);
@@ -279,7 +285,7 @@ BackendError impl_branch(LLVMBackendCompileUnit *unit,
     }
 
     *branch_start_block = g_array_index(cond_blocks, LLVMBasicBlockRef, 0);
-    *branch_end_block = g_array_index(cond_blocks, LLVMBasicBlockRef, cond_blocks->len - 1);
+    *branch_end_block = after_block;
 
     g_array_free(cond_blocks, TRUE);
     g_array_free(start_body_blocks, TRUE);

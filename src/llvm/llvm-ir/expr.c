@@ -186,6 +186,8 @@ BackendError impl_relational_operation(LLVMBackendCompileUnit *unit,
         PANIC("invalid type for relational operator");
     }
 
+    // *llvm_result = convert_integral_to_boolean(builder, *llvm_result);
+
     return SUCCESS;
 }
 
@@ -337,7 +339,7 @@ BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
     const LLVMOpcode opcode =
             LLVMGetCastOpcode(operand, src_signed, target_type, dst_signed);
     *llvm_result =
-            LLVMBuildCast(builder, opcode, operand, target_type, "transmute");
+            LLVMBuildCast(builder, opcode, operand, target_type, "typecast");
 
     return err;
 }
@@ -353,6 +355,23 @@ BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *sc
     }
 
     *llvm_result = llvm_variable;
+
+    return SUCCESS;
+}
+
+BackendError impl_address_of(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                                LLVMBuilderRef builder, AddressOf* addressOf,
+                                LLVMValueRef *llvm_result) {
+
+    LLVMValueRef llvm_variable = NULL;
+    BackendError err = impl_expr(unit, scope, builder, addressOf->variable, &llvm_variable);
+
+    if (err.kind != Success) {
+        return err;
+    }
+
+    LLVMValueRef zero = LLVMConstInt(LLVMInt32Type(), 0, 0);
+    *llvm_result = LLVMBuildGEP2(builder, LLVMTypeOf(llvm_variable), llvm_variable, &zero, 1, "address of");
 
     return SUCCESS;
 }
@@ -383,6 +402,10 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
         case ExpressionKindVariable:
             err = impl_variable_load(unit, scope, builder, expr->impl.variable,
                                      llvm_result);
+            break;
+        case ExpressionKindAddressOf:
+            err = impl_address_of(unit, scope, builder, &expr->impl.addressOf,
+                                  llvm_result);
             break;
         default:
             err = new_backend_impl_error(Implementation, NULL, "unknown expression");

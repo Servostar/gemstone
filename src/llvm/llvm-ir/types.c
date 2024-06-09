@@ -179,9 +179,7 @@ BackendError impl_box_type(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
 BackendError get_type_impl(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
                            Type* gemstone_type, LLVMTypeRef* llvm_type) {
     DEBUG("retrieving type implementation...");
-    BackendError err =
-        new_backend_impl_error(Implementation, gemstone_type->nodePtr,
-                               "No type implementation covers type");
+    BackendError err;
 
     switch (gemstone_type->kind) {
         case TypeKindPrimitive:

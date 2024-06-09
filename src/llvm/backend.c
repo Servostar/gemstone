@@ -27,7 +27,7 @@ Target create_native_target() {
     target.features.allocation = LLVM;
     assert(target.features.str != NULL);
 
-    target.opt = LLVMCodeGenLevelDefault;
+    target.opt = LLVMCodeGenLevelNone;
     target.reloc = LLVMRelocDefault;
     target.model = LLVMCodeModelDefault;
 

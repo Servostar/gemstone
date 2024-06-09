@@ -10,6 +10,7 @@
 #include <llvm/llvm-ir/variables.h>
 #include <set/types.h>
 #include <sys/log.h>
+#include <mem/cache.h>
 
 LLVMLocalScope* new_local_scope(LLVMLocalScope* parent) {
     LLVMLocalScope* scope = malloc(sizeof(LLVMLocalScope));
@@ -90,18 +91,19 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
     DEBUG("implementing function declaration: %s()", name);
     BackendError err = SUCCESS;
 
-    Parameter* params = (Parameter*)fundef->parameter;
     GArray* llvm_params = g_array_new(FALSE, FALSE, sizeof(LLVMTypeRef));
 
     for (size_t i = 0; i < fundef->parameter->len; i++) {
-        Parameter* param = &params[i];
+        Parameter* param = &g_array_index(fundef->parameter, Parameter, i);
 
         LLVMTypeRef llvm_type = NULL;
         err = impl_param_type(unit, scope, param, &llvm_type);
 
         if (err.kind != Success) {
-            break;
+            return err;
         }
+
+        g_array_append_val(llvm_params, llvm_type);
     }
 
     DEBUG("implemented %ld parameter", llvm_params->len);
@@ -144,11 +146,15 @@ BackendError impl_func_def(LLVMBackendCompileUnit* unit,
         LLVMPositionBuilderAtEnd(builder, entry);
 
         // create value references for parameter
-        const size_t params = fundef->parameter->len;
-        for (size_t i = 0; i < params; i++) {
-            const Parameter* param = ((Parameter*)fundef->parameter) + i;
-            g_hash_table_insert(func_scope->params, (gpointer)param->name,
-                                LLVMGetParam(llvm_func, i));
+        for (guint i = 0; i < fundef->parameter->len; i++) {
+            Parameter* param = &g_array_index(fundef->parameter, Parameter, i);
+            LLVMValueRef llvm_param = LLVMGetParam(llvm_func, i);
+
+            if (llvm_param == NULL) {
+                return new_backend_impl_error(Implementation, NULL, "invalid parameter");
+            }
+
+            g_hash_table_insert(func_scope->params, (gpointer)param->name, llvm_param);
         }
 
         LLVMBasicBlockRef llvm_start_body_block = NULL;
