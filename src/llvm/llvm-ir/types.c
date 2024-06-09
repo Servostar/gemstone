@@ -200,7 +200,6 @@ BackendError get_type_impl(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
             break;
         default:
             PANIC("invalid type kind: %ld", gemstone_type->kind);
-            break;
     }
 
     return err;

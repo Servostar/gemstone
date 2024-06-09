@@ -181,7 +181,9 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
             print_ast_to_file(ast, target);
             Module* module = create_set(ast);
 
-            run_backend_codegen(module, target);
+            if (module != NULL) {
+                run_backend_codegen(module, target);
+            }
         }
     }
 

@@ -10,6 +10,7 @@
 #include <llvm/llvm-ir/func.h>
 #include <llvm/llvm-ir/types.h>
 #include <assert.h>
+#include <mem/cache.h>
 
 BackendError impl_assign_stmt(
         LLVMBackendCompileUnit *unit,
@@ -146,12 +147,13 @@ gboolean is_parameter_out(Parameter *param) {
 BackendError impl_func_call(LLVMBackendCompileUnit *unit,
                             LLVMBuilderRef builder, LLVMLocalScope *scope,
                             const FunctionCall *call) {
+    DEBUG("implementing function call...");
     BackendError err = SUCCESS;
 
-    GArray *arguments = g_array_new(FALSE, FALSE, sizeof(LLVMValueRef));
+    LLVMValueRef* arguments = mem_alloc(MemoryNamespaceLlvm, sizeof(LLVMValueRef) * call->expressions->len);
 
     for (size_t i = 0; i < call->expressions->len; i++) {
-        Expression *arg = ((Expression *) call->expressions->data) + i;
+        Expression *arg = g_array_index(call->expressions, Expression*, i);
 
         LLVMValueRef llvm_arg = NULL;
         err = impl_expr(unit, scope, builder, arg, &llvm_arg);
@@ -159,24 +161,29 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
             break;
         }
 
-        Parameter *parameter = g_array_index(call->function->impl.declaration.parameter, Parameter*, i);
+        GArray* param_list;
+        if (call->function->kind == FunctionDeclarationKind) {
+            param_list = call->function->impl.definition.parameter;
+        } else {
+            param_list = call->function->impl.declaration.parameter;
+        }
 
-        if (is_parameter_out(parameter)) {
+        Parameter parameter = g_array_index(param_list, Parameter, i);
+
+        if (is_parameter_out(&parameter)) {
             LLVMValueRef zero = LLVMConstInt(LLVMInt32TypeInContext(unit->context), 0, 0);
             llvm_arg = LLVMBuildGEP2(builder, LLVMTypeOf(llvm_arg), llvm_arg, &zero, 1, "");
         }
 
-        g_array_append_vals(arguments, &llvm_arg, 1);
+        arguments[i] = llvm_arg;
     }
 
     if (err.kind == Success) {
-        LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, "");
+        LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, call->function->name);
         LLVMTypeRef llvm_func_type = LLVMTypeOf(llvm_func);
-        LLVMBuildCall2(builder, llvm_func_type, llvm_func, (LLVMValueRef *) arguments->data, arguments->len,
+        LLVMBuildCall2(builder, llvm_func_type, llvm_func, arguments, call->expressions->len,
                        "stmt.call");
     }
-
-    g_array_free(arguments, FALSE);
 
     return err;
 }
