@@ -180,9 +180,11 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
 
     if (err.kind == Success) {
         LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, call->function->name);
-        LLVMTypeRef llvm_func_type = LLVMTypeOf(llvm_func);
+
+        LLVMTypeRef llvm_func_type = g_hash_table_lookup(scope->func_scope->global_scope->functions, call->function->name);
+
         LLVMBuildCall2(builder, llvm_func_type, llvm_func, arguments, call->expressions->len,
-                       "stmt.call");
+                       "");
     }
 
     return err;

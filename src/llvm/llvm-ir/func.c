@@ -114,6 +114,8 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
 
     *llvm_fun = LLVMAddFunction(unit->module, name, llvm_fun_type);
 
+    g_hash_table_insert(scope->functions, name, llvm_fun_type);
+
     g_array_free(llvm_params, FALSE);
 
     return err;
@@ -135,9 +137,6 @@ BackendError impl_func_def(LLVMBackendCompileUnit* unit,
         func_scope->llvm_func = llvm_func;
         func_scope->global_scope = global_scope;
         func_scope->params = g_hash_table_new(g_str_hash, g_str_equal);
-
-        // store function type in global scope
-        g_hash_table_insert(global_scope->functions, (gpointer)name, llvm_func);
 
         // create function body builder
         LLVMBasicBlockRef entry =
