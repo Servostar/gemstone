@@ -6,33 +6,41 @@
 #include <llvm/llvm-ir/types.h>
 #include <sys/log.h>
 
-BackendError impl_bitwise_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
-                                    [[maybe_unused]] LLVMLocalScope *scope,
+BackendError impl_bitwise_operation(LLVMBackendCompileUnit *unit,
+                                    LLVMLocalScope *scope,
                                     LLVMBuilderRef builder,
                                     Operation *operation,
                                     LLVMValueRef *llvm_result) {
-    // TODO: resolve lhs and rhs or op
-    LLVMValueRef rhs = NULL;
-    LLVMValueRef lhs = NULL;
+    Expression *rhs = NULL;
+    Expression *lhs = NULL;
+    LLVMValueRef llvm_rhs = NULL;
+    LLVMValueRef llvm_lhs = NULL;
 
-    if (operation->impl.bitwise == BitwiseNot) {
+    if (operation->impl.arithmetic == BitwiseNot) {
         // single operand
+        rhs = g_array_index(operation->operands, Expression*, 0);
+        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
     } else {
         // two operands
+        lhs = g_array_index(operation->operands, Expression*, 0);
+        impl_expr(unit, scope, builder, lhs, &llvm_lhs);
+
+        rhs = g_array_index(operation->operands, Expression*, 1);
+        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
     }
 
     switch (operation->impl.bitwise) {
         case BitwiseAnd:
-            *llvm_result = LLVMBuildAnd(builder, lhs, rhs, "bitwise and");
+            *llvm_result = LLVMBuildAnd(builder, llvm_lhs, llvm_rhs, "bitwise and");
             break;
         case BitwiseOr:
-            *llvm_result = LLVMBuildOr(builder, lhs, rhs, "bitwise or");
+            *llvm_result = LLVMBuildOr(builder, llvm_lhs, llvm_rhs, "bitwise or");
             break;
         case BitwiseXor:
-            *llvm_result = LLVMBuildXor(builder, lhs, rhs, "bitwise xor");
+            *llvm_result = LLVMBuildXor(builder, llvm_lhs, llvm_rhs, "bitwise xor");
             break;
         case BitwiseNot:
-            *llvm_result = LLVMBuildNot(builder, rhs, "bitwise not");
+            *llvm_result = LLVMBuildNot(builder, llvm_rhs, "bitwise not");
             break;
     }
 
@@ -57,67 +65,89 @@ static LLVMValueRef convert_integral_to_boolean(
     return LLVMBuildICmp(builder, LLVMIntNE, zero, integral, "to boolean");
 }
 
-BackendError impl_logical_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
-                                    [[maybe_unused]] LLVMLocalScope *scope,
+BackendError impl_logical_operation(LLVMBackendCompileUnit *unit,
+                                    LLVMLocalScope *scope,
                                     LLVMBuilderRef builder,
                                     Operation *operation,
                                     LLVMValueRef *llvm_result) {
-    // TODO: resolve lhs and rhs or op
-    LLVMValueRef rhs = NULL;
-    LLVMValueRef lhs = NULL;
+    Expression *rhs = NULL;
+    Expression *lhs = NULL;
+    LLVMValueRef llvm_rhs = NULL;
+    LLVMValueRef llvm_lhs = NULL;
 
-    if (operation->impl.logical == LogicalNot) {
+    if (operation->impl.arithmetic == LogicalNot) {
         // single operand
-        rhs = convert_integral_to_boolean(builder, rhs);
+        rhs = g_array_index(operation->operands, Expression*, 0);
+        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
     } else {
         // two operands
-        lhs = convert_integral_to_boolean(builder, lhs);
-        rhs = convert_integral_to_boolean(builder, rhs);
+        lhs = g_array_index(operation->operands, Expression*, 0);
+        impl_expr(unit, scope, builder, lhs, &llvm_lhs);
+
+        rhs = g_array_index(operation->operands, Expression*, 1);
+        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
     }
 
     switch (operation->impl.logical) {
         case LogicalAnd:
-            *llvm_result = LLVMBuildAnd(builder, lhs, rhs, "logical and");
+            *llvm_result = LLVMBuildAnd(builder, llvm_lhs, llvm_rhs, "logical and");
             break;
         case LogicalOr:
-            *llvm_result = LLVMBuildOr(builder, lhs, rhs, "logical or");
+            *llvm_result = LLVMBuildOr(builder, llvm_lhs, llvm_rhs, "logical or");
             break;
         case LogicalXor:
-            *llvm_result = LLVMBuildXor(builder, lhs, rhs, "logical xor");
+            *llvm_result = LLVMBuildXor(builder, llvm_lhs, llvm_rhs, "logical xor");
             break;
         case LogicalNot:
-            *llvm_result = LLVMBuildNot(builder, rhs, "logical not");
+            *llvm_result = LLVMBuildNot(builder, llvm_rhs, "logical not");
             break;
     }
 
     return SUCCESS;
 }
 
-static LLVMBool is_floating_point(LLVMValueRef value) {
-    LLVMTypeRef valueType = LLVMTypeOf(value);
-    LLVMTypeKind typeKind = LLVMGetTypeKind(valueType);
+static LLVMBool is_floating_point(Type *value) {
+    if (value->kind == TypeKindPrimitive) {
+        return value->impl.primitive == Float;
+    }
 
-    return typeKind == LLVMFloatTypeKind || typeKind == LLVMHalfTypeKind || typeKind == LLVMDoubleTypeKind ||
-           typeKind == LLVMFP128TypeKind;
+    if (value->kind == TypeKindComposite) {
+        return value->impl.composite.primitive == Float;
+    }
+
+    return FALSE;
 }
 
-static LLVMBool is_integral(LLVMValueRef value) {
-    LLVMTypeRef valueType = LLVMTypeOf(value);
-    LLVMTypeKind typeKind = LLVMGetTypeKind(valueType);
+static LLVMBool is_integral(Type *value) {
+    if (value->kind == TypeKindPrimitive) {
+        return value->impl.primitive == Int;
+    }
 
-    return typeKind == LLVMIntegerTypeKind;
+    if (value->kind == TypeKindComposite) {
+        return value->impl.composite.primitive == Int;
+    }
+
+    return FALSE;
 }
 
-BackendError impl_relational_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
-                                       [[maybe_unused]] LLVMLocalScope *scope,
+BackendError impl_relational_operation(LLVMBackendCompileUnit *unit,
+                                       LLVMLocalScope *scope,
                                        LLVMBuilderRef builder,
                                        Operation *operation,
                                        LLVMValueRef *llvm_result) {
-    // TODO: resolve lhs and rhs or op
-    LLVMValueRef rhs = NULL;
-    LLVMValueRef lhs = NULL;
+    Expression *rhs = NULL;
+    Expression *lhs = NULL;
+    LLVMValueRef llvm_rhs = NULL;
+    LLVMValueRef llvm_lhs = NULL;
 
-    if ((is_integral(lhs) && is_integral(rhs)) == 1) {
+    // two operands
+    lhs = g_array_index(operation->operands, Expression*, 0);
+    impl_expr(unit, scope, builder, lhs, &llvm_lhs);
+
+    rhs = g_array_index(operation->operands, Expression*, 1);
+    impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+
+    if (is_integral(rhs->result)) {
         // integral type
         LLVMIntPredicate operator = 0;
 
@@ -133,8 +163,9 @@ BackendError impl_relational_operation([[maybe_unused]] LLVMBackendCompileUnit *
                 break;
         }
 
-        *llvm_result = LLVMBuildICmp(builder, operator, lhs, rhs, "integral comparison");
-    } else if ((is_floating_point(lhs) && is_floating_point(rhs)) == 1) {
+        *llvm_result = LLVMBuildICmp(builder, operator, llvm_lhs, llvm_rhs, "integral comparison");
+
+    } else if (is_floating_point(rhs->result)) {
         // integral type
         LLVMRealPredicate operator = 0;
 
@@ -150,7 +181,7 @@ BackendError impl_relational_operation([[maybe_unused]] LLVMBackendCompileUnit *
                 break;
         }
 
-        *llvm_result = LLVMBuildFCmp(builder, operator, lhs, rhs, "floating point comparison");
+        *llvm_result = LLVMBuildFCmp(builder, operator, llvm_lhs, llvm_rhs, "floating point comparison");
     } else {
         PANIC("invalid type for relational operator");
     }
@@ -158,53 +189,69 @@ BackendError impl_relational_operation([[maybe_unused]] LLVMBackendCompileUnit *
     return SUCCESS;
 }
 
-BackendError impl_arithmetic_operation([[maybe_unused]] LLVMBackendCompileUnit *unit,
-                                       [[maybe_unused]] LLVMLocalScope *scope,
+BackendError impl_arithmetic_operation(LLVMBackendCompileUnit *unit,
+                                       LLVMLocalScope *scope,
                                        LLVMBuilderRef builder,
                                        Operation *operation,
                                        LLVMValueRef *llvm_result) {
-    // TODO: resolve lhs and rhs or op
-    LLVMValueRef rhs = NULL;
-    LLVMValueRef lhs = NULL;
+    Expression *rhs = NULL;
+    Expression *lhs = NULL;
+    LLVMValueRef llvm_rhs = NULL;
+    LLVMValueRef llvm_lhs = NULL;
 
-    if ((is_integral(lhs) && is_integral(rhs)) == 1) {
-        // integral type
+    if (operation->impl.arithmetic == Negate) {
+        // single operand
+        rhs = g_array_index(operation->operands, Expression*, 0);
+        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+    } else {
+        // two operands
+        lhs = g_array_index(operation->operands, Expression*, 0);
+        impl_expr(unit, scope, builder, lhs, &llvm_lhs);
 
-        switch (operation->impl.arithmetic) {
-            case Add:
-                *llvm_result = LLVMBuildNSWAdd(builder, lhs, rhs, "signed integer addition");
-                break;
-            case Sub:
-                *llvm_result = LLVMBuildNSWSub(builder, lhs, rhs, "signed integer subtraction");
-                break;
-            case Mul:
-                *llvm_result = LLVMBuildNSWMul(builder, lhs, rhs, "signed integer multiply");
-                break;
-            case Div:
-                *llvm_result = LLVMBuildSDiv(builder, lhs, rhs, "signed integer divide");
-                break;
-        }
+        rhs = g_array_index(operation->operands, Expression*, 1);
+        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+    }
 
-    } else if ((is_floating_point(lhs) && is_floating_point(rhs)) == 1) {
-        // integral type
-        LLVMRealPredicate operator = 0;
+    if (is_integral(rhs->result)) {
 
         switch (operation->impl.arithmetic) {
             case Add:
-                *llvm_result = LLVMBuildFAdd(builder, lhs, rhs, "floating point addition");
+                *llvm_result = LLVMBuildNSWAdd(builder, llvm_lhs, llvm_rhs, "signed integer addition");
                 break;
             case Sub:
-                *llvm_result = LLVMBuildFSub(builder, lhs, rhs, "floating point subtraction");
+                *llvm_result = LLVMBuildNSWSub(builder, llvm_lhs, llvm_rhs, "signed integer subtraction");
                 break;
             case Mul:
-                *llvm_result = LLVMBuildFMul(builder, lhs, rhs, "floating point multiply");
+                *llvm_result = LLVMBuildNSWMul(builder, llvm_lhs, llvm_rhs, "signed integer multiply");
                 break;
             case Div:
-                *llvm_result = LLVMBuildFDiv(builder, lhs, rhs, "floating point divide");
+                *llvm_result = LLVMBuildSDiv(builder, llvm_lhs, llvm_rhs, "signed integer divide");
+                break;
+            case Negate:
+                *llvm_result = LLVMBuildNeg(builder, llvm_rhs, "signed integer negate");
                 break;
         }
 
-        *llvm_result = LLVMBuildFCmp(builder, operator, lhs, rhs, "floating point comparison");
+    } else if (is_floating_point(rhs->result)) {
+
+        switch (operation->impl.arithmetic) {
+            case Add:
+                *llvm_result = LLVMBuildFAdd(builder, llvm_lhs, llvm_rhs, "floating point addition");
+                break;
+            case Sub:
+                *llvm_result = LLVMBuildFSub(builder, llvm_lhs, llvm_rhs, "floating point subtraction");
+                break;
+            case Mul:
+                *llvm_result = LLVMBuildFMul(builder, llvm_lhs, llvm_rhs, "floating point multiply");
+                break;
+            case Div:
+                *llvm_result = LLVMBuildFDiv(builder, llvm_lhs, llvm_rhs, "floating point divide");
+                break;
+            case Negate:
+                *llvm_result = LLVMBuildFNeg(builder, llvm_rhs, "floating point negate");
+                break;
+        }
+
     } else {
         PANIC("invalid type for arithmetic operator");
     }
@@ -244,8 +291,10 @@ BackendError impl_operation(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
 BackendError impl_transmute(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                             LLVMBuilderRef builder, Transmute *transmute,
                             LLVMValueRef *llvm_result) {
-    // TODO: resolve sub expression
+
     LLVMValueRef operand = NULL;
+    impl_expr(unit, scope, builder, transmute->operand, &operand);
+
     LLVMTypeRef target_type = NULL;
     BackendError err = get_type_impl(unit, scope->func_scope->global_scope,
                                      transmute->targetType, &target_type);
@@ -272,8 +321,9 @@ static LLVMBool is_type_signed(const Type *type) {
 BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                            LLVMBuilderRef builder, TypeCast *typecast,
                            LLVMValueRef *llvm_result) {
-    // TODO: resolve sub expression
     LLVMValueRef operand = NULL;
+    impl_expr(unit, scope, builder, typecast->operand, &operand);
+
     LLVMTypeRef target_type = NULL;
     BackendError err = get_type_impl(unit, scope->func_scope->global_scope,
                                      typecast->targetType, &target_type);
@@ -283,24 +333,40 @@ BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
     }
 
     LLVMBool dst_signed = is_type_signed(typecast->targetType);
-    // TODO: derive source type sign
+    LLVMBool src_signed = is_type_signed(typecast->operand->result);
     const LLVMOpcode opcode =
-            LLVMGetCastOpcode(operand, 0, target_type, dst_signed);
+            LLVMGetCastOpcode(operand, src_signed, target_type, dst_signed);
     *llvm_result =
             LLVMBuildCast(builder, opcode, operand, target_type, "transmute");
 
     return err;
 }
 
+BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                                LLVMBuilderRef builder, Variable *variable,
+                                LLVMValueRef *llvm_result) {
+
+    LLVMValueRef llvm_variable = get_variable(scope, variable->name);
+
+    if (llvm_variable == NULL) {
+        return new_backend_impl_error(Implementation, NULL, "Variable not found");
+    }
+
+    *llvm_result = llvm_variable;
+
+    return SUCCESS;
+}
+
 BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                        LLVMBuilderRef builder, Expression *expr,
                        LLVMValueRef *llvm_result) {
+    DEBUG("implementing expression: %ld", expr->kind);
     BackendError err = SUCCESS;
 
     switch (expr->kind) {
         case ExpressionKindConstant:
             err = get_const_type_value(unit, scope->func_scope->global_scope,
-                                 &expr->impl.constant, llvm_result);
+                                       &expr->impl.constant, llvm_result);
             break;
         case ExpressionKindTransmute:
             err = impl_transmute(unit, scope, builder, &expr->impl.transmute,
@@ -313,6 +379,13 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
         case ExpressionKindOperation:
             err = impl_operation(unit, scope, builder, &expr->impl.operation,
                                  llvm_result);
+            break;
+        case ExpressionKindVariable:
+            err = impl_variable_load(unit, scope, builder, expr->impl.variable,
+                                     llvm_result);
+            break;
+        default:
+            err = new_backend_impl_error(Implementation, NULL, "unknown expression");
             break;
     }
 

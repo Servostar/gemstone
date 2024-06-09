@@ -75,13 +75,17 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
             filename = g_build_filename(config->archive_directory, basename, NULL);
             break;
         case LLVMObjectFile:
-            basename = g_strjoin("", config->name, "o", NULL);
+            basename = g_strjoin(".", config->name, "o", NULL);
             filename = g_build_filename(config->archive_directory, basename, NULL);
             break;
         default:
             return new_backend_impl_error(Implementation, NULL,
                                           "invalid codegen file");
     }
+
+    // TODO: add custom link libraries
+
+    INFO("export to file: %s", filename);
 
     if (LLVMTargetMachineEmitToFile(target_machine, unit->module, filename,
                                     file_type, &error) != 0) {

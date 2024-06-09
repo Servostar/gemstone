@@ -96,7 +96,7 @@ BackendError impl_primtive_type(LLVMBackendCompileUnit* unit,
 
 BackendError impl_integral_type(LLVMBackendCompileUnit* unit, Scale scale,
                                 LLVMTypeRef* llvm_type) {
-    size_t bits = (int)(4 * scale) * BITS_PER_BYTE;
+    size_t bits = (int)(BASE_BYTES * scale) * BITS_PER_BYTE;
     DEBUG("implementing integral type of size: %ld", bits);
     LLVMTypeRef integral_type = LLVMIntTypeInContext(unit->context, bits);
 

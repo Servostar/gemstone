@@ -67,8 +67,8 @@ Target create_target_from_config(const TargetConfig* config) {
 
     target.opt = llvm_opt_from_int(config->optimization_level);
 
-    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name, target.opt,
-         target.triple, target.cpu, target.features);
+    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name.str, target.opt,
+         target.triple.str, target.cpu.str, target.features.str);
 
     return target;
 }

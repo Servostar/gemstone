@@ -120,3 +120,11 @@ BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
 
     return err;
 }
+
+LLVMValueRef get_global_variable(LLVMGlobalScope* scope, char* name) {
+    if (g_hash_table_contains(scope->variables, name)) {
+        return g_hash_table_lookup(scope->variables, name);
+    }
+
+    return NULL;
+}

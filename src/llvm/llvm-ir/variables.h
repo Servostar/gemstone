@@ -12,4 +12,6 @@ BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
                                    LLVMGlobalScope* scope,
                                    GHashTable* variables);
 
+LLVMValueRef get_global_variable(LLVMGlobalScope* scope, char* name);
+
 #endif  // LLVM_BACKEND_VARIABLES_H_

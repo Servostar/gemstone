@@ -7,6 +7,7 @@
 #include <llvm/parser.h>
 #include <llvm/llvm-ir/types.h>
 #include <llvm/llvm-ir/stmt.h>
+#include <llvm/llvm-ir/variables.h>
 #include <set/types.h>
 #include <sys/log.h>
 
@@ -43,7 +44,13 @@ LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name) {
         return get_variable(scope->parent_scope, name);
     }
 
-    return get_parameter(scope->func_scope, name);
+    LLVMValueRef param = get_parameter(scope->func_scope, name);
+    if (param != NULL) {
+        return param;
+    }
+
+    LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, name);
+    return global_var;
 }
 
 BackendError impl_param_type(LLVMBackendCompileUnit* unit,
@@ -110,7 +117,7 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
     return err;
 }
 
-BackendError impl_func(LLVMBackendCompileUnit* unit,
+BackendError impl_func_def(LLVMBackendCompileUnit* unit,
                        LLVMGlobalScope* global_scope,
                        FunctionDefinition* fundef, const char* name) {
     BackendError err = SUCCESS;
@@ -131,10 +138,10 @@ BackendError impl_func(LLVMBackendCompileUnit* unit,
         g_hash_table_insert(global_scope->functions, (gpointer)name, llvm_func);
 
         // create function body builder
-        LLVMBasicBlockRef body =
-            LLVMAppendBasicBlockInContext(unit->context, llvm_func, "entry");
+        LLVMBasicBlockRef entry =
+            LLVMAppendBasicBlockInContext(unit->context, llvm_func, "func.entry");
         LLVMBuilderRef builder = LLVMCreateBuilderInContext(unit->context);
-        LLVMPositionBuilderAtEnd(builder, body);
+        LLVMPositionBuilderAtEnd(builder, entry);
 
         // create value references for parameter
         const size_t params = fundef->parameter->len;
@@ -144,7 +151,20 @@ BackendError impl_func(LLVMBackendCompileUnit* unit,
                                 LLVMGetParam(llvm_func, i));
         }
 
-        err = impl_block(unit, builder, func_scope, fundef->body);
+        LLVMBasicBlockRef llvm_start_body_block = NULL;
+        LLVMBasicBlockRef llvm_end_body_block = NULL;
+        err = impl_block(unit, builder, func_scope, &llvm_start_body_block, &llvm_end_body_block, fundef->body);
+        LLVMPositionBuilderAtEnd(builder, entry);
+        LLVMBuildBr(builder, llvm_start_body_block);
+
+        // insert returning end block
+        LLVMBasicBlockRef end_block =
+                LLVMAppendBasicBlockInContext(unit->context, llvm_func, "func.end");
+        LLVMPositionBuilderAtEnd(builder, end_block);
+        LLVMBuildRetVoid(builder);
+
+        LLVMPositionBuilderAtEnd(builder, llvm_end_body_block);
+        LLVMBuildBr(builder, end_block);
 
         LLVMDisposeBuilder(builder);
 
@@ -168,11 +188,16 @@ BackendError impl_functions(LLVMBackendCompileUnit* unit,
 
     size_t function_count = 0;
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
-        err =
-            impl_func(unit, scope, (FunctionDefinition*)val, (const char*)key);
+        Function* func = (Function*) val;
+
+        if (func->kind == FunctionDeclarationKind) {
+            // err = impl_func_decl(unit, scope, &func->impl.declaration, (const char*) key);
+        } else {
+            err = impl_func_def(unit, scope, &func->impl.definition, (const char*)key);
+        }
 
         if (err.kind != Success) {
-            break;
+            return err;
         }
 
         function_count++;

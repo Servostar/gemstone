@@ -13,6 +13,7 @@
 extern int lld_main(int Argc, const char **Argv, const char **outstr);
 
 const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
+    INFO("resolving absolute path for link target: %s", link_target_name);
 
     for (guint i = 0; i < config->link_search_paths->len; i++) {
         const char* link_directory_path = g_array_index(config->link_search_paths, char*, i);
@@ -28,6 +29,7 @@ const char* get_absolute_link_path(const TargetConfig* config, const char* link_
         g_free(cwd);
 
         if (exists && !is_dir) {
+            INFO("link target found at: %s", canonical);
             return canonical;
         }
 
@@ -48,9 +50,11 @@ TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfi
     config->colorize = stdout_supports_ansi_esc();
 
     // append build object file
-    const char* target_object = get_absolute_link_path(target_config, (const char*) target->name.str);
+    char* basename = g_strjoin(".", target_config->name, "o", NULL);
+    char* filename = g_build_filename(target_config->archive_directory, basename, NULL);
+    const char* target_object = get_absolute_link_path(target_config, (const char*) filename);
     if (target_object == NULL) {
-        ERROR("failed to resolve path to target object: %s", target->name.str);
+        ERROR("failed to resolve path to target object: %s", filename);
         lld_delete_link_config(config);
         return NULL;
     }
@@ -99,12 +103,17 @@ GArray* lld_create_lld_arguments(TargetLinkConfig* config) {
 }
 
 BackendError lld_link_target(TargetLinkConfig* config) {
+    DEBUG("linking target...");
     BackendError err = SUCCESS;
 
     GArray* argv = lld_create_lld_arguments(config);
 
+    INFO("Linking target...");
+
     const char* message = NULL;
     int status = lld_main((int) argv->len, (const char**) argv->data, &message);
+
+    INFO("done linking target...");
 
     g_array_free(argv, TRUE);
 

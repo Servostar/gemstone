@@ -159,6 +159,10 @@ TargetConfig* default_target_config_from_args() {
         }
     }
 
+    // TODO: free vvvvvvvvvvvvv
+    char* cwd = g_get_current_dir();
+    g_array_append_val(config->link_search_paths, cwd);
+
     if (is_option_set("link-paths")) {
         const Option* opt = get_option("link-paths");
 
