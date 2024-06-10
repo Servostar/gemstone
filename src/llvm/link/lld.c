@@ -61,14 +61,20 @@ TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfi
 
     {
         // output file after linking
-        gchar* basename = g_strjoin(".", target_config->name, "out", NULL);
-        gchar* filename = g_build_filename(target_config->output_directory, basename, NULL);
+        basename = g_strjoin(".", target_config->name, "out", NULL);
+        filename = g_build_filename(target_config->output_directory, basename, NULL);
 
         config->output_file = filename;
     }
 
     g_array_append_val(config->object_file_names, target_object);
     INFO("resolved path of target object: %s", target_object);
+
+    // if it is an app, add entrypoint library
+    if (target_config->mode == Application) {
+        char* entrypoint = g_strdup("libentrypoint.a");
+        g_array_append_val(module->imports, entrypoint);
+    }
 
     // resolve absolute paths to dependent library object files
     DEBUG("resolving target dependencies...");

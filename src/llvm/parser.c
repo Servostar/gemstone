@@ -244,11 +244,13 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
 
         err = export_module(unit, &target, config);
         if (err.kind == Success) {
-            TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
+            if (config->mode == Application) {
+                TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
 
-            lld_link_target(link_config);
+                lld_link_target(link_config);
 
-            lld_delete_link_config(link_config);
+                lld_delete_link_config(link_config);
+            }
         }
 
         delete_target(target);

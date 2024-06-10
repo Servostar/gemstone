@@ -75,7 +75,7 @@ BackendError impl_logical_operation(LLVMBackendCompileUnit *unit,
     LLVMValueRef llvm_rhs = NULL;
     LLVMValueRef llvm_lhs = NULL;
 
-    if (operation->impl.arithmetic == LogicalNot) {
+    if (operation->impl.logical == LogicalNot) {
         // single operand
         rhs = g_array_index(operation->operands, Expression*, 0);
         impl_expr(unit, scope, builder, rhs, &llvm_rhs);
@@ -354,7 +354,23 @@ BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *sc
         return new_backend_impl_error(Implementation, NULL, "Variable not found");
     }
 
-    *llvm_result = llvm_variable;
+    if (LLVMGetTypeKind(LLVMTypeOf(llvm_variable)) == LLVMPointerTypeKind) {
+
+        Type* type;
+        LLVMTypeRef llvm_type;
+
+        if (variable->kind == VariableKindDefinition) {
+            type = variable->impl.definiton.declaration.type;
+        } else {
+            type = variable->impl.declaration.type;
+        }
+
+        get_type_impl(unit, scope->func_scope->global_scope, type, &llvm_type);
+
+        *llvm_result = LLVMBuildLoad2(builder, llvm_type, llvm_variable, "");
+    } else {
+        *llvm_result = llvm_variable;
+    }
 
     return SUCCESS;
 }
