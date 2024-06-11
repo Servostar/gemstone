@@ -5,6 +5,7 @@
 #include <llvm/parser.h>
 #include <set/types.h>
 #include <sys/log.h>
+#include <set/set.h>
 
 #define BASE_BYTES 4
 #define BITS_PER_BYTE 8
@@ -33,6 +34,17 @@ static BackendError get_const_composite_value(CompositeType composite,
                                      llvm_value);
 }
 
+BackendError impl_reference_const(TypeValue* value, LLVMValueRef* llvm_value) {
+    BackendError err = SUCCESS;
+    if (value->type->kind == TypeKindReference && compareTypes(value->type, (Type*) &StringLiteralType)) {
+        // is string literal
+        *llvm_value = LLVMConstString(value->value, strlen(value->value), FALSE);
+    } else {
+        err = new_backend_impl_error(Implementation, value->nodePtr, "reference initializer can only be string literals");
+    }
+    return err;
+}
+
 BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
                                   LLVMGlobalScope* scope,
                                   TypeValue* gemstone_value,
@@ -58,9 +70,7 @@ BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
                                             llvm_value);
             break;
         case TypeKindReference:
-            err =
-                new_backend_impl_error(Implementation, gemstone_value->nodePtr,
-                                       "reference cannot be constant value");
+            err = impl_reference_const(gemstone_value, llvm_value);
             break;
         case TypeKindBox:
             err =

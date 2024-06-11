@@ -164,7 +164,35 @@ static void run_backend_codegen(const Module* module, const TargetConfig* target
     err = deinit_backend();
 }
 
-static AST_NODE_PTR compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file) {
+const char* get_absolute_import_path(const TargetConfig* config, const char* import_target_name) {
+    INFO("resolving absolute path for import target: %s", import_target_name);
+
+    for (guint i = 0; i < config->import_paths->len; i++) {
+        const char* import_directory_path = g_array_index(config->import_paths, char*, i);
+
+        char* path = g_build_filename(import_directory_path, import_target_name, NULL);
+        char* cwd = g_get_current_dir();
+        char* canonical = g_canonicalize_filename(path, cwd);
+
+        const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
+        const gboolean is_dir = g_file_test(canonical, G_FILE_TEST_IS_DIR);
+
+        g_free(path);
+        g_free(cwd);
+
+        if (exists && !is_dir) {
+            INFO("import target found at: %s", canonical);
+            return canonical;
+        }
+
+        g_free(canonical);
+    }
+
+    // file not found
+    return NULL;
+}
+
+static AST_NODE_PTR compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file, const TargetConfig *target) {
     AST_NODE_PTR root_module = AST_new_node(empty_location(), AST_Module, NULL);
 
     if (compile_file_to_ast(root_module, file) == EXIT_SUCCESS) {
@@ -175,7 +203,12 @@ static AST_NODE_PTR compile_module_with_dependencies(ModuleFileStack *unit, Modu
             if (child->kind == AST_Import) {
                 AST_NODE_PTR imported_module = AST_new_node(empty_location(), AST_Module, NULL);
 
-                ModuleFile *imported_file = push_file(unit, child->value);
+                const char* path = get_absolute_import_path(target, child->value);
+                if (path == NULL) {
+                    return NULL;
+                }
+
+                ModuleFile *imported_file = push_file(unit, path);
 
                 if (compile_file_to_ast(imported_module, imported_file) == EXIT_SUCCESS) {
                     AST_merge_modules(root_module, i + 1, imported_module);
@@ -196,7 +229,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     print_message(Info, "Building target: %s", target->name);
 
     ModuleFile *file = push_file(unit, target->root_module);
-    AST_NODE_PTR  ast = compile_module_with_dependencies(unit, file);
+    AST_NODE_PTR  ast = compile_module_with_dependencies(unit, file, target);
 
     if (ast != NULL) {
         if (setup_target_environment(target) == 0) {

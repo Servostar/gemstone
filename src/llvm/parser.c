@@ -207,6 +207,9 @@ static BackendError build_module(LLVMBackendCompileUnit* unit,
     }
 
     err = impl_functions(unit, global_scope, module->functions);
+    if (err.kind != Success) {
+        return err;
+    }
 
     char* error = NULL;
     if (LLVMVerifyModule(unit->module, LLVMAbortProcessAction, &error)) {

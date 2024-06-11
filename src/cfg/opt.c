@@ -106,6 +106,7 @@ TargetConfig* default_target_config() {
     config->link_search_paths = g_array_new(FALSE, FALSE, sizeof(char*));
     config->lld_fatal_warnings = FALSE;
     config->gsc_fatal_warnings = FALSE;
+    config->import_paths = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
 
     return config;
 }
@@ -207,6 +208,9 @@ TargetConfig* default_target_config_from_args() {
 
         g_array_free(files, TRUE);
     }
+
+    char* default_import_path = mem_strdup(MemoryNamespaceOpt, ".");
+    g_array_append_val(config->import_paths, default_import_path);
 
     return config;
 }

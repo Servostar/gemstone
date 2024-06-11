@@ -1292,7 +1292,8 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     assert(currentNode->child_count == 2);
     Dereference deref;
     deref.nodePtr = currentNode;
-    deref.index = createExpression(AST_get_node(currentNode, 0));
+    AST_NODE_PTR expression_node = AST_get_node(currentNode, 1);
+    deref.index = createExpression(expression_node);
 
     //index has to be made
     if (deref.index == NULL) {
@@ -1323,11 +1324,11 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
         }
     }
 
-    deref.variable = createExpression(AST_get_node(currentNode, 1));
+    deref.variable = createExpression(AST_get_node(currentNode, 0));
 
     //variable has to be made
     if (deref.index == NULL) {
-        print_diagnostic(current_file, &AST_get_node(currentNode, 1)->location, Error, "Invalid index");
+        print_diagnostic(current_file, &AST_get_node(currentNode, 0)->location, Error, "Invalid index");
         return SEMANTIC_ERROR;
     }
 

@@ -5,6 +5,7 @@
 #include <llvm/llvm-ir/expr.h>
 #include <llvm/llvm-ir/types.h>
 #include <sys/log.h>
+#include <mem/cache.h>
 
 BackendError impl_bitwise_operation(LLVMBackendCompileUnit *unit,
                                     LLVMLocalScope *scope,
@@ -394,6 +395,29 @@ BackendError impl_address_of(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope
     return SUCCESS;
 }
 
+BackendError impl_deref(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                             LLVMBuilderRef builder, Dereference* dereference,
+                             LLVMValueRef *llvm_result) {
+    BackendError err;
+
+    LLVMValueRef llvm_pointer = get_variable(scope, dereference->variable->impl.variable->name);
+    LLVMTypeRef llvm_deref_type = NULL;
+    err = get_type_impl(unit, scope->func_scope->global_scope, dereference->variable->result, &llvm_deref_type);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    LLVMValueRef* index = mem_alloc(MemoryNamespaceLlvm, sizeof(LLVMValueRef));
+    err = impl_expr(unit, scope, builder, dereference->index, FALSE, index);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    *llvm_result = LLVMBuildGEP2(builder, llvm_deref_type, llvm_pointer, index, 1, "expr.deref");
+
+    return err;
+}
+
 BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                        LLVMBuilderRef builder, Expression *expr,
                        LLVMBool reference,
@@ -426,6 +450,10 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
         case ExpressionKindAddressOf:
             err = impl_address_of(unit, scope, builder, &expr->impl.addressOf,
                                   llvm_result);
+            break;
+        case ExpressionKindDereference:
+            err = impl_deref(unit, scope, builder, &expr->impl.dereference,
+                             llvm_result);
             break;
         default:
             err = new_backend_impl_error(Implementation, NULL, "unknown expression");

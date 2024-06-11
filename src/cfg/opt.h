@@ -61,6 +61,7 @@ typedef struct TargetConfig_t {
     bool lld_fatal_warnings;
     // treat parser warnings as errors
     bool gsc_fatal_warnings;
+    GArray* import_paths;
 } TargetConfig;
 
 /**
