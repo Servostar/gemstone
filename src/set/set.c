@@ -9,7 +9,6 @@
 #include <set/set.h>
 #include <mem/cache.h>
 
-extern ModuleFile *current_file;
 static GHashTable *declaredComposites = NULL;//pointer to composites with names 
 static GHashTable *declaredBoxes = NULL;//pointer to type
 static GHashTable *functionParameter = NULL;
@@ -103,12 +102,12 @@ int check_scale_factor(AST_NODE_PTR node, Scale scale) {
     assert(node != NULL);
 
     if (8 < scale) {
-        print_diagnostic(current_file, &node->location, Error, "Composite scale overflow");
+        print_diagnostic(&node->location, Error, "Composite scale overflow");
         return SEMANTIC_ERROR;
     }
 
     if (0.25 > scale) {
-        print_diagnostic(current_file, &node->location, Error, "Composite scale underflow");
+        print_diagnostic(&node->location, Error, "Composite scale underflow");
         return SEMANTIC_ERROR;
     }
 
@@ -198,7 +197,7 @@ int set_impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
         Type *nested_type = NULL;
         status = get_type_decl(typeKind->value, &nested_type);
         if (status == SEMANTIC_ERROR) {
-            print_diagnostic(current_file, &typeKind->location, Error, "Unknown composite type in declaration");
+            print_diagnostic(&typeKind->location, Error, "Unknown composite type in declaration");
             return SEMANTIC_ERROR;
         }
 
@@ -215,13 +214,13 @@ int set_impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
             composite->scale = composite->scale * nested_type->impl.composite.scale;
 
             if (composite->scale > 8 || composite->scale < 0.25) {
-                print_diagnostic(current_file, &typeKind->location, Error, "Invalid type scale of composite type: %lf",
+                print_diagnostic(&typeKind->location, Error, "Invalid type scale of composite type: %lf",
                                  composite->scale);
                 return SEMANTIC_ERROR;
             }
 
         } else {
-            print_diagnostic(current_file, &typeKind->location, Error, "Type must be either composite or primitive");
+            print_diagnostic(&typeKind->location, Error, "Type must be either composite or primitive");
             return SEMANTIC_ERROR;
         }
     }
@@ -274,7 +273,7 @@ int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
         *type = g_hash_table_lookup(declaredBoxes, typekind);
 
         if (currentNode->child_count > 1) {
-            print_diagnostic(current_file, &currentNode->location, Error, "Box type cannot modified");
+            print_diagnostic(&currentNode->location, Error, "Box type cannot modified");
             return SEMANTIC_ERROR;
         }
         return SEMANTIC_OK;
@@ -299,7 +298,7 @@ int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
             return SEMANTIC_OK;
         }
 
-        print_diagnostic(current_file, &currentNode->children[currentNode->child_count - 1]->location, Error,
+        print_diagnostic(&currentNode->children[currentNode->child_count - 1]->location, Error,
                          "Expected either primitive or composite type");
         return SEMANTIC_ERROR;
     }
@@ -503,7 +502,7 @@ int getVariableFromScope(const char *name, Variable **variable) {
         DEBUG("Found var");
         return SEMANTIC_OK;
     } else if (found > 1) {
-        print_diagnostic(current_file, &(*variable)->nodePtr->location, Warning,
+        print_diagnostic(&(*variable)->nodePtr->location, Warning,
                          "Parameter shadows variable of same name: %s", name);
         return SEMANTIC_OK;
     }
@@ -514,7 +513,7 @@ int getVariableFromScope(const char *name, Variable **variable) {
 int addVarToScope(Variable *variable) {
     Variable *tmp = NULL;
     if (getVariableFromScope(variable->name, &tmp) == SEMANTIC_OK) {
-        print_diagnostic(current_file, &variable->nodePtr->location, Error, "Variable already exist: ", variable->name);
+        print_diagnostic(&variable->nodePtr->location, Error, "Variable already exist: ", variable->name);
         return SEMANTIC_ERROR;
     }
     GHashTable *currentScope = g_array_index(Scope, GHashTable*, Scope->len - 1);
@@ -532,7 +531,7 @@ int fillTablesWithVars(GHashTable *variableTable, const GArray *variables) {
 
         // this variable is discarded, only need status code
         if (g_hash_table_contains(variableTable, (gpointer) var->name)) {
-            print_diagnostic(current_file, &var->nodePtr->location, Error, "Variable already exists");
+            print_diagnostic(&var->nodePtr->location, Error, "Variable already exists");
             return SEMANTIC_ERROR;
         }
 
@@ -623,7 +622,7 @@ Type *createTypeFromOperands(Type *LeftOperandType, Type *RightOperandType, AST_
         result->impl.composite.nodePtr = currentNode;
     } else {
         mem_free(result);
-        print_diagnostic(current_file, &currentNode->location, Error, "Incompatible types in expression");
+        print_diagnostic(&currentNode->location, Error, "Incompatible types in expression");
         return NULL;
     }
     DEBUG("Succsessfully created type");
@@ -645,7 +644,7 @@ int createTypeCastFromExpression(Expression *expression, Type *resultType, Expre
 
     if (expression->result->kind != TypeKindComposite
         && expression->result->kind != TypeKindPrimitive) {
-        print_diagnostic(current_file, &expression->nodePtr->location, Error,
+        print_diagnostic(&expression->nodePtr->location, Error,
                          "Expected either primitive or composite type");
         return SEMANTIC_ERROR;
     }
@@ -699,7 +698,7 @@ int createArithOperation(Expression *ParentExpression, AST_NODE_PTR currentNode,
         result->nodePtr = currentNode;
 
         if (result->kind == TypeKindReference || result->kind == TypeKindBox) {
-            print_diagnostic(current_file, &currentNode->location, Error, "Invalid type for arithmetic operation");
+            print_diagnostic(&currentNode->location, Error, "Invalid type for arithmetic operation");
             return SEMANTIC_ERROR;
         } else if (result->kind == TypeKindComposite) {
             result->impl.composite.sign = Signed;
@@ -829,32 +828,32 @@ int createBoolOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) 
 
     // should not be a box or a reference
     if (LeftOperandType->kind != TypeKindPrimitive && LeftOperandType->kind != TypeKindComposite) {
-        print_diagnostic(current_file, &lhs->nodePtr->location, Error, "invalid type for boolean operation");
+        print_diagnostic(&lhs->nodePtr->location, Error, "invalid type for boolean operation");
         return SEMANTIC_ERROR;
     }
     if (RightOperandType->kind != TypeKindPrimitive && RightOperandType->kind != TypeKindComposite) {
-        print_diagnostic(current_file, &rhs->nodePtr->location, Error, "invalid type for boolean operation");
+        print_diagnostic(&rhs->nodePtr->location, Error, "invalid type for boolean operation");
         return SEMANTIC_ERROR;
     }
     // should not be a float
     if (LeftOperandType->kind == TypeKindComposite) {
         if (LeftOperandType->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "operand must not be a float");
+            print_diagnostic(&lhs->nodePtr->location, Error, "operand must not be a float");
             return SEMANTIC_ERROR;
         }
     } else if (LeftOperandType->kind == TypeKindPrimitive) {
         if (LeftOperandType->impl.primitive == Float) {
-            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "operand must not be a float");
+            print_diagnostic(&lhs->nodePtr->location, Error, "operand must not be a float");
             return SEMANTIC_ERROR;
         }
     } else if (RightOperandType->kind == TypeKindComposite) {
         if (RightOperandType->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "operand must not be a float");
+            print_diagnostic(&rhs->nodePtr->location, Error, "operand must not be a float");
             return SEMANTIC_ERROR;
         }
     } else if (RightOperandType->kind == TypeKindPrimitive) {
         if (RightOperandType->impl.primitive == Float) {
-            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "operand must not be a float");
+            print_diagnostic(&rhs->nodePtr->location, Error, "operand must not be a float");
             return SEMANTIC_ERROR;
         }
     }
@@ -896,14 +895,14 @@ int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNod
     result->nodePtr = currentNode;
 
     if (Operand->kind == TypeKindBox || Operand->kind == TypeKindReference) {
-        print_diagnostic(current_file, &Operand->nodePtr->location, Error,
+        print_diagnostic(&Operand->nodePtr->location, Error,
                          "Operand must be a variant of primitive type int");
         return SEMANTIC_ERROR;
     }
 
     if (Operand->kind == TypeKindPrimitive) {
         if (Operand->impl.primitive == Float) {
-            print_diagnostic(current_file, &Operand->nodePtr->location, Error,
+            print_diagnostic(&Operand->nodePtr->location, Error,
                              "Operand must be a variant of primitive type int");
             return SEMANTIC_ERROR;
         }
@@ -912,7 +911,7 @@ int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNod
 
     } else if (Operand->kind == TypeKindComposite) {
         if (Operand->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &Operand->nodePtr->location, Error,
+            print_diagnostic(&Operand->nodePtr->location, Error,
                              "Operand must be a variant of primitive type int");
             return SEMANTIC_ERROR;
         }
@@ -986,24 +985,24 @@ int createBitOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) {
 
     //should not be a box or a reference
     if (LeftOperandType->kind != TypeKindPrimitive && LeftOperandType->kind != TypeKindComposite) {
-        print_diagnostic(current_file, &lhs->nodePtr->location, Error, "Must be a type variant of int");
+        print_diagnostic(&lhs->nodePtr->location, Error, "Must be a type variant of int");
         return SEMANTIC_ERROR;
     }
 
     if (RightOperandType->kind != TypeKindPrimitive && RightOperandType->kind != TypeKindComposite) {
-        print_diagnostic(current_file, &rhs->nodePtr->location, Error, "Must be a type variant of int");
+        print_diagnostic(&rhs->nodePtr->location, Error, "Must be a type variant of int");
         return SEMANTIC_ERROR;
     }
 
     if (LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindPrimitive) {
 
         if (LeftOperandType->impl.primitive == Float) {
-            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&lhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
         if (RightOperandType->impl.primitive == Float) {
-            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&rhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
@@ -1013,12 +1012,12 @@ int createBitOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     } else if (LeftOperandType->kind == TypeKindPrimitive && RightOperandType->kind == TypeKindComposite) {
 
         if (LeftOperandType->impl.primitive == Float) {
-            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&lhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
         if (RightOperandType->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&rhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
@@ -1028,12 +1027,12 @@ int createBitOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     } else if (LeftOperandType->kind == TypeKindComposite && RightOperandType->kind == TypeKindPrimitive) {
 
         if (LeftOperandType->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&lhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
         if (RightOperandType->impl.primitive == Float) {
-            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&rhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
@@ -1042,17 +1041,17 @@ int createBitOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     } else {
 
         if (RightOperandType->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &rhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&rhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
         if (LeftOperandType->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &lhs->nodePtr->location, Error, "Must be a type variant of int");
+            print_diagnostic(&lhs->nodePtr->location, Error, "Must be a type variant of int");
             return SEMANTIC_ERROR;
         }
 
         if (!isScaleEqual(LeftOperandType->impl.composite.scale, RightOperandType->impl.composite.scale)) {
-            print_diagnostic(current_file, &currentNode->location, Error, "Operands must be of equal size");
+            print_diagnostic(&currentNode->location, Error, "Operands must be of equal size");
             return SEMANTIC_ERROR;
         }
 
@@ -1103,7 +1102,7 @@ int createBitNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNode
     if (Operand->kind == TypeKindPrimitive) {
 
         if (Operand->impl.primitive == Float) {
-            print_diagnostic(current_file, &Operand->nodePtr->location, Error, "Operand type must be a variant of int");
+            print_diagnostic(&Operand->nodePtr->location, Error, "Operand type must be a variant of int");
             return SEMANTIC_ERROR;
         }
 
@@ -1112,7 +1111,7 @@ int createBitNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNode
     } else if (Operand->kind == TypeKindComposite) {
 
         if (Operand->impl.composite.primitive == Float) {
-            print_diagnostic(current_file, &Operand->nodePtr->location, Error, "Operand type must be a variant of int");
+            print_diagnostic(&Operand->nodePtr->location, Error, "Operand type must be a variant of int");
             return SEMANTIC_ERROR;
         }
 
@@ -1192,7 +1191,7 @@ int createBoxAccess(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     int status = getVariableFromScope(boxname, &boxVariable);
 
     if (status == SEMANTIC_ERROR) {
-        print_diagnostic(current_file, &currentNode->children[0]->location, Error,
+        print_diagnostic(&currentNode->children[0]->location, Error,
                          "Variable of name `%s` does not exist");
         return SEMANTIC_ERROR;
     }
@@ -1258,7 +1257,7 @@ int createTypeCast(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     Type *target = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     int status = set_get_type_impl(currentNode->children[1], &target);
     if (status) {
-        print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
+        print_diagnostic(&currentNode->children[1]->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
     }
     ParentExpression->impl.typecast.targetType = target;
@@ -1277,7 +1276,7 @@ int createTransmute(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     Type *target = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     int status = set_get_type_impl(currentNode->children[1], &target);
     if (status) {
-        print_diagnostic(current_file, &currentNode->children[1]->location, Error, "Unknown type");
+        print_diagnostic(&currentNode->children[1]->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
     }
 
@@ -1302,7 +1301,7 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     Type *indexType = deref.index->result;
     //indexType can only be a composite or a primitive
     if (indexType->kind != TypeKindComposite && indexType->kind != TypeKindPrimitive) {
-        print_diagnostic(current_file, &AST_get_node(currentNode, 1)->location, Error,
+        print_diagnostic(&AST_get_node(currentNode, 1)->location, Error,
                          "Index must a primitive int or composite variation");
         return SEMANTIC_ERROR;
     }
@@ -1310,7 +1309,7 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     //indexType can only be int
     if (indexType->kind == TypeKindPrimitive) {
         if (indexType->impl.primitive != Int) {
-            print_diagnostic(current_file, &AST_get_node(currentNode, 1)->location, Error,
+            print_diagnostic(&AST_get_node(currentNode, 1)->location, Error,
                              "Index must a primitive int or composite variation");
             return SEMANTIC_ERROR;
         }
@@ -1318,7 +1317,7 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
 
     if (indexType->kind == TypeKindComposite) {
         if (indexType->impl.composite.primitive != Int) {
-            print_diagnostic(current_file, &AST_get_node(currentNode, 1)->location, Error,
+            print_diagnostic(&AST_get_node(currentNode, 1)->location, Error,
                              "Index must a primitive int or composite variation");
             return SEMANTIC_ERROR;
         }
@@ -1328,13 +1327,13 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
 
     //variable has to be made
     if (deref.index == NULL) {
-        print_diagnostic(current_file, &AST_get_node(currentNode, 0)->location, Error, "Invalid index");
+        print_diagnostic(&AST_get_node(currentNode, 0)->location, Error, "Invalid index");
         return SEMANTIC_ERROR;
     }
 
     //variable can only be a reference
     if (deref.variable->result->kind != TypeKindReference) {
-        print_diagnostic(current_file, &AST_get_node(currentNode, 0)->location, Error,
+        print_diagnostic(&AST_get_node(currentNode, 0)->location, Error,
                          "Only references can be dereferenced");
         return SEMANTIC_ERROR;
     }
@@ -1389,7 +1388,7 @@ Expression *createExpression(AST_NODE_PTR currentNode) {
             int status = getVariableFromScope(currentNode->value, &(expression->impl.variable));
             if (status == SEMANTIC_ERROR) {
                 DEBUG("Identifier is not in current scope");
-                print_diagnostic(current_file, &currentNode->location, Error, "Variable not found");
+                print_diagnostic(&currentNode->location, Error, "Variable not found");
                 return NULL;
             }
             switch (expression->impl.variable->kind) {
@@ -1563,7 +1562,7 @@ int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
 
     bool result = compareTypes(varType, assign.value->result);
     if (result == FALSE) {
-        print_diagnostic(current_file, &currentNode->location, Error, "Assignment expression has incompatible type");
+        print_diagnostic(&currentNode->location, Error, "Assignment expression has incompatible type");
         return SEMANTIC_ERROR;
     }
 
@@ -1719,7 +1718,7 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
     if (nameNode->kind == AST_Ident) {
         int result = getFunction(nameNode->value, &fun);
         if (result == SEMANTIC_ERROR) {
-            print_diagnostic(current_file, &currentNode->location, Error, "Unknown function: `%s`", nameNode);
+            print_diagnostic(&currentNode->location, Error, "Unknown function: `%s`", nameNode);
             return SEMANTIC_ERROR;
         }
     }
@@ -1735,7 +1734,7 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
 
         int result = getFunction(name, &fun);
         if (result) {
-            print_diagnostic(current_file, &currentNode->location, Error, "Unknown function: `%s`", nameNode);
+            print_diagnostic(&currentNode->location, Error, "Unknown function: `%s`", nameNode);
             return SEMANTIC_ERROR;
         }
     }
@@ -1756,7 +1755,7 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
     }
 
     if (count != paramCount) {
-        print_diagnostic(current_file, &currentNode->location, Error, "Expected %d arguments instead of %d", paramCount,
+        print_diagnostic(&currentNode->location, Error, "Expected %d arguments instead of %d", paramCount,
                          count);
         return SEMANTIC_ERROR;
     }
@@ -1920,7 +1919,7 @@ int createParam(GArray *Paramlist, AST_NODE_PTR currentNode) {
     paramvar->impl.declaration.type = param.impl.declaration.type;
 
     if (g_hash_table_contains(functionParameter, param.name)) {
-        print_diagnostic(current_file, &param.nodePtr->location, Error, "Names of function parameters must be unique");
+        print_diagnostic(&param.nodePtr->location, Error, "Names of function parameters must be unique");
         return SEMANTIC_ERROR;
     }
     g_hash_table_insert(functionParameter, (gpointer) param.name, paramvar);
@@ -2003,7 +2002,7 @@ bool compareParameter(GArray *leftParameter, GArray *rightParameter) {
 int addFunction(const char *name, Function *function) {
     if (function->kind == FunctionDefinitionKind) {
         if (g_hash_table_contains(definedFunctions, name)) {
-            print_diagnostic(current_file, &function->nodePtr->location, Error, "Multiple definition of function: `%s`", function->name);
+            print_diagnostic(&function->nodePtr->location, Error, "Multiple definition of function: `%s`", function->name);
             return SEMANTIC_ERROR;
         }
         g_hash_table_insert(declaredFunctions, (gpointer) name, function);
@@ -2014,7 +2013,7 @@ int addFunction(const char *name, Function *function) {
                                            function->impl.declaration.parameter);
             // a function can have multiple declartations but all have to be identical
             if (result == FALSE) {
-                print_diagnostic(current_file, &function->nodePtr->location, Error, "Divergent declaration of function: `%s`", function->name);
+                print_diagnostic(&function->nodePtr->location, Error, "Divergent declaration of function: `%s`", function->name);
                 return SEMANTIC_ERROR;
             }
         }
@@ -2133,7 +2132,7 @@ int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode) {
         return SEMANTIC_ERROR;
     }
 
-    Expression *init = createExpression(expressionNode);;
+    Expression *init = createExpression(expressionNode);
     if (init == NULL) {
         return SEMANTIC_ERROR;
     }
@@ -2195,10 +2194,6 @@ int createBox(GHashTable *boxes, AST_NODE_PTR currentNode) {
     for (size_t i = 0; boxMemberList->child_count; i++) {
         switch (boxMemberList->children[i]->kind) {
             case AST_Decl:
-                if (createDeclMember(box, boxMemberList->children[i])) {
-                    return SEMANTIC_ERROR;
-                }
-                break;
             case AST_Def:
                 if (createDeclMember(box, boxMemberList->children[i])) {
                     return SEMANTIC_ERROR;
@@ -2240,14 +2235,14 @@ int createTypeDef(GHashTable *types, AST_NODE_PTR currentNode) {
     def->type = type;
 
     if (g_hash_table_contains(types, (gpointer) def->name)) {
-        print_diagnostic(current_file, &currentNode->location, Error, "Multiple definition of type: `%s`",
+        print_diagnostic(&currentNode->location, Error, "Multiple definition of type: `%s`",
                          nameNode->value);
         return SEMANTIC_ERROR;
     }
     g_hash_table_insert(types, (gpointer) def->name, def);
 
     if (g_hash_table_contains(declaredComposites, (gpointer) def->name)) {
-        print_diagnostic(current_file, &currentNode->location, Error, "Multiple definition of type: `%s`",
+        print_diagnostic(&currentNode->location, Error, "Multiple definition of type: `%s`",
                          nameNode->value);
         return SEMANTIC_ERROR;
     }
@@ -2334,7 +2329,7 @@ Module *create_set(AST_NODE_PTR currentNode) {
                 }
 
                 if (g_hash_table_contains(functions, function->name)) {
-                    print_diagnostic(current_file, &function->impl.definition.nodePtr->location, Error,
+                    print_diagnostic(&function->impl.definition.nodePtr->location, Error,
                                      "Multiple definition of function: `%s`", function->name);
                     return NULL;
                 }

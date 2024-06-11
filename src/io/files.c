@@ -84,19 +84,20 @@ static void custom_fgets(char *buffer, size_t n, FILE *stream) {
     }
 }
 
-void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message, ...) {
-    assert(file->handle != NULL);
+void print_diagnostic(TokenLocation *location, Message kind, const char *message, ...) {
+    assert(location->file != NULL);
+    assert(location->file->handle != NULL);
     assert(location != NULL);
     assert(message != NULL);
 
     // reset to start
-    rewind(file->handle);
+    rewind(location->file->handle);
 
     char *buffer = alloca(SEEK_BUF_BYTES);
     unsigned long int line_count = 1;
 
     // seek to first line
-    while (line_count < location->line_start && fgets(buffer, SEEK_BUF_BYTES, file->handle) != NULL) {
+    while (line_count < location->line_start && fgets(buffer, SEEK_BUF_BYTES, location->file->handle) != NULL) {
         line_count += strchr(buffer, '\n') != NULL;
     }
 
@@ -106,21 +107,21 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
         case Info:
             kind_text = "info";
             accent_color = CYAN;
-            file->statistics.info_count++;
+            location->file->statistics.info_count++;
             break;
         case Warning:
             kind_text = "warning";
             accent_color = YELLOW;
-            file->statistics.warning_count++;
+            location->file->statistics.warning_count++;
             break;
         case Error:
             kind_text = "error";
             accent_color = RED;
-            file->statistics.error_count++;
+            location->file->statistics.error_count++;
             break;
     }
 
-    const char *absolute_path = get_absolute_path(file->path);
+    const char *absolute_path = get_absolute_path(location->file->path);
 
     printf("%s%s:%ld:%s %s%s:%s ", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET);
 
@@ -145,7 +146,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
         // print line before token group start
         unsigned long int limit = min(location->col_start, SEEK_BUF_BYTES);
         while (limit > 1) {
-            custom_fgets(buffer, (int) limit, file->handle);
+            custom_fgets(buffer, (int) limit, location->file->handle);
             chars += printf("%s", buffer);
             limit = min(location->col_start - chars, SEEK_BUF_BYTES);
 
@@ -159,7 +160,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
         chars = 0;
         limit = min(location->col_end - location->col_start + 1, SEEK_BUF_BYTES);
         while (limit > 0) {
-            custom_fgets(buffer, (int) limit, file->handle);
+            custom_fgets(buffer, (int) limit, location->file->handle);
             chars += printf("%s", buffer);
             limit = min(location->col_end - location->col_start + 1 - chars, SEEK_BUF_BYTES);
 
@@ -172,7 +173,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
 
         // print rest of the line
         do {
-            custom_fgets(buffer, SEEK_BUF_BYTES, file->handle);
+            custom_fgets(buffer, SEEK_BUF_BYTES, location->file->handle);
             printf("%s", buffer);
         } while (strchr(buffer, '\n') == NULL);
 
@@ -195,13 +196,14 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
 }
 
 TokenLocation new_location(unsigned long int line_start, unsigned long int col_start, unsigned long int line_end,
-                           unsigned long int col_end) {
+                           unsigned long int col_end, ModuleFile* file) {
     TokenLocation location;
 
     location.line_start = line_start;
     location.line_end = line_end;
     location.col_start = col_start;
     location.col_end = col_end;
+    location.file = file;
 
     return location;
 }
@@ -213,6 +215,7 @@ TokenLocation empty_location(void) {
     location.line_end = 0;
     location.col_start = 0;
     location.col_end = 0;
+    location.file = NULL;
 
     return location;
 }

@@ -152,6 +152,10 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
     owner->location.col_start = min(owner->location.col_start, child->location.col_start);
     owner->location.line_start = min(owner->location.line_start, child->location.line_start);
 
+    if (owner->location.file == NULL) {
+        owner->location.file = child->location.file;
+    }
+
     assert(owner->children != NULL);
 
     owner->children[owner->child_count++] = child;

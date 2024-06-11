@@ -192,8 +192,7 @@ const char* get_absolute_import_path(const TargetConfig* config, const char* imp
     return NULL;
 }
 
-static AST_NODE_PTR compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file, const TargetConfig *target) {
-    AST_NODE_PTR root_module = AST_new_node(empty_location(), AST_Module, NULL);
+static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file, const TargetConfig *target, AST_NODE_PTR root_module) {
 
     if (compile_file_to_ast(root_module, file) == EXIT_SUCCESS) {
 
@@ -205,19 +204,23 @@ static AST_NODE_PTR compile_module_with_dependencies(ModuleFileStack *unit, Modu
 
                 const char* path = get_absolute_import_path(target, child->value);
                 if (path == NULL) {
-                    return NULL;
+                    return EXIT_FAILURE;
                 }
 
                 ModuleFile *imported_file = push_file(unit, path);
 
                 if (compile_file_to_ast(imported_module, imported_file) == EXIT_SUCCESS) {
                     AST_merge_modules(root_module, i + 1, imported_module);
+                } else {
+                    return EXIT_FAILURE;
                 }
             }
         }
+    } else {
+        return EXIT_FAILURE;
     }
 
-    return root_module;
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -229,20 +232,22 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     print_message(Info, "Building target: %s", target->name);
 
     ModuleFile *file = push_file(unit, target->root_module);
-    AST_NODE_PTR  ast = compile_module_with_dependencies(unit, file, target);
+    AST_NODE_PTR root_module = AST_new_node(empty_location(), AST_Module, NULL);
 
-    if (ast != NULL) {
-        if (setup_target_environment(target) == 0) {
+    if (compile_module_with_dependencies(unit, file, target, root_module) == EXIT_SUCCESS) {
+        if (root_module != NULL) {
+            if (setup_target_environment(target) == 0) {
 
-            print_ast_to_file(ast, target);
-            Module *module = create_set(ast);
+                print_ast_to_file(root_module, target);
+                Module *module = create_set(root_module);
 
-            if (module != NULL) {
-                run_backend_codegen(module, target);
+                if (module != NULL) {
+                    run_backend_codegen(module, target);
+                }
             }
-        }
 
-        AST_delete_node(ast);
+            AST_delete_node(root_module);
+        }
     }
 
     mem_purge_namespace(MemoryNamespaceLex);

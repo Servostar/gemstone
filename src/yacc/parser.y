@@ -17,7 +17,7 @@
     extern int yylex();
     extern AST_NODE_PTR root;
 
-    #define new_loc() new_location(yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column)
+    #define new_loc() new_location(yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column, current_file)
 }
 
 %union {
@@ -544,6 +544,6 @@ opbit: expr OpBitand expr {AST_NODE_PTR and = AST_new_node(new_loc(), AST_BitAnd
 
 int yyerror(const char *s) {
     TokenLocation location = new_loc();
-    print_diagnostic(current_file, &location, Error, s);
+    print_diagnostic(&location, Error, s);
     return 0;
 }
