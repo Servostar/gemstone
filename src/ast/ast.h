@@ -221,7 +221,10 @@ void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* node);
 
 AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t kind);
 
-[[gnu::nonnull(1), gnu::nonnull(2)]]
-void AST_merge_modules(AST_NODE_PTR dst, AST_NODE_PTR src);
+[[gnu::nonnull(1), gnu::nonnull(3)]]
+void AST_merge_modules(AST_NODE_PTR dst, size_t i, AST_NODE_PTR src);
+
+[[gnu::nonnull(1), gnu::nonnull(3)]]
+void AST_insert_node(AST_NODE_PTR owner, size_t idx, AST_NODE_PTR child);
 
 #endif

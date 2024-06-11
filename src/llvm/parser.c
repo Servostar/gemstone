@@ -231,7 +231,7 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
     DEBUG("creating LLVM context and module");
     unit->context = LLVMContextCreate();
     unit->module =
-        LLVMModuleCreateWithNameInContext(config->name, unit->context);
+        LLVMModuleCreateWithNameInContext(config->root_module, unit->context);
 
     LLVMGlobalScope* global_scope = new_global_scope(module);
 

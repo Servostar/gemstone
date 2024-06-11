@@ -179,6 +179,9 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
 
     if (err.kind == Success) {
         LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, call->function->name);
+        if (llvm_func == NULL) {
+            return new_backend_impl_error(Implementation, NULL, "no declared function");
+        }
 
         LLVMTypeRef llvm_func_type = g_hash_table_lookup(scope->func_scope->global_scope->functions, call->function->name);
 

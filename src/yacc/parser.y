@@ -55,6 +55,7 @@
 %type <node_ptr> moduleimport
 %type <node_ptr> programbody
 %type <node_ptr> fundef
+%type <node_ptr> fundecl
 %type <node_ptr> box
 %type <node_ptr> typedef
 %type <node_ptr> exprlist
@@ -141,6 +142,7 @@ program: program programbody {AST_push_node(root, $2);
 
 programbody: moduleimport {$$ = $1;}
        | fundef{$$ = $1;}
+       | fundecl{$$ = $1;}
        | box{$$ = $1;}
        | definition{$$ = $1;}
        | decl{$$ = $1;}
@@ -190,6 +192,13 @@ fundef: KeyFun Ident paramlist '{' statementlist'}' {AST_NODE_PTR fun = AST_new_
                                                      AST_push_node(fun, $5);
                                                      $$ = fun;
                                                             DEBUG("Function");};
+
+fundecl: KeyFun Ident paramlist {AST_NODE_PTR fun = AST_new_node(new_loc(), AST_Fun, NULL);
+                                 AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $2);
+                                 AST_push_node(fun, ident);
+                                 AST_push_node(fun, $3);
+                                 $$ = fun;
+                                        DEBUG("Function");};
 
 paramlist: paramlist '(' params ')' {AST_push_node($1, $3);
                                      $$ = $1;}

@@ -317,9 +317,24 @@ AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t k
   return NULL;
 }
 
-void AST_merge_modules(AST_NODE_PTR dst, AST_NODE_PTR src) {
+void AST_merge_modules(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
     for (size_t i = 0; i < src->child_count; i++) {
-        AST_push_node(dst, AST_remove_child(src, i));
+        AST_insert_node(dst, k + i, AST_remove_child(src, i));
     }
     AST_delete_node(src);
+}
+
+void AST_insert_node(AST_NODE_PTR owner, size_t idx, AST_NODE_PTR child) {
+    DEBUG("Reallocating old children array");
+
+    owner->child_count++;
+    const size_t size = sizeof(struct AST_Node_t *) * owner->child_count;
+    owner->children = mem_realloc(MemoryNamespaceAst, owner->children, size);
+
+    // shift back every following element backwards by one
+    for (size_t i = owner->child_count - 1; i > idx; i--) {
+        owner->children[i] = owner->children[i - 1];
+    }
+
+    owner->children[idx] = child;
 }

@@ -2046,7 +2046,7 @@ int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
 
     fundecl.nodePtr = currentNode;
     fundecl.name = nameNode->value;
-    fundecl.parameter = mem_alloc(MemoryNamespaceSet, sizeof(GArray));
+    fundecl.parameter = mem_new_g_array(MemoryNamespaceSet, sizeof(Parameter));
 
     for (size_t i = 0; i < paramlistlist->child_count; i++) {
 
@@ -2062,7 +2062,7 @@ int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
     }
 
     Parentfunction->nodePtr = currentNode;
-    Parentfunction->kind = FunctionDefinitionKind;
+    Parentfunction->kind = FunctionDeclarationKind;
     Parentfunction->impl.declaration = fundecl;
     Parentfunction->name = fundecl.name;
     return SEMANTIC_OK;

@@ -108,7 +108,7 @@ static int setup_target_environment(const TargetConfig *target) {
  * @param ast
  * @param target
  */
-static void print_ast_to_file(const AST_NODE_PTR ast, const TargetConfig *target) {
+static void print_ast_to_file(AST_NODE_PTR ast, const TargetConfig *target) {
     assert(ast != NULL);
     assert(target != NULL);
     DEBUG("printing AST to file: %s", target->name);
@@ -178,7 +178,7 @@ static AST_NODE_PTR compile_module_with_dependencies(ModuleFileStack *unit, Modu
                 ModuleFile *imported_file = push_file(unit, child->value);
 
                 if (compile_file_to_ast(imported_module, imported_file) == EXIT_SUCCESS) {
-                    AST_merge_modules(root_module, imported_module);
+                    AST_merge_modules(root_module, i + 1, imported_module);
                 }
             }
         }

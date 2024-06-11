@@ -85,16 +85,23 @@ BackendError impl_param_type(LLVMBackendCompileUnit* unit,
     return err;
 }
 
-BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
-                            LLVMGlobalScope* scope, FunctionDefinition* fundef,
-                            LLVMValueRef* llvm_fun, const char* name) {
-    DEBUG("implementing function declaration: %s()", name);
+BackendError impl_func_type(LLVMBackendCompileUnit* unit,
+                            LLVMGlobalScope* scope, Function* func,
+                            LLVMValueRef* llvm_fun) {
+    DEBUG("implementing function declaration: %s()", func->name);
     BackendError err = SUCCESS;
 
     GArray* llvm_params = g_array_new(FALSE, FALSE, sizeof(LLVMTypeRef));
+    GArray* func_params = NULL;
 
-    for (size_t i = 0; i < fundef->parameter->len; i++) {
-        Parameter* param = &g_array_index(fundef->parameter, Parameter, i);
+    if (func->kind == FunctionDeclarationKind) {
+        func_params = func->impl.declaration.parameter;
+    } else {
+        func_params = func->impl.definition.parameter;
+    }
+
+    for (size_t i = 0; i < func_params->len; i++) {
+        Parameter* param = &g_array_index(func_params, Parameter, i);
 
         LLVMTypeRef llvm_type = NULL;
         err = impl_param_type(unit, scope, param, &llvm_type);
@@ -112,9 +119,9 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
         LLVMFunctionType(LLVMVoidTypeInContext(unit->context),
                          (LLVMTypeRef*)llvm_params->data, llvm_params->len, 0);
 
-    *llvm_fun = LLVMAddFunction(unit->module, name, llvm_fun_type);
+    *llvm_fun = LLVMAddFunction(unit->module, func->name, llvm_fun_type);
 
-    g_hash_table_insert(scope->functions, name, llvm_fun_type);
+    g_hash_table_insert(scope->functions, func->name, llvm_fun_type);
 
     g_array_free(llvm_params, FALSE);
 
@@ -123,11 +130,11 @@ BackendError impl_func_decl(LLVMBackendCompileUnit* unit,
 
 BackendError impl_func_def(LLVMBackendCompileUnit* unit,
                        LLVMGlobalScope* global_scope,
-                       FunctionDefinition* fundef, const char* name) {
+                       Function* func, const char* name) {
     BackendError err = SUCCESS;
 
     LLVMValueRef llvm_func = NULL;
-    err = impl_func_decl(unit, global_scope, fundef, &llvm_func, name);
+    err = impl_func_type(unit, global_scope, func, &llvm_func);
 
     if (err.kind == Success) {
         // create local function scope
@@ -145,8 +152,8 @@ BackendError impl_func_def(LLVMBackendCompileUnit* unit,
         LLVMPositionBuilderAtEnd(builder, entry);
 
         // create value references for parameter
-        for (guint i = 0; i < fundef->parameter->len; i++) {
-            Parameter* param = &g_array_index(fundef->parameter, Parameter, i);
+        for (guint i = 0; i < func->impl.definition.parameter->len; i++) {
+            Parameter* param = &g_array_index(func->impl.definition.parameter, Parameter, i);
             LLVMValueRef llvm_param = LLVMGetParam(llvm_func, i);
 
             if (llvm_param == NULL) {
@@ -158,7 +165,7 @@ BackendError impl_func_def(LLVMBackendCompileUnit* unit,
 
         LLVMBasicBlockRef llvm_start_body_block = NULL;
         LLVMBasicBlockRef llvm_end_body_block = NULL;
-        err = impl_block(unit, builder, func_scope, &llvm_start_body_block, &llvm_end_body_block, fundef->body);
+        err = impl_block(unit, builder, func_scope, &llvm_start_body_block, &llvm_end_body_block, func->impl.definition.body);
         LLVMPositionBuilderAtEnd(builder, entry);
         LLVMBuildBr(builder, llvm_start_body_block);
 
@@ -196,9 +203,10 @@ BackendError impl_functions(LLVMBackendCompileUnit* unit,
         Function* func = (Function*) val;
 
         if (func->kind == FunctionDeclarationKind) {
-            // err = impl_func_decl(unit, scope, &func->impl.declaration, (const char*) key);
+            LLVMValueRef llvm_func = NULL;
+            err = impl_func_type(unit, scope, func, &llvm_func);
         } else {
-            err = impl_func_def(unit, scope, &func->impl.definition, (const char*)key);
+            err = impl_func_def(unit, scope, func, (const char*)key);
         }
 
         if (err.kind != Success) {
