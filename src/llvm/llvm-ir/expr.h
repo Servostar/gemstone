@@ -12,6 +12,7 @@
 
 BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                        LLVMBuilderRef builder, Expression *expr,
+                       LLVMBool reference,
                        LLVMValueRef *llvm_result);
 
 #endif  // LLVM_BACKEND_EXPR_H

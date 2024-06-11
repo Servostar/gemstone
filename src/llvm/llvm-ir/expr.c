@@ -19,14 +19,14 @@ BackendError impl_bitwise_operation(LLVMBackendCompileUnit *unit,
     if (operation->impl.arithmetic == BitwiseNot) {
         // single operand
         rhs = g_array_index(operation->operands, Expression*, 0);
-        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+        impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
     } else {
         // two operands
         lhs = g_array_index(operation->operands, Expression*, 0);
-        impl_expr(unit, scope, builder, lhs, &llvm_lhs);
+        impl_expr(unit, scope, builder, lhs, FALSE, &llvm_lhs);
 
         rhs = g_array_index(operation->operands, Expression*, 1);
-        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+        impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
     }
 
     switch (operation->impl.bitwise) {
@@ -78,14 +78,14 @@ BackendError impl_logical_operation(LLVMBackendCompileUnit *unit,
     if (operation->impl.logical == LogicalNot) {
         // single operand
         rhs = g_array_index(operation->operands, Expression*, 0);
-        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+        impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
     } else {
         // two operands
         lhs = g_array_index(operation->operands, Expression*, 0);
-        impl_expr(unit, scope, builder, lhs, &llvm_lhs);
+        impl_expr(unit, scope, builder, lhs, FALSE, &llvm_lhs);
 
         rhs = g_array_index(operation->operands, Expression*, 1);
-        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+        impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
     }
 
     switch (operation->impl.logical) {
@@ -142,10 +142,10 @@ BackendError impl_relational_operation(LLVMBackendCompileUnit *unit,
 
     // two operands
     lhs = g_array_index(operation->operands, Expression*, 0);
-    impl_expr(unit, scope, builder, lhs, &llvm_lhs);
+    impl_expr(unit, scope, builder, lhs, FALSE, &llvm_lhs);
 
     rhs = g_array_index(operation->operands, Expression*, 1);
-    impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+    impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
 
     if (is_integral(rhs->result)) {
         // integral type
@@ -204,14 +204,14 @@ BackendError impl_arithmetic_operation(LLVMBackendCompileUnit *unit,
     if (operation->impl.arithmetic == Negate) {
         // single operand
         rhs = g_array_index(operation->operands, Expression*, 0);
-        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+        impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
     } else {
         // two operands
         lhs = g_array_index(operation->operands, Expression*, 0);
-        impl_expr(unit, scope, builder, lhs, &llvm_lhs);
+        impl_expr(unit, scope, builder, lhs, FALSE, &llvm_lhs);
 
         rhs = g_array_index(operation->operands, Expression*, 1);
-        impl_expr(unit, scope, builder, rhs, &llvm_rhs);
+        impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
     }
 
     if (is_integral(rhs->result)) {
@@ -295,7 +295,7 @@ BackendError impl_transmute(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                             LLVMValueRef *llvm_result) {
 
     LLVMValueRef operand = NULL;
-    impl_expr(unit, scope, builder, transmute->operand, &operand);
+    impl_expr(unit, scope, builder, transmute->operand, FALSE, &operand);
 
     LLVMTypeRef target_type = NULL;
     BackendError err = get_type_impl(unit, scope->func_scope->global_scope,
@@ -324,7 +324,7 @@ BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                            LLVMBuilderRef builder, TypeCast *typecast,
                            LLVMValueRef *llvm_result) {
     LLVMValueRef operand = NULL;
-    impl_expr(unit, scope, builder, typecast->operand, &operand);
+    impl_expr(unit, scope, builder, typecast->operand, FALSE, &operand);
 
     LLVMTypeRef target_type = NULL;
     BackendError err = get_type_impl(unit, scope->func_scope->global_scope,
@@ -346,6 +346,7 @@ BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
 
 BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                                 LLVMBuilderRef builder, Variable *variable,
+                                LLVMBool reference,
                                 LLVMValueRef *llvm_result) {
 
     LLVMValueRef llvm_variable = get_variable(scope, variable->name);
@@ -354,7 +355,13 @@ BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *sc
         return new_backend_impl_error(Implementation, NULL, "Variable not found");
     }
 
-    if (LLVMGetTypeKind(LLVMTypeOf(llvm_variable)) == LLVMPointerTypeKind) {
+    if (reference) {
+        // only reference wanted
+
+        *llvm_result = llvm_variable;
+
+    } else {
+        // no referencing, load value
 
         Type* type;
         LLVMTypeRef llvm_type;
@@ -368,8 +375,6 @@ BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *sc
         get_type_impl(unit, scope->func_scope->global_scope, type, &llvm_type);
 
         *llvm_result = LLVMBuildLoad2(builder, llvm_type, llvm_variable, "");
-    } else {
-        *llvm_result = llvm_variable;
     }
 
     return SUCCESS;
@@ -380,20 +385,18 @@ BackendError impl_address_of(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope
                                 LLVMValueRef *llvm_result) {
 
     LLVMValueRef llvm_variable = NULL;
-    BackendError err = impl_expr(unit, scope, builder, addressOf->variable, &llvm_variable);
+    BackendError err = impl_expr(unit, scope, builder, addressOf->variable, FALSE, llvm_result);
 
     if (err.kind != Success) {
         return err;
     }
-
-    LLVMValueRef zero = LLVMConstInt(LLVMInt32Type(), 0, 0);
-    *llvm_result = LLVMBuildGEP2(builder, LLVMTypeOf(llvm_variable), llvm_variable, &zero, 1, "address of");
 
     return SUCCESS;
 }
 
 BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                        LLVMBuilderRef builder, Expression *expr,
+                       LLVMBool reference,
                        LLVMValueRef *llvm_result) {
     DEBUG("implementing expression: %ld", expr->kind);
     BackendError err = SUCCESS;
@@ -417,6 +420,7 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
             break;
         case ExpressionKindVariable:
             err = impl_variable_load(unit, scope, builder, expr->impl.variable,
+                                     reference,
                                      llvm_result);
             break;
         case ExpressionKindAddressOf:

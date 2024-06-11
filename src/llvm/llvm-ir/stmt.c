@@ -23,7 +23,7 @@ BackendError impl_assign_stmt(
     DEBUG("implementing assignment for variable: %s", assignment->variable->name);
 
     LLVMValueRef llvm_value = NULL;
-    err = impl_expr(unit, scope, builder, assignment->value, &llvm_value);
+    err = impl_expr(unit, scope, builder, assignment->value, FALSE, &llvm_value);
     if (err.kind != Success) {
         return err;
     }
@@ -100,7 +100,7 @@ BackendError impl_while(LLVMBackendCompileUnit *unit,
     LLVMPositionBuilderAtEnd(builder, while_cond_block);
     // Resolve condition in block to a variable
     LLVMValueRef cond_result = NULL;
-    err = impl_expr(unit, scope, builder, (Expression *) while_stmt->conditon, &cond_result);
+    err = impl_expr(unit, scope, builder, (Expression *) while_stmt->conditon, FALSE, &cond_result);
     if (err.kind != Success) {
         return err;
     }
@@ -155,12 +155,6 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
     for (size_t i = 0; i < call->expressions->len; i++) {
         Expression *arg = g_array_index(call->expressions, Expression*, i);
 
-        LLVMValueRef llvm_arg = NULL;
-        err = impl_expr(unit, scope, builder, arg, &llvm_arg);
-        if (err.kind != Success) {
-            break;
-        }
-
         GArray* param_list;
         if (call->function->kind == FunctionDeclarationKind) {
             param_list = call->function->impl.definition.parameter;
@@ -168,11 +162,16 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
             param_list = call->function->impl.declaration.parameter;
         }
 
+        LLVMBool reference = FALSE;
         Parameter parameter = g_array_index(param_list, Parameter, i);
-
         if (is_parameter_out(&parameter)) {
-            LLVMValueRef zero = LLVMConstInt(LLVMInt32TypeInContext(unit->context), 0, 0);
-            llvm_arg = LLVMBuildGEP2(builder, LLVMTypeOf(llvm_arg), llvm_arg, &zero, 1, "");
+            reference = TRUE;
+        }
+
+        LLVMValueRef llvm_arg = NULL;
+        err = impl_expr(unit, scope, builder, arg, reference, &llvm_arg);
+        if (err.kind != Success) {
+            break;
         }
 
         arguments[i] = llvm_arg;
@@ -200,7 +199,7 @@ impl_cond_block(LLVMBackendCompileUnit *unit, LLVMBuilderRef builder, LLVMLocalS
                                                 "stmt.branch.cond");
     LLVMPositionBuilderAtEnd(builder, *cond_block);
     // Resolve condition in block to a variable
-    err = impl_expr(unit, scope, builder, cond, llvm_cond);
+    err = impl_expr(unit, scope, builder, cond, FALSE, llvm_cond);
     if (err.kind == Success) {
         // build body of loop
         err = impl_basic_block(unit, builder, scope, block, start_body_block, end_body_block);
@@ -350,7 +349,7 @@ BackendError impl_def(LLVMBackendCompileUnit *unit,
     }
 
     LLVMValueRef initial_value = NULL;
-    err = impl_expr(unit, scope, builder, def->initializer, &initial_value);
+    err = impl_expr(unit, scope, builder, def->initializer, FALSE, &initial_value);
     if (err.kind != Success) {
         return err;
     }
