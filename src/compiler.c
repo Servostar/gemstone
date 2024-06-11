@@ -164,6 +164,29 @@ static void run_backend_codegen(const Module* module, const TargetConfig* target
     err = deinit_backend();
 }
 
+static AST_NODE_PTR compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file) {
+    AST_NODE_PTR root_module = AST_new_node(empty_location(), AST_Module, NULL);
+
+    if (compile_file_to_ast(root_module, file) == EXIT_SUCCESS) {
+
+        for (size_t i = 0; i < root_module->child_count; i++) {
+            AST_NODE_PTR child = AST_get_node(root_module, i);
+
+            if (child->kind == AST_Import) {
+                AST_NODE_PTR imported_module = AST_new_node(empty_location(), AST_Module, NULL);
+
+                ModuleFile *imported_file = push_file(unit, child->value);
+
+                if (compile_file_to_ast(imported_module, imported_file) == EXIT_SUCCESS) {
+                    AST_merge_modules(root_module, imported_module);
+                }
+            }
+        }
+    }
+
+    return root_module;
+}
+
 /**
  * @brief Build the given target
  * @param unit
@@ -172,22 +195,22 @@ static void run_backend_codegen(const Module* module, const TargetConfig* target
 static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     print_message(Info, "Building target: %s", target->name);
 
-    AST_NODE_PTR ast = AST_new_node(empty_location(), AST_Module, NULL);
     ModuleFile *file = push_file(unit, target->root_module);
+    AST_NODE_PTR  ast = compile_module_with_dependencies(unit, file);
 
-    if (compile_file_to_ast(ast, file) == EXIT_SUCCESS) {
+    if (ast != NULL) {
         if (setup_target_environment(target) == 0) {
 
             print_ast_to_file(ast, target);
-            Module* module = create_set(ast);
+            Module *module = create_set(ast);
 
             if (module != NULL) {
                 run_backend_codegen(module, target);
             }
         }
-    }
 
-    AST_delete_node(ast);
+        AST_delete_node(ast);
+    }
 
     mem_purge_namespace(MemoryNamespaceLex);
     mem_purge_namespace(MemoryNamespaceAst);

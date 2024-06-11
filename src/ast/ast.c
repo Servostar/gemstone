@@ -316,3 +316,10 @@ AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t k
 
   return NULL;
 }
+
+void AST_merge_modules(AST_NODE_PTR dst, AST_NODE_PTR src) {
+    for (size_t i = 0; i < src->child_count; i++) {
+        AST_push_node(dst, AST_remove_child(src, i));
+    }
+    AST_delete_node(src);
+}
