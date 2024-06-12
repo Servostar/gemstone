@@ -76,6 +76,11 @@ void delete_files(ModuleFileStack *stack) {
 
 // behaves like fgets except that it has defined behavior when n == 1
 static void custom_fgets(char *buffer, size_t n, FILE *stream) {
+    if (feof(stream)) {
+        buffer[0] = '\n';
+        buffer[1] = 0;
+        return;
+    }
     if (n == 1) {
         buffer[0] = (char) fgetc(stream);
         buffer[1] = 0;
