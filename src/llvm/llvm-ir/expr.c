@@ -372,10 +372,13 @@ BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *sc
         } else {
             type = variable->impl.declaration.type;
         }
-
         get_type_impl(unit, scope->func_scope->global_scope, type, &llvm_type);
 
-        *llvm_result = LLVMBuildLoad2(builder, llvm_type, llvm_variable, "");
+        if (LLVMGetTypeKind(LLVMTypeOf(llvm_variable)) == LLVMPointerTypeKind) {
+            *llvm_result = LLVMBuildLoad2(builder, llvm_type, llvm_variable, "");
+        } else {
+            *llvm_result = llvm_variable;
+        }
     }
 
     return SUCCESS;
