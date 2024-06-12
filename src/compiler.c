@@ -200,7 +200,6 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
             AST_NODE_PTR child = AST_get_node(root_module, i);
 
             if (child->kind == AST_Import) {
-                AST_NODE_PTR imported_module = AST_new_node(empty_location(), AST_Module, NULL);
 
                 const char* path = get_absolute_import_path(target, child->value);
                 if (path == NULL) {
@@ -208,6 +207,7 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
                 }
 
                 ModuleFile *imported_file = push_file(unit, path);
+                AST_NODE_PTR imported_module = AST_new_node(empty_location(imported_file), AST_Module, NULL);
 
                 if (compile_file_to_ast(imported_module, imported_file) == EXIT_SUCCESS) {
                     AST_merge_modules(root_module, i + 1, imported_module);
@@ -232,7 +232,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     print_message(Info, "Building target: %s", target->name);
 
     ModuleFile *file = push_file(unit, target->root_module);
-    AST_NODE_PTR root_module = AST_new_node(empty_location(), AST_Module, NULL);
+    AST_NODE_PTR root_module = AST_new_node(empty_location(file), AST_Module, NULL);
 
     if (compile_module_with_dependencies(unit, file, target, root_module) == EXIT_SUCCESS) {
         if (root_module != NULL) {

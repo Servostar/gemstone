@@ -208,14 +208,14 @@ TokenLocation new_location(unsigned long int line_start, unsigned long int col_s
     return location;
 }
 
-TokenLocation empty_location(void) {
+TokenLocation empty_location(ModuleFile* file) {
     TokenLocation location;
 
     location.line_start = 0;
     location.line_end = 0;
     location.col_start = 0;
     location.col_end = 0;
-    location.file = NULL;
+    location.file = file;
 
     return location;
 }

@@ -82,7 +82,7 @@ TokenLocation new_location(unsigned long int line_start, unsigned long int col_s
  * @brief Create a new empty location with all of its contents set to zero
  * @return
  */
-TokenLocation empty_location(void);
+TokenLocation empty_location(ModuleFile* file);
 
 /**
  * @brief Prints some diagnostic message to stdout.
