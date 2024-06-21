@@ -170,6 +170,7 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
 
         LLVMValueRef llvm_arg = NULL;
         err = impl_expr(unit, scope, builder, arg, reference, &llvm_arg);
+
         if (err.kind != Success) {
             break;
         }
@@ -179,6 +180,7 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
 
     if (err.kind == Success) {
         LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, call->function->name);
+
         if (llvm_func == NULL) {
             return new_backend_impl_error(Implementation, NULL, "no declared function");
         }

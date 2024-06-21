@@ -28,6 +28,12 @@ void delete_local_scope(LLVMLocalScope*);
 
 LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name);
 
+LLVMBool is_parameter(const LLVMLocalScope* scope, const char* name);
+
+BackendError impl_function_types(LLVMBackendCompileUnit* unit,
+                            LLVMGlobalScope* scope,
+                            GHashTable* variables);
+
 BackendError impl_functions(LLVMBackendCompileUnit* unit,
                                    LLVMGlobalScope* scope,
                                    GHashTable* variables);

@@ -340,7 +340,7 @@ BackendError impl_typecast(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
     const LLVMOpcode opcode =
             LLVMGetCastOpcode(operand, src_signed, target_type, dst_signed);
     *llvm_result =
-            LLVMBuildCast(builder, opcode, operand, target_type, "typecast");
+            LLVMBuildCast(builder, opcode, operand, target_type, "expr.typecast");
 
     return err;
 }
@@ -352,26 +352,29 @@ BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *sc
 
     LLVMValueRef llvm_variable = get_variable(scope, variable->name);
 
+    Type* type;
+
+    if (variable->kind == VariableKindDefinition) {
+        type = variable->impl.definiton.declaration.type;
+    } else {
+        type = variable->impl.declaration.type;
+    }
+
     if (llvm_variable == NULL) {
         return new_backend_impl_error(Implementation, NULL, "Variable not found");
     }
 
-    if (reference) {
+    if (reference || is_parameter(scope, variable->name)) {
+        // don't load in case variable is parameter?
         // only reference wanted
 
         *llvm_result = llvm_variable;
 
+
     } else {
         // no referencing, load value
-
-        Type* type;
         LLVMTypeRef llvm_type;
 
-        if (variable->kind == VariableKindDefinition) {
-            type = variable->impl.definiton.declaration.type;
-        } else {
-            type = variable->impl.declaration.type;
-        }
         get_type_impl(unit, scope->func_scope->global_scope, type, &llvm_type);
 
         if (LLVMGetTypeKind(LLVMTypeOf(llvm_variable)) == LLVMPointerTypeKind) {
@@ -405,7 +408,7 @@ BackendError impl_deref(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
 
     LLVMValueRef llvm_pointer = get_variable(scope, dereference->variable->impl.variable->name);
     LLVMTypeRef llvm_deref_type = NULL;
-    err = get_type_impl(unit, scope->func_scope->global_scope, dereference->variable->result, &llvm_deref_type);
+    err = get_type_impl(unit, scope->func_scope->global_scope, dereference->variable->result->impl.reference, &llvm_deref_type);
     if (err.kind != Success) {
         return err;
     }
@@ -416,7 +419,9 @@ BackendError impl_deref(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
         return err;
     }
 
-    *llvm_result = LLVMBuildGEP2(builder, llvm_deref_type, llvm_pointer, index, 1, "expr.deref");
+    *llvm_result = LLVMBuildGEP2(builder, llvm_deref_type, llvm_pointer, index, 1, "expr.deref.gep2");
+
+    *llvm_result = LLVMBuildLoad2(builder, llvm_deref_type, *llvm_result, "expr.deref.load");
 
     return err;
 }
@@ -430,7 +435,7 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
 
     switch (expr->kind) {
         case ExpressionKindConstant:
-            err = get_const_type_value(unit, scope->func_scope->global_scope,
+            err = get_const_type_value(unit, builder, scope->func_scope->global_scope,
                                        &expr->impl.constant, llvm_result);
             break;
         case ExpressionKindTransmute:

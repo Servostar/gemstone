@@ -54,6 +54,24 @@ LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name) {
     return global_var;
 }
 
+LLVMBool is_parameter(const LLVMLocalScope* scope, const char* name) {
+    if (g_hash_table_contains(scope->vars, name)) {
+        return FALSE;
+    }
+
+    if (scope->parent_scope != NULL) {
+        return is_parameter(scope->parent_scope, name);
+    }
+
+    LLVMValueRef param = get_parameter(scope->func_scope, name);
+    if (param != NULL) {
+        return TRUE;
+    }
+
+    LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, name);
+    return global_var != NULL;
+}
+
 BackendError impl_param_type(LLVMBackendCompileUnit* unit,
                              LLVMGlobalScope* scope, Parameter* param,
                              LLVMTypeRef* llvm_type) {
@@ -133,8 +151,7 @@ BackendError impl_func_def(LLVMBackendCompileUnit* unit,
                        Function* func, const char* name) {
     BackendError err = SUCCESS;
 
-    LLVMValueRef llvm_func = NULL;
-    err = impl_func_type(unit, global_scope, func, &llvm_func);
+    LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, name);
 
     if (err.kind == Success) {
         // create local function scope
@@ -166,22 +183,46 @@ BackendError impl_func_def(LLVMBackendCompileUnit* unit,
         LLVMBasicBlockRef llvm_start_body_block = NULL;
         LLVMBasicBlockRef llvm_end_body_block = NULL;
         err = impl_block(unit, builder, func_scope, &llvm_start_body_block, &llvm_end_body_block, func->impl.definition.body);
-        LLVMPositionBuilderAtEnd(builder, entry);
-        LLVMBuildBr(builder, llvm_start_body_block);
 
-        // insert returning end block
-        LLVMBasicBlockRef end_block =
-                LLVMAppendBasicBlockInContext(unit->context, llvm_func, "func.end");
-        LLVMPositionBuilderAtEnd(builder, end_block);
-        LLVMBuildRetVoid(builder);
+        if (err.kind == Success) {
+            LLVMPositionBuilderAtEnd(builder, entry);
+            LLVMBuildBr(builder, llvm_start_body_block);
 
-        LLVMPositionBuilderAtEnd(builder, llvm_end_body_block);
-        LLVMBuildBr(builder, end_block);
+            // insert returning end block
+            LLVMBasicBlockRef end_block =
+                    LLVMAppendBasicBlockInContext(unit->context, llvm_func, "func.end");
+            LLVMPositionBuilderAtEnd(builder, end_block);
+            LLVMBuildRetVoid(builder);
 
-        LLVMDisposeBuilder(builder);
+            LLVMPositionBuilderAtEnd(builder, llvm_end_body_block);
+            LLVMBuildBr(builder, end_block);
+
+            LLVMDisposeBuilder(builder);
+        }
 
         // delete function scope GLib structs
         g_hash_table_destroy(func_scope->params);
+    }
+
+    return err;
+}
+
+BackendError impl_function_types(LLVMBackendCompileUnit* unit,
+                            LLVMGlobalScope* scope, GHashTable* functions) {
+    DEBUG("implementing functions...");
+    GHashTableIter iterator;
+    g_hash_table_iter_init(&iterator, functions);
+
+    gpointer key = NULL;
+    gpointer val = NULL;
+
+    BackendError err = SUCCESS;
+    size_t function_count = 0;
+    while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
+        Function* func = (Function*) val;
+        LLVMValueRef llvm_func;
+        err = impl_func_type(unit, scope, func, &llvm_func);
+        function_count++;
     }
 
     return err;
@@ -202,10 +243,7 @@ BackendError impl_functions(LLVMBackendCompileUnit* unit,
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
         Function* func = (Function*) val;
 
-        if (func->kind == FunctionDeclarationKind) {
-            LLVMValueRef llvm_func = NULL;
-            err = impl_func_type(unit, scope, func, &llvm_func);
-        } else {
+        if (func->kind != FunctionDeclarationKind) {
             err = impl_func_def(unit, scope, func, (const char*)key);
         }
 

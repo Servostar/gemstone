@@ -11,7 +11,12 @@ static struct CodegenBackend_t {
 } CodegenBackend;
 
 BackendError new_backend_error(BackendErrorKind kind) {
-    return new_backend_impl_error(kind, NULL, NULL);
+    BackendError error;
+    error.kind = kind;
+    error.impl.ast_node = NULL;
+    error.impl.message = NULL;
+
+    return error;
 }
 
 BackendError new_backend_impl_error(BackendErrorKind kind, AST_NODE_PTR node, const char* message) {
@@ -78,7 +83,7 @@ BackendError generate_code(const Module* root, const TargetConfig* target) {
 
     BackendError code = CodegenBackend.codegen_func(root, target);
     if (code.kind) {
-        ERROR("code generation of backend: %s failed with code: %ld", CodegenBackend.name, code);
+        ERROR("code generation of backend: %s failed with code: %ld `%s`", CodegenBackend.name, code, code.impl.message);
         return code;
     }
 

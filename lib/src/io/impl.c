@@ -40,6 +40,7 @@ void flush(handle dev) {
 // Compile for Linux and BSD
 
 #include <unistd.h>
+#include <stdio.h>
 
 // savely cast a 64-bit pointer down to a 32-bit value
 // this assumes that 64-bit system will use 32-bit handles

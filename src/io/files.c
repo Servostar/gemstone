@@ -42,22 +42,24 @@ ModuleFile *push_file(ModuleFileStack *stack, const char *path) {
 
     // lazy init of heap stack
     if (stack->files == NULL) {
-        stack->files = g_array_new(FALSE, FALSE, sizeof(ModuleFile));
+        stack->files = g_array_new(FALSE, FALSE, sizeof(ModuleFile*));
     }
 
-    ModuleFile new_file = {
-            .path = path,
-            .handle = NULL
-    };
+    ModuleFile* new_file = mem_alloc(MemoryNamespaceStatic, sizeof(ModuleFile));
+    new_file->handle = NULL;
+    new_file->path = path;
+    new_file->statistics.warning_count = 0;
+    new_file->statistics.error_count = 0;
+    new_file->statistics.info_count = 0;
 
     g_array_append_val(stack->files, new_file);
 
-    return ((ModuleFile *) stack->files->data) + stack->files->len - 1;
+    return new_file;
 }
 
 void delete_files(ModuleFileStack *stack) {
     for (size_t i = 0; i < stack->files->len; i++) {
-        const ModuleFile *file = (ModuleFile *) stack->files->data + i;
+        const ModuleFile *file = g_array_index(stack->files, ModuleFile*, i);
 
         if (file->handle != NULL) {
             DEBUG("closing file: %s", file->path);
@@ -254,7 +256,7 @@ void print_unit_statistics(ModuleFileStack *file_stack) {
     stats.error_count = 0;
 
     for (size_t i = 0; i < file_stack->files->len; i++) {
-        ModuleFile *file = (ModuleFile *) file_stack->files->data;
+        ModuleFile* file = g_array_index(file_stack->files, ModuleFile*, i);
 
         stats.info_count += file->statistics.warning_count;
         stats.warning_count += file->statistics.warning_count;

@@ -69,6 +69,7 @@
 %type <node_ptr> typecast
 %type <node_ptr> reinterpretcast
 %type <node_ptr> program
+%type <node_ptr> storage_expr
 
 
 %token KeyInt
@@ -399,15 +400,18 @@ storagequalifier: KeyGlobal {$$ = AST_new_node(new_loc(), AST_Storage, "global")
         | KeyStatic {$$ = AST_new_node(new_loc(), AST_Storage, "static");}
         | KeyLocal {$$ = AST_new_node(new_loc(), AST_Storage, "local");};
 
-assign: Ident '=' expr { AST_NODE_PTR assign = AST_new_node(new_loc(), AST_Assign, NULL);
-                         AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $1);
-                         AST_push_node(assign, ident);
+assign: storage_expr '=' expr { AST_NODE_PTR assign = AST_new_node(new_loc(), AST_Assign, NULL);
+                         AST_push_node(assign, $1);
                          AST_push_node(assign, $3);
-                         $$ = assign;
-    DEBUG("Assignment"); }
-    
-      | boxaccess '=' expr 
-      | boxselfaccess '=' expr ;
+                         $$ = assign; };
+
+storage_expr: Ident { $$ = AST_new_node(new_loc(), AST_Ident, $1); }
+    | boxaccess  { $$ = $1; }
+    | boxselfaccess  { $$ = $1; }
+    | storage_expr '[' expr ']' { AST_NODE_PTR deref = AST_new_node(new_loc(), AST_Dereference, NULL);
+                                                                    AST_push_node(deref, $1);
+                                                                    AST_push_node(deref, $3);
+                                                                    $$ = deref; };
 
 sign: KeySigned {$$ = AST_new_node(new_loc(), AST_Sign, "signed");}
     | KeyUnsigned{$$ = AST_new_node(new_loc(), AST_Sign, "unsigned");};

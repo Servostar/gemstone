@@ -19,8 +19,7 @@ struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t
 
     // init to discrete state
     node->parent = NULL;
-    node->children = NULL;
-    node->child_count = 0;
+    node->children = mem_new_g_array(MemoryNamespaceAst, sizeof(AST_NODE_PTR));
     node->kind = kind;
     node->value = value;
     node->location = location;
@@ -131,17 +130,6 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
     assert(owner != NULL);
     assert(child != NULL);
 
-    // if there are no children for now
-    if (owner->child_count == 0) {
-        DEBUG("Allocating new children array");
-        owner->children = mem_alloc(MemoryNamespaceAst, sizeof(struct AST_Node_t *));
-
-    } else {
-        DEBUG("Rellocating old children array");
-        const size_t size = sizeof(struct AST_Node_t *) * (owner->child_count + 1);
-        owner->children = mem_realloc(MemoryNamespaceAst, owner->children, size);
-    }
-
     if (owner->children == NULL) {
         PANIC("failed to allocate children array of AST node");
     }
@@ -158,20 +146,20 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
 
     assert(owner->children != NULL);
 
-    owner->children[owner->child_count++] = child;
+    g_array_append_val(owner->children, child);
 }
 
 struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, const size_t idx) {
     DEBUG("retrvieng node %d from %p", idx, owner);
     assert(owner != NULL);
     assert(owner->children != NULL);
-    assert(idx < owner->child_count);
+    assert(idx < owner->children->len);
 
     if (owner->children == NULL) {
         PANIC("AST owner node has no children");
     }
 
-    struct AST_Node_t *child = owner->children[idx];
+    AST_NODE_PTR child = g_array_index(owner->children, AST_NODE_PTR, idx);
 
     if (child == NULL) {
         PANIC("child node is NULL");
@@ -183,18 +171,12 @@ struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, const size_t idx) {
 struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, const size_t idx) {
     assert(owner != NULL);
     assert(owner->children != NULL);
-    assert(idx < owner->child_count);
+    assert(idx < owner->children->len);
 
-    struct AST_Node_t* child = owner->children[idx];
+    AST_NODE_PTR child = g_array_index(owner->children, AST_NODE_PTR, idx);
+    g_array_remove_index(owner->children, idx);
 
     child->parent = NULL;
-
-    owner->child_count--;
-
-    // shift back every following element by one
-    for (size_t i = idx; i < owner->child_count; i++) {
-        owner->children[i] = owner->children[i + 1];
-    }
 
     return child;
 }
@@ -204,8 +186,8 @@ struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_N
     assert(child != NULL);
     assert(owner->children != NULL);
 
-    for (size_t i = 0; i < owner->child_count; i++) {
-        if (owner->children[i] == child) {
+    for (size_t i = 0; i < owner->children->len; i++) {
+        if (g_array_index(owner->children, AST_NODE_PTR, i) == child) {
             return AST_remove_child(owner, i);
         }
     }
@@ -225,10 +207,10 @@ void AST_delete_node(struct AST_Node_t *node) {
     }
 
     if (node->children != NULL) {
-        for (size_t i = 0; i < node->child_count; i++) {
+        for (size_t i = 0; i < AST_get_child_count(node); i++) {
             // prevent detach of children node
-            node->children[i]->parent = NULL;
-            AST_delete_node(node->children[i]);
+            AST_get_node(node, i)->parent = NULL;
+            AST_delete_node(AST_get_node(node, i));
         }
         mem_free(node->children);
     }
@@ -246,8 +228,8 @@ static void AST_visit_nodes_recurse2(struct AST_Node_t *root,
 
     (for_each)(root, depth);
 
-    for (size_t i = 0; i < root->child_count; i++) {
-        AST_visit_nodes_recurse2(root->children[i], for_each, depth + 1);
+    for (size_t i = 0; i < root->children->len; i++) {
+        AST_visit_nodes_recurse2(g_array_index(root->children, AST_NODE_PTR, i), for_each, depth + 1);
     }
 }
 
@@ -274,8 +256,8 @@ static void AST_fprint_graphviz_node_definition(FILE* stream, const struct AST_N
         return;
     }
 
-    for (size_t i = 0; i < node->child_count; i++) {
-        AST_fprint_graphviz_node_definition(stream, node->children[i]);
+    for (size_t i = 0; i < node->children->len; i++) {
+        AST_fprint_graphviz_node_definition(stream, g_array_index(node->children, AST_NODE_PTR, i));
     }
 }
 
@@ -289,9 +271,10 @@ static void AST_fprint_graphviz_node_connection(FILE* stream, const struct AST_N
         return;
     }
 
-    for (size_t i = 0; i < node->child_count; i++) {
-        fprintf(stream, "\tnode%p -- node%p\n", (void*) node, (void*) node->children[i]);
-        AST_fprint_graphviz_node_connection(stream, node->children[i]);
+    for (size_t i = 0; i < node->children->len; i++) {
+        AST_NODE_PTR child = g_array_index(node->children, AST_NODE_PTR, i);
+        fprintf(stream, "\tnode%p -- node%p\n", (void*) node, (void*) child);
+        AST_fprint_graphviz_node_connection(stream, child);
     }
 }
 
@@ -310,7 +293,7 @@ void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* root) {
 }
 
 AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t kind) {
-  for (size_t i = 0; i < owner->child_count; i++) {
+  for (size_t i = 0; i < owner->children->len; i++) {
     AST_NODE_PTR child = AST_get_node(owner, i);
 
     if (child->kind == kind) {
@@ -322,23 +305,31 @@ AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t k
 }
 
 void AST_merge_modules(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
-    for (size_t i = 0; i < src->child_count; i++) {
-        AST_insert_node(dst, k + i, AST_remove_child(src, i));
+    assert(dst != NULL);
+    assert(src != NULL);
+
+    size_t elements = src->children->len;
+    for (size_t i = 0; i < elements; i++) {
+        AST_insert_node(dst, k + i, AST_remove_child(src, 0));
     }
     AST_delete_node(src);
 }
 
 void AST_insert_node(AST_NODE_PTR owner, size_t idx, AST_NODE_PTR child) {
+    assert(owner != NULL);
+    assert(child != NULL);
+
     DEBUG("Reallocating old children array");
 
-    owner->child_count++;
-    const size_t size = sizeof(struct AST_Node_t *) * owner->child_count;
-    owner->children = mem_realloc(MemoryNamespaceAst, owner->children, size);
+    g_array_insert_val(owner->children, idx, child);
+}
 
-    // shift back every following element backwards by one
-    for (size_t i = owner->child_count - 1; i > idx; i--) {
-        owner->children[i] = owner->children[i - 1];
-    }
+size_t AST_get_child_count(AST_NODE_PTR node) {
+    return node->children->len;
+}
 
-    owner->children[idx] = child;
+AST_NODE_PTR AST_get_last_node(AST_NODE_PTR node) {
+    assert(node != NULL);
+
+    return g_array_index(node->children, AST_NODE_PTR, node->children->len - 1);
 }

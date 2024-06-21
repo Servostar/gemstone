@@ -118,7 +118,7 @@ int merge_scale_list(AST_NODE_PTR scale_list, Scale *scale) {
     assert(scale_list != NULL);
     assert(scale != NULL);
 
-    for (size_t i = 0; i < scale_list->child_count; i++) {
+    for (size_t i = 0; i < scale_list->children->len; i++) {
 
         double scale_in_list = 1.0;
         int scale_invalid = scale_factor_from(AST_get_node(scale_list, i)->value, &scale_in_list);
@@ -162,12 +162,12 @@ int set_impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
     composite->sign = Signed;
 
     // check if we have a sign
-    if (AST_Sign == ast_type->children[0]->kind) {
+    if (AST_Sign == AST_get_node(ast_type, 0)->kind) {
 
-        status = sign_from_string(ast_type->children[0]->value, &composite->sign);
+        status = sign_from_string(AST_get_node(ast_type, 0)->value, &composite->sign);
 
         if (status == SEMANTIC_ERROR) {
-            ERROR("invalid sign: %s", ast_type->children[0]->value);
+            ERROR("invalid sign: %s", AST_get_node(ast_type, 0)->value);
             return SEMANTIC_ERROR;
         }
 
@@ -177,16 +177,16 @@ int set_impl_composite_type(AST_NODE_PTR ast_type, CompositeType *composite) {
     composite->scale = 1.0;
 
     // check if we have a list of scale factors
-    if (ast_type->children[scaleNodeOffset]->kind == AST_List) {
+    if (AST_get_node(ast_type, scaleNodeOffset)->kind == AST_List) {
 
-        status = merge_scale_list(ast_type->children[scaleNodeOffset], &composite->scale);
+        status = merge_scale_list(AST_get_node(ast_type, scaleNodeOffset), &composite->scale);
 
         if (status == SEMANTIC_ERROR) {
             return SEMANTIC_ERROR;
         }
     }
 
-    AST_NODE_PTR typeKind = ast_type->children[ast_type->child_count - 1];
+    AST_NODE_PTR typeKind = AST_get_last_node(ast_type);
 
     status = primitive_from_string(typeKind->value, &composite->primitive);
 
@@ -252,7 +252,7 @@ int set_impl_reference_type(AST_NODE_PTR currentNode, Type **type) {
 int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
     assert(currentNode != NULL);
     assert(currentNode->kind == AST_Type || currentNode->kind == AST_Reference);
-    assert(currentNode->child_count > 0);
+    assert(currentNode->children->len > 0);
     DEBUG("start Type");
 
     int status;
@@ -261,7 +261,7 @@ int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
         return set_impl_reference_type(currentNode, type);
     }
 
-    const char *typekind = currentNode->children[currentNode->child_count - 1]->value;
+    const char *typekind = AST_get_node(currentNode, currentNode->children->len - 1)->value;
 
     //find type in composites
     if (g_hash_table_contains(declaredComposites, typekind) == TRUE) {
@@ -272,7 +272,7 @@ int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
     if (g_hash_table_contains(declaredBoxes, typekind) == TRUE) {
         *type = g_hash_table_lookup(declaredBoxes, typekind);
 
-        if (currentNode->child_count > 1) {
+        if (currentNode->children->len > 1) {
             print_diagnostic(&currentNode->location, Error, "Box type cannot modified");
             return SEMANTIC_ERROR;
         }
@@ -286,7 +286,7 @@ int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
     // only one child means either composite or primitive
     // try to implement primitive first
     // if not successfull continue building a composite
-    if (currentNode->child_count == 1) {
+    if (currentNode->children->len == 1) {
         // type is a primitive
         new_type->kind = TypeKindPrimitive;
 
@@ -298,7 +298,7 @@ int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
             return SEMANTIC_OK;
         }
 
-        print_diagnostic(&currentNode->children[currentNode->child_count - 1]->location, Error,
+        print_diagnostic(&AST_get_last_node(currentNode)->location, Error,
                          "Expected either primitive or composite type");
         return SEMANTIC_ERROR;
     }
@@ -328,7 +328,7 @@ int addVarToScope(Variable *variable);
 
 int createRef(AST_NODE_PTR currentNode, Type **reftype) {
     assert(currentNode != NULL);
-    assert(currentNode->child_count == 1);
+    assert(currentNode->children->len == 1);
     assert(AST_get_node(currentNode, 0)->kind == AST_Type);
 
     Type *type = malloc(sizeof(Type));
@@ -336,7 +336,7 @@ int createRef(AST_NODE_PTR currentNode, Type **reftype) {
     referenceType->kind = TypeKindReference;
     referenceType->nodePtr = currentNode;
 
-    int signal = set_get_type_impl(currentNode->children[0], &type);
+    int signal = set_get_type_impl(AST_get_node(currentNode, 0), &type);
     if (signal) {
         return SEMANTIC_ERROR;
     }
@@ -349,7 +349,7 @@ int createRef(AST_NODE_PTR currentNode, Type **reftype) {
 int createDecl(AST_NODE_PTR currentNode, GArray **variables) {
     DEBUG("create declaration");
 
-    AST_NODE_PTR ident_list = currentNode->children[currentNode->child_count - 1];
+    AST_NODE_PTR ident_list = AST_get_last_node(currentNode);
 
     *variables = mem_new_g_array(MemoryNamespaceSet, sizeof(Variable *));
 
@@ -359,10 +359,10 @@ int createDecl(AST_NODE_PTR currentNode, GArray **variables) {
 
     int status = SEMANTIC_OK;
 
-    DEBUG("Child Count: %i", currentNode->child_count);
+    DEBUG("Child Count: %i", currentNode->children->len);
 
-    for (size_t i = 0; i < currentNode->child_count; i++) {
-        switch (currentNode->children[i]->kind) {
+    for (size_t i = 0; i < currentNode->children->len; i++) {
+        switch (AST_get_node(currentNode, i)->kind) {
             case AST_Storage:
                 DEBUG("fill Qualifier");
                 decl.qualifier = Qualifier_from_string(AST_get_node(currentNode, i)->value);
@@ -377,17 +377,17 @@ int createDecl(AST_NODE_PTR currentNode, GArray **variables) {
                 status = createRef(AST_get_node(currentNode, i), &decl.type);
                 break;
             default:
-                PANIC("invalid node type: %ld", currentNode->children[i]->kind);
+                PANIC("invalid node type: %ld", AST_get_node(currentNode, i)->kind);
                 break;
         }
     }
 
-    for (size_t i = 0; i < ident_list->child_count; i++) {
+    for (size_t i = 0; i < ident_list->children->len; i++) {
         Variable *variable = mem_alloc(MemoryNamespaceSet, sizeof(Variable));
 
         variable->kind = VariableKindDeclaration;
         variable->nodePtr = currentNode;
-        variable->name = ident_list->children[i]->value;
+        variable->name = AST_get_node(ident_list, i)->value;
         variable->impl.declaration = decl;
 
         g_array_append_val(*variables, variable);
@@ -409,9 +409,9 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
 
     DEBUG("create definition");
 
-    AST_NODE_PTR declaration = currentNode->children[0];
-    AST_NODE_PTR expression = currentNode->children[1];
-    AST_NODE_PTR ident_list = declaration->children[currentNode->child_count - 1];
+    AST_NODE_PTR declaration = AST_get_node(currentNode, 0);
+    AST_NODE_PTR expression = AST_get_node(currentNode, 1);
+    AST_NODE_PTR ident_list = AST_get_last_node(declaration);
 
     *variables = mem_new_g_array(MemoryNamespaceSet, sizeof(Variable *));
 
@@ -423,17 +423,20 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
 
     int status = SEMANTIC_OK;
 
-    DEBUG("Child Count: %i", declaration->child_count);
-    for (size_t i = 0; i < declaration->child_count; i++) {
-        switch (declaration->children[i]->kind) {
+    DEBUG("Child Count: %i", declaration->children->len);
+    for (size_t i = 0; i < declaration->children->len; i++) {
+
+        AST_NODE_PTR child = AST_get_node(declaration, i);
+
+        switch (child->kind) {
             case AST_Storage:
                 DEBUG("fill Qualifier");
-                decl.qualifier = Qualifier_from_string(declaration->children[i]->value);
+                decl.qualifier = Qualifier_from_string(child->value);
                 break;
             case AST_Reference:
             case AST_Type:
                 DEBUG("fill Type");
-                status = set_get_type_impl(declaration->children[i], &decl.type);
+                status = set_get_type_impl(child, &decl.type);
                 if (status == SEMANTIC_ERROR) {
                     return SEMANTIC_ERROR;
                 }
@@ -441,7 +444,7 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
             case AST_IdentList:
                 break;
             default:
-                PANIC("invalid node type: %ld", declaration->children[i]->kind);
+                PANIC("invalid node type: %ld", child->kind);
                 break;
         }
     }
@@ -453,12 +456,12 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
     }
     def.initializer = name;
 
-    for (size_t i = 0; i < ident_list->child_count; i++) {
+    for (size_t i = 0; i < ident_list->children->len; i++) {
         Variable *variable = mem_alloc(MemoryNamespaceSet, sizeof(Variable));
 
         variable->kind = VariableKindDefinition;
         variable->nodePtr = currentNode;
-        variable->name = ident_list->children[i]->value;
+        variable->name = AST_get_node(ident_list, i)->value;
         variable->impl.definiton = def;
 
         g_array_append_val(*variables, variable);
@@ -659,10 +662,10 @@ int createArithOperation(Expression *ParentExpression, AST_NODE_PTR currentNode,
     ParentExpression->impl.operation.nodePtr = currentNode;
     ParentExpression->impl.operation.operands = g_array_new(FALSE, FALSE, sizeof(Expression *));
 
-    assert(expectedChildCount == currentNode->child_count);
+    assert(expectedChildCount == currentNode->children->len);
 
-    for (size_t i = 0; i < currentNode->child_count; i++) {
-        Expression *expression = createExpression(currentNode->children[i]);
+    for (size_t i = 0; i < currentNode->children->len; i++) {
+        Expression *expression = createExpression(AST_get_node(currentNode, i));
 
         if (NULL == expression) {
             return SEMANTIC_ERROR;
@@ -738,8 +741,8 @@ int createRelationalOperation(Expression *ParentExpression, AST_NODE_PTR current
     ParentExpression->impl.operation.operands = g_array_new(FALSE, FALSE, sizeof(Expression *));
 
     // fill Operands
-    for (size_t i = 0; i < currentNode->child_count; i++) {
-        Expression *expression = createExpression(currentNode->children[i]);
+    for (size_t i = 0; i < currentNode->children->len; i++) {
+        Expression *expression = createExpression(AST_get_node(currentNode, i));
 
         if (NULL == expression) {
             return SEMANTIC_ERROR;
@@ -797,8 +800,8 @@ int createBoolOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) 
     ParentExpression->impl.operation.operands = g_array_new(FALSE, FALSE, sizeof(Expression *));
 
     // fill Operands
-    for (size_t i = 0; i < currentNode->child_count; i++) {
-        Expression *expression = createExpression(currentNode->children[i]);
+    for (size_t i = 0; i < currentNode->children->len; i++) {
+        Expression *expression = createExpression(AST_get_node(currentNode, i));
         if (NULL == expression) {
             return SEMANTIC_ERROR;
         }
@@ -881,7 +884,7 @@ int createBoolNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNod
     ParentExpression->impl.operation.operands = g_array_new(FALSE, FALSE, sizeof(Expression *));
 
     //fill Operand
-    Expression *expression = createExpression(currentNode->children[0]);
+    Expression *expression = createExpression(AST_get_node(currentNode, 0));
     if (NULL == expression) {
         return SEMANTIC_ERROR;
     }
@@ -949,8 +952,8 @@ int createBitOperation(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     ParentExpression->impl.operation.operands = g_array_new(FALSE, FALSE, sizeof(Expression *));
 
     // fill Operands
-    for (size_t i = 0; i < currentNode->child_count; i++) {
-        Expression *expression = createExpression(currentNode->children[i]);
+    for (size_t i = 0; i < currentNode->children->len; i++) {
+        Expression *expression = createExpression(AST_get_node(currentNode, i));
 
         if (NULL == expression) {
             return SEMANTIC_ERROR;
@@ -1086,7 +1089,7 @@ int createBitNotOperation(Expression *ParentExpression, AST_NODE_PTR currentNode
     ParentExpression->impl.operation.operands = g_array_new(FALSE, FALSE, sizeof(Expression *));
 
     //fill Operand
-    Expression *expression = createExpression(currentNode->children[0]);
+    Expression *expression = createExpression(AST_get_node(currentNode, 0));
     if (NULL == expression) {
         return SEMANTIC_ERROR;
     }
@@ -1186,12 +1189,12 @@ GArray *getBoxMember(Type *currentBoxType, GArray *names) {
 
 int createBoxAccess(Expression *ParentExpression, AST_NODE_PTR currentNode) {
 
-    const char *boxname = currentNode->children[0]->value;
+    const char *boxname = AST_get_node(currentNode, 0)->value;
     Variable *boxVariable = NULL;
     int status = getVariableFromScope(boxname, &boxVariable);
 
     if (status == SEMANTIC_ERROR) {
-        print_diagnostic(&currentNode->children[0]->location, Error,
+        print_diagnostic(&AST_get_node(currentNode, 0)->location, Error,
                          "Variable of name `%s` does not exist");
         return SEMANTIC_ERROR;
     }
@@ -1221,12 +1224,12 @@ int createBoxAccess(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     //first one is the box itself
     GArray *names = mem_alloc(MemoryNamespaceSet, sizeof(GArray));
     if (currentNode->kind == AST_IdentList) {
-        for (size_t i = 1; i < currentNode->child_count; i++) {
-            g_array_append_val(names, currentNode->children[i]->value);
+        for (size_t i = 1; i < currentNode->children->len; i++) {
+            g_array_append_val(names, AST_get_node(currentNode, i)->value);
         }
     } else if (currentNode->kind == AST_List) {
-        for (size_t i = 1; i < currentNode->children[1]->child_count; i++) {
-            g_array_append_val(names, currentNode->children[1]->children[i]->value);
+        for (size_t i = 1; i < AST_get_node(currentNode, 1)->children->len; i++) {
+            g_array_append_val(names, AST_get_node(AST_get_node(currentNode, 1), i)->value);
         }
     } else {
         PANIC("current Node is not an Access");
@@ -1243,21 +1246,22 @@ int createTypeCast(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     DEBUG("create type cast");
     ParentExpression->impl.typecast.nodePtr = currentNode;
 
-    ParentExpression->impl.typecast.operand = createExpression(currentNode->children[0]);
+    ParentExpression->impl.typecast.operand = createExpression(AST_get_node(currentNode, 0));
     if (ParentExpression->impl.typecast.operand == NULL) {
         return SEMANTIC_ERROR;
     }
 
     if (ParentExpression->impl.typecast.operand->result->kind != TypeKindComposite
-        && ParentExpression->impl.typecast.operand->result->kind != TypeKindPrimitive) {
+        && ParentExpression->impl.typecast.operand->result->kind != TypeKindPrimitive
+        && ParentExpression->impl.typecast.operand->result->kind != TypeKindReference) {
 
         return SEMANTIC_ERROR;
     }
 
     Type *target = mem_alloc(MemoryNamespaceSet, sizeof(Type));
-    int status = set_get_type_impl(currentNode->children[1], &target);
+    int status = set_get_type_impl(AST_get_node(currentNode, 1), &target);
     if (status) {
-        print_diagnostic(&currentNode->children[1]->location, Error, "Unknown type");
+        print_diagnostic(&AST_get_node(currentNode, 1)->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
     }
     ParentExpression->impl.typecast.targetType = target;
@@ -1267,16 +1271,16 @@ int createTypeCast(Expression *ParentExpression, AST_NODE_PTR currentNode) {
 
 int createTransmute(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     ParentExpression->impl.transmute.nodePtr = currentNode;
-    ParentExpression->impl.transmute.operand = createExpression(currentNode->children[0]);
+    ParentExpression->impl.transmute.operand = createExpression(AST_get_node(currentNode, 0));
 
     if (ParentExpression->impl.transmute.operand == NULL) {
         return SEMANTIC_ERROR;
     }
 
     Type *target = mem_alloc(MemoryNamespaceSet, sizeof(Type));
-    int status = set_get_type_impl(currentNode->children[1], &target);
+    int status = set_get_type_impl(AST_get_node(currentNode, 1), &target);
     if (status) {
-        print_diagnostic(&currentNode->children[1]->location, Error, "Unknown type");
+        print_diagnostic(&AST_get_node(currentNode, 1)->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
     }
 
@@ -1288,7 +1292,7 @@ int createTransmute(Expression *ParentExpression, AST_NODE_PTR currentNode) {
 }
 
 int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
-    assert(currentNode->child_count == 2);
+    assert(currentNode->children->len == 2);
     Dereference deref;
     deref.nodePtr = currentNode;
     AST_NODE_PTR expression_node = AST_get_node(currentNode, 1);
@@ -1301,7 +1305,7 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     Type *indexType = deref.index->result;
     //indexType can only be a composite or a primitive
     if (indexType->kind != TypeKindComposite && indexType->kind != TypeKindPrimitive) {
-        print_diagnostic(&AST_get_node(currentNode, 1)->location, Error,
+        print_diagnostic(&expression_node->location, Error,
                          "Index must a primitive int or composite variation");
         return SEMANTIC_ERROR;
     }
@@ -1345,7 +1349,7 @@ int createDeref(Expression *ParentExpression, AST_NODE_PTR currentNode) {
 
 int createAddressOf(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     assert(currentNode != NULL);
-    assert(currentNode->child_count == 1);
+    assert(currentNode->children->len == 1);
 
     AddressOf address_of;
     address_of.node_ptr = currentNode;
@@ -1540,14 +1544,15 @@ int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
     DEBUG("create Assign");
     Assignment assign;
     assign.nodePtr = currentNode;
-    const char *varName = currentNode->children[0]->value;
 
+    // TODO: get variable
+    const char *varName = AST_get_node(currentNode, 0)->value;
     int status = getVariableFromScope(varName, &assign.variable);
     if (status) {
         return SEMANTIC_ERROR;
     }
 
-    assign.value = createExpression(currentNode->children[1]);
+    assign.value = createExpression(AST_get_node(currentNode, 1));
     if (assign.value == NULL) {
         return SEMANTIC_ERROR;
     }
@@ -1579,7 +1584,7 @@ int fillBlock(Block *block, AST_NODE_PTR currentNode) {
     GHashTable *lowerScope = g_hash_table_new(g_str_hash, g_str_equal);
     g_array_append_val(Scope, lowerScope);
 
-    for (size_t i = 0; i < currentNode->child_count; i++) {
+    for (size_t i = 0; i < currentNode->children->len; i++) {
         int signal = createStatement(block, AST_get_node(currentNode, i));
         if (signal) {
             return SEMANTIC_ERROR;
@@ -1600,11 +1605,11 @@ int createWhile(Statement *ParentStatement, AST_NODE_PTR currentNode) {
 
     While whileStruct;
     whileStruct.nodePtr = currentNode;
-    whileStruct.conditon = createExpression(currentNode->children[0]);
+    whileStruct.conditon = createExpression(AST_get_node(currentNode, 0));
     if (NULL == whileStruct.conditon) {
         return SEMANTIC_ERROR;
     }
-    AST_NODE_PTR statementList = currentNode->children[1];
+    AST_NODE_PTR statementList = AST_get_node(currentNode, 1);
 
     int signal = fillBlock(&whileStruct.block, statementList);
     if (signal) {
@@ -1619,13 +1624,13 @@ int createIf(Branch *Parentbranch, AST_NODE_PTR currentNode) {
     If ifbranch;
     ifbranch.nodePtr = currentNode;
 
-    Expression *expression = createExpression(currentNode->children[0]);
+    Expression *expression = createExpression(AST_get_node(currentNode, 0));
     if (NULL == expression) {
         return SEMANTIC_ERROR;
     }
     ifbranch.conditon = expression;
 
-    int status = fillBlock(&ifbranch.block, currentNode->children[1]);
+    int status = fillBlock(&ifbranch.block, AST_get_node(currentNode, 1));
     if (status) {
         return SEMANTIC_ERROR;
     }
@@ -1638,7 +1643,7 @@ int createElse(Branch *Parentbranch, AST_NODE_PTR currentNode) {
     Else elseBranch;
     elseBranch.nodePtr = currentNode;
 
-    int status = fillBlock(&elseBranch.block, currentNode->children[0]);
+    int status = fillBlock(&elseBranch.block, AST_get_node(currentNode, 0));
 
     if (status) {
         return SEMANTIC_ERROR;
@@ -1655,12 +1660,12 @@ int createElseIf(Branch *Parentbranch, AST_NODE_PTR currentNode) {
         Parentbranch->elseIfBranches = mem_new_g_array(MemoryNamespaceSet, sizeof(ElseIf));
     }
 
-    Expression *expression = createExpression(currentNode->children[0]);
+    Expression *expression = createExpression(AST_get_node(currentNode, 0));
     if (NULL == expression) {
         return SEMANTIC_ERROR;
     }
     elseIfBranch.conditon = expression;
-    int status = fillBlock(&elseIfBranch.block, currentNode->children[1]);
+    int status = fillBlock(&elseIfBranch.block, AST_get_node(currentNode, 1));
 
     if (status) {
         return SEMANTIC_ERROR;
@@ -1675,22 +1680,22 @@ int createBranch(Statement *ParentStatement, AST_NODE_PTR currentNode) {
     branch.elseBranch.block.statemnts = NULL;
     branch.elseIfBranches = NULL;
 
-    for (size_t i = 0; i < currentNode->child_count; i++) {
-        switch (currentNode->children[i]->kind) {
+    for (size_t i = 0; i < currentNode->children->len; i++) {
+        switch (AST_get_node(currentNode, i)->kind) {
             case AST_If:
-                if (createIf(&branch, currentNode->children[i])) {
+                if (createIf(&branch, AST_get_node(currentNode, i))) {
                     return SEMANTIC_ERROR;
                 }
                 break;
 
             case AST_IfElse:
-                if (createElseIf(&branch, currentNode->children[i])) {
+                if (createElseIf(&branch, AST_get_node(currentNode, i))) {
                     return SEMANTIC_ERROR;
                 }
                 break;
 
             case AST_Else:
-                if (createElse(&branch, currentNode->children[i])) {
+                if (createElse(&branch, AST_get_node(currentNode, i))) {
                     return SEMANTIC_ERROR;
                 }
                 break;
@@ -1708,7 +1713,7 @@ int getFunction(const char *name, Function **function);
 
 int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
     assert(currentNode != NULL);
-    assert(currentNode->child_count == 2);
+    assert(currentNode->children->len == 2);
 
     AST_NODE_PTR argsListNode = AST_get_node(currentNode, 1);
     AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
@@ -1723,12 +1728,12 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
         }
     }
     if (nameNode->kind == AST_IdentList) {
-        assert(nameNode->child_count > 1);
+        assert(nameNode->children->len > 1);
 
         //idents.boxname.funname()
         //only boxname and funname are needed, because the combination is unique
-        const char *boxName = AST_get_node(nameNode, (nameNode->child_count - 2))->value;
-        const char *funName = AST_get_node(nameNode, (nameNode->child_count - 1))->value;
+        const char *boxName = AST_get_node(nameNode, (nameNode->children->len - 2))->value;
+        const char *funName = AST_get_node(nameNode, (nameNode->children->len - 1))->value;
 
         const char *name = g_strjoin("", boxName, ".", funName, NULL);
 
@@ -1750,8 +1755,8 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
     }
 
     size_t count = 0;
-    for (size_t i = 0; i < argsListNode->child_count; i++) {
-        count += AST_get_node(argsListNode, i)->child_count;
+    for (size_t i = 0; i < argsListNode->children->len; i++) {
+        count += AST_get_node(argsListNode, i)->children->len;
     }
 
     if (count != paramCount) {
@@ -1762,14 +1767,16 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
 
     GArray *expressions = mem_new_g_array(MemoryNamespaceSet, (sizeof(Expression *)));
     //exprlists
-    for (size_t i = 0; i < argsListNode->child_count; i++) {
+    for (size_t i = 0; i < argsListNode->children->len; i++) {
         AST_NODE_PTR currentExprList = AST_get_node(argsListNode, i);
 
-        for (size_t j = 0; j < currentExprList->child_count; j++) {
-            Expression *expr = createExpression(AST_get_node(currentExprList, j));
+        for (int j = ((int) currentExprList->children->len)  -1; j >= 0; j--) {
+            AST_NODE_PTR expr_node = AST_get_node(currentExprList, j);
+            Expression *expr = createExpression(expr_node);
             if (expr == NULL) {
                 return SEMANTIC_ERROR;
             }
+
             g_array_append_val(expressions, expr);
         }
     }
@@ -1873,21 +1880,21 @@ int createStatement(Block *Parentblock, AST_NODE_PTR currentNode) {
 int createParam(GArray *Paramlist, AST_NODE_PTR currentNode) {
     assert(currentNode->kind == AST_Parameter);
     DEBUG("start param");
-    DEBUG("current node child count: %i", currentNode->child_count);
+    DEBUG("current node child count: %i", currentNode->children->len);
 
-    AST_NODE_PTR paramdecl = currentNode->children[1];
-    AST_NODE_PTR ioQualifierList = currentNode->children[0];
+    AST_NODE_PTR paramdecl = AST_get_node(currentNode, 1);
+    AST_NODE_PTR ioQualifierList = AST_get_node(currentNode, 0);
 
     ParameterDeclaration decl;
     decl.nodePtr = paramdecl;
 
-    DEBUG("iolistnode child count: %i", ioQualifierList->child_count);
-    if (ioQualifierList->child_count == 2) {
+    DEBUG("iolistnode child count: %i", ioQualifierList->children->len);
+    if (ioQualifierList->children->len == 2) {
         decl.qualifier = InOut;
-    } else if (ioQualifierList->child_count == 1) {
-        if (strcmp(ioQualifierList->children[0]->value, "in") == 0) {
+    } else if (ioQualifierList->children->len == 1) {
+        if (strcmp(AST_get_node(ioQualifierList, 0)->value, "in") == 0) {
             decl.qualifier = In;
-        } else if (strcmp(ioQualifierList->children[0]->value, "out") == 0) {
+        } else if (strcmp(AST_get_node(ioQualifierList, 0)->value, "out") == 0) {
             decl.qualifier = Out;
         } else {
             PANIC("IO_Qualifier is not in or out");
@@ -1896,14 +1903,14 @@ int createParam(GArray *Paramlist, AST_NODE_PTR currentNode) {
         PANIC("IO_Qualifier has not the right amount of children");
     }
 
-    if (set_get_type_impl(paramdecl->children[0], &(decl.type))) {
+    if (set_get_type_impl(AST_get_node(paramdecl, 0), &(decl.type))) {
         return SEMANTIC_ERROR;
     }
     Parameter param;
     param.nodePtr = currentNode;
     param.kind = ParameterDeclarationKind;
     param.impl.declaration = decl;
-    param.name = paramdecl->children[1]->value;
+    param.name = AST_get_node(paramdecl, 1)->value;
 
     DEBUG("param name: %s", param.name);
     g_array_append_val(Paramlist, param);
@@ -1919,7 +1926,7 @@ int createParam(GArray *Paramlist, AST_NODE_PTR currentNode) {
     paramvar->impl.declaration.type = param.impl.declaration.type;
 
     if (g_hash_table_contains(functionParameter, param.name)) {
-        print_diagnostic(&param.nodePtr->location, Error, "Names of function parameters must be unique");
+        print_diagnostic(&param.nodePtr->location, Error, "Names of function parameters must be unique: %s", param.name);
         return SEMANTIC_ERROR;
     }
     g_hash_table_insert(functionParameter, (gpointer) param.name, paramvar);
@@ -1930,9 +1937,9 @@ int createParam(GArray *Paramlist, AST_NODE_PTR currentNode) {
 
 int createFunDef(Function *Parentfunction, AST_NODE_PTR currentNode) {
     DEBUG("start fundef");
-    AST_NODE_PTR nameNode = currentNode->children[0];
-    AST_NODE_PTR paramlistlist = currentNode->children[1];
-    AST_NODE_PTR statementlist = currentNode->children[2];
+    AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
+    AST_NODE_PTR paramlistlist = AST_get_node(currentNode, 1);
+    AST_NODE_PTR statementlist = AST_get_node(currentNode, 2);
 
     FunctionDefinition fundef;
 
@@ -1941,15 +1948,15 @@ int createFunDef(Function *Parentfunction, AST_NODE_PTR currentNode) {
     fundef.body = mem_alloc(MemoryNamespaceSet, sizeof(Block));
     fundef.parameter = g_array_new(FALSE, FALSE, sizeof(Parameter));
 
-    DEBUG("paramlistlist child count: %i", paramlistlist->child_count);
-    for (size_t i = 0; i < paramlistlist->child_count; i++) {
+    DEBUG("paramlistlist child count: %i", paramlistlist->children->len);
+    for (size_t i = 0; i < paramlistlist->children->len; i++) {
 
         //all parameterlists
-        AST_NODE_PTR paramlist = paramlistlist->children[i];
-        DEBUG("paramlist child count: %i", paramlist->child_count);
-        for (size_t j = 0; j < paramlist->child_count; j++) {
+        AST_NODE_PTR paramlist = AST_get_node(paramlistlist, i);
+        DEBUG("paramlist child count: %i", paramlist->children->len);
+        for (int j = ((int) paramlist->children->len) - 1; j >= 0; j--) {
 
-            DEBUG("param child count: %i", AST_get_node(paramlist, j)->child_count);
+            DEBUG("param child count: %i", AST_get_node(paramlist, j)->children->len);
 
             if (createParam(fundef.parameter, AST_get_node(paramlist, j))) {
                 return SEMANTIC_ERROR;
@@ -2039,8 +2046,8 @@ int getFunction(const char *name, Function **function) {
 
 int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
     DEBUG("start fundecl");
-    AST_NODE_PTR nameNode = currentNode->children[0];
-    AST_NODE_PTR paramlistlist = currentNode->children[1];
+    AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
+    AST_NODE_PTR paramlistlist = AST_get_node(currentNode, 1);
 
     FunctionDeclaration fundecl;
 
@@ -2048,14 +2055,14 @@ int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
     fundecl.name = nameNode->value;
     fundecl.parameter = mem_new_g_array(MemoryNamespaceSet, sizeof(Parameter));
 
-    for (size_t i = 0; i < paramlistlist->child_count; i++) {
+    for (size_t i = 0; i < paramlistlist->children->len; i++) {
 
         //all parameter lists
-        AST_NODE_PTR paramlist = paramlistlist->children[i];
+        AST_NODE_PTR paramlist = AST_get_node(paramlistlist, i);
 
-        for (size_t j = 0; j < paramlistlist->child_count; j++) {
-
-            if (createParam(fundecl.parameter, paramlist->children[i])) {
+        for (int j = ((int) paramlist->children->len) - 1; j >= 0; j--) {
+            AST_NODE_PTR param = AST_get_node(paramlist, j);
+            if (createParam(fundecl.parameter, param)) {
                 return SEMANTIC_ERROR;
             }
         }
@@ -2065,6 +2072,7 @@ int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
     Parentfunction->kind = FunctionDeclarationKind;
     Parentfunction->impl.declaration = fundecl;
     Parentfunction->name = fundecl.name;
+
     return SEMANTIC_OK;
 }
 
@@ -2072,12 +2080,12 @@ int createFunction(Function *function, AST_NODE_PTR currentNode) {
     assert(currentNode->kind == AST_Fun);
     functionParameter = g_hash_table_new(g_str_hash, g_str_equal);
 
-    if (currentNode->child_count == 2) {
+    if (currentNode->children->len == 2) {
         int signal = createFunDecl(function, currentNode);
         if (signal) {
             return SEMANTIC_ERROR;
         }
-    } else if (currentNode->child_count == 3) {
+    } else if (currentNode->children->len == 3) {
         int signal = createFunDef(function, currentNode);
         if (signal) {
             return SEMANTIC_ERROR;
@@ -2100,15 +2108,15 @@ int createFunction(Function *function, AST_NODE_PTR currentNode) {
 int createDeclMember(BoxType *ParentBox, AST_NODE_PTR currentNode) {
 
     Type *declType = mem_alloc(MemoryNamespaceSet, sizeof(Type));
-    int status = set_get_type_impl(currentNode->children[0], &declType);
+    int status = set_get_type_impl(AST_get_node(currentNode, 0), &declType);
     if (status) {
         return SEMANTIC_ERROR;
     }
 
-    AST_NODE_PTR nameList = currentNode->children[1];
-    for (size_t i = 0; i < nameList->child_count; i++) {
+    AST_NODE_PTR nameList = AST_get_node(currentNode, 1);
+    for (size_t i = 0; i < nameList->children->len; i++) {
         BoxMember *decl = mem_alloc(MemoryNamespaceSet, sizeof(BoxMember));
-        decl->name = nameList->children[i]->value;
+        decl->name = AST_get_node(nameList, i)->value;
         decl->nodePtr = currentNode;
         decl->box = ParentBox;
         decl->initalizer = NULL;
@@ -2122,12 +2130,12 @@ int createDeclMember(BoxType *ParentBox, AST_NODE_PTR currentNode) {
 }
 
 int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode) {
-    AST_NODE_PTR declNode = currentNode->children[0];
-    AST_NODE_PTR expressionNode = currentNode->children[1];
-    AST_NODE_PTR nameList = declNode->children[1];
+    AST_NODE_PTR declNode = AST_get_node(currentNode, 0);
+    AST_NODE_PTR expressionNode = AST_get_node(currentNode, 1);
+    AST_NODE_PTR nameList = AST_get_node(declNode, 1);
 
     Type *declType = mem_alloc(MemoryNamespaceSet, sizeof(Type));
-    int status = set_get_type_impl(currentNode->children[0], &declType);
+    int status = set_get_type_impl(AST_get_node(currentNode, 0), &declType);
     if (status) {
         return SEMANTIC_ERROR;
     }
@@ -2137,12 +2145,12 @@ int createDefMember(BoxType *ParentBox, AST_NODE_PTR currentNode) {
         return SEMANTIC_ERROR;
     }
 
-    for (size_t i = 0; i < nameList->child_count; i++) {
+    for (size_t i = 0; i < nameList->children->len; i++) {
         BoxMember *def = mem_alloc(MemoryNamespaceSet, sizeof(BoxMember));
         def->box = ParentBox;
         def->type = declType;
         def->initalizer = init;
-        def->name = nameList->children[i]->value;
+        def->name = AST_get_node(nameList, i)->value;
         def->nodePtr = currentNode;
         if (g_hash_table_contains(ParentBox->member, (gpointer) def->name)) {
             return SEMANTIC_ERROR;
@@ -2184,18 +2192,18 @@ int createBox(GHashTable *boxes, AST_NODE_PTR currentNode) {
     BoxType *box = mem_alloc(MemoryNamespaceSet, sizeof(BoxType));
 
     box->nodePtr = currentNode;
-    const char *boxName = currentNode->children[0]->value;
-    AST_NODE_PTR boxMemberList = currentNode->children[1];
+    const char *boxName = AST_get_node(currentNode, 0)->value;
+    AST_NODE_PTR boxMemberList = AST_get_node(currentNode, 1);
 
     Type *boxType = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     boxType->nodePtr = currentNode;
     boxType->impl.box = box;
 
-    for (size_t i = 0; boxMemberList->child_count; i++) {
-        switch (boxMemberList->children[i]->kind) {
+    for (size_t i = 0; boxMemberList->children->len; i++) {
+        switch (AST_get_node(boxMemberList, i)->kind) {
             case AST_Decl:
             case AST_Def:
-                if (createDeclMember(box, boxMemberList->children[i])) {
+                if (createDeclMember(box, AST_get_node(boxMemberList, i))) {
                     return SEMANTIC_ERROR;
                 }
                 break;
@@ -2220,8 +2228,8 @@ int createBox(GHashTable *boxes, AST_NODE_PTR currentNode) {
 
 int createTypeDef(GHashTable *types, AST_NODE_PTR currentNode) {
     DEBUG("create Type define");
-    AST_NODE_PTR typeNode = currentNode->children[0];
-    AST_NODE_PTR nameNode = currentNode->children[1];
+    AST_NODE_PTR typeNode = AST_get_node(currentNode, 0);
+    AST_NODE_PTR nameNode = AST_get_node(currentNode, 1);
 
     Type *type = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     int status = set_get_type_impl(typeNode, &type);
@@ -2283,12 +2291,12 @@ Module *create_set(AST_NODE_PTR currentNode) {
 
     DEBUG("created Module struct");
 
-    for (size_t i = 0; i < currentNode->child_count; i++) {
-        DEBUG("created Child with type: %i", currentNode->children[i]->kind);
-        switch (currentNode->children[i]->kind) {
+    for (size_t i = 0; i < currentNode->children->len; i++) {
+        DEBUG("created Child with type: %i", AST_get_node(currentNode, i)->kind);
+        switch (AST_get_node(currentNode, i)->kind) {
             case AST_Decl: {
                 GArray *vars = NULL;
-                int status = createDecl(currentNode->children[i], &vars);
+                int status = createDecl(AST_get_node(currentNode, i), &vars);
                 if (status) {
                     return NULL;
                 }
@@ -2301,7 +2309,7 @@ Module *create_set(AST_NODE_PTR currentNode) {
             }
             case AST_Def: {
                 GArray *vars;
-                int status = createDef(currentNode->children[i], &vars);
+                int status = createDef(AST_get_node(currentNode, i), &vars);
                 if (status) {
                     return NULL;
                 }
@@ -2313,7 +2321,7 @@ Module *create_set(AST_NODE_PTR currentNode) {
                 break;
             }
             case AST_Box: {
-                int status = createBox(boxes, currentNode->children[i]);
+                int status = createBox(boxes, AST_get_node(currentNode, i));
                 if (status) {
                     return NULL;
                 }
@@ -2324,7 +2332,7 @@ Module *create_set(AST_NODE_PTR currentNode) {
                 DEBUG("start function");
                 Function *function = mem_alloc(MemoryNamespaceSet, sizeof(Function));
 
-                if (createFunction(function, currentNode->children[i]) == SEMANTIC_ERROR) {
+                if (createFunction(function, AST_get_node(currentNode, i)) == SEMANTIC_ERROR) {
                     return NULL;
                 }
 
@@ -2340,7 +2348,7 @@ Module *create_set(AST_NODE_PTR currentNode) {
                 break;
             }
             case AST_Typedef: {
-                int status = createTypeDef(types, currentNode->children[i]);
+                int status = createTypeDef(types, AST_get_node(currentNode, i));
                 if (status) {
                     return NULL;
                 }
@@ -2349,7 +2357,7 @@ Module *create_set(AST_NODE_PTR currentNode) {
             }
             case AST_Import:
                 DEBUG("create Import");
-                g_array_append_val(imports, currentNode->children[i]->value);
+                g_array_append_val(imports, AST_get_node(currentNode, i)->value);
                 break;
             default:
                 INFO("Provided source file could not be parsed because of semantic error.");

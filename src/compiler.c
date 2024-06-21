@@ -158,8 +158,11 @@ static void run_backend_codegen(const Module* module, const TargetConfig* target
     DEBUG("generating code...");
     err = generate_code(module, target);
     if (err.kind != Success) {
+        print_message(Error, "Backend failed: %s", err.impl.message);
         return;
     }
+
+    print_message(Info, "Compilation finished successfully");
 
     err = deinit_backend();
 }
@@ -194,16 +197,23 @@ const char* get_absolute_import_path(const TargetConfig* config, const char* imp
 
 static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file, const TargetConfig *target, AST_NODE_PTR root_module) {
 
+    GHashTable* imports = mem_new_g_hash_table(MemoryNamespaceAst, g_str_hash, g_str_equal);
+
     if (compile_file_to_ast(root_module, file) == EXIT_SUCCESS) {
 
-        for (size_t i = 0; i < root_module->child_count; i++) {
+        for (size_t i = 0; i < AST_get_child_count(root_module); i++) {
             AST_NODE_PTR child = AST_get_node(root_module, i);
 
             if (child->kind == AST_Import) {
 
                 const char* path = get_absolute_import_path(target, child->value);
                 if (path == NULL) {
+                    print_message(Error, "Cannot resolve path for import: `%s`", child->value);
                     return EXIT_FAILURE;
+                }
+
+                if (g_hash_table_contains(imports, path)) {
+                    continue;
                 }
 
                 ModuleFile *imported_file = push_file(unit, path);
@@ -214,6 +224,11 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
                 } else {
                     return EXIT_FAILURE;
                 }
+
+                g_hash_table_insert(imports, (gpointer) path, NULL);
+
+                gchar* directory = g_path_get_dirname(path);
+                g_array_append_val(target->import_paths, directory);
             }
         }
     } else {

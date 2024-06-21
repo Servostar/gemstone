@@ -91,6 +91,8 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
         err =
             new_backend_impl_error(Implementation, NULL, "failed to emit code");
         LLVMDisposeMessage(error);
+    } else {
+        print_message(Info, "Generated code was written to: %s", filename);
     }
 
     g_free((void*) filename);
@@ -130,6 +132,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(
         llvm_target, target->triple.str, target->cpu.str, target->features.str,
         target->opt, target->reloc, target->model);
+
+    print_message(Info, "Generating code for: %s", target->triple.str);
 
     if (config->print_asm) {
         err = emit_module_to_file(unit, target_machine, LLVMAssemblyFile, error,
@@ -202,6 +206,11 @@ static BackendError build_module(LLVMBackendCompileUnit* unit,
     }
 
     err = impl_global_variables(unit, global_scope, module->variables);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    err = impl_function_types(unit, global_scope, module->functions);
     if (err.kind != Success) {
         return err;
     }

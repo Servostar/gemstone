@@ -6,9 +6,14 @@
 #include <set/types.h>
 #include <sys/log.h>
 #include <set/set.h>
+#include <mem/cache.h>
 
 #define BASE_BYTES 4
 #define BITS_PER_BYTE 8
+
+char* guid() {
+    return "uuid";
+}
 
 static BackendError get_const_primitive_value(PrimitiveType primitive,
                                               LLVMTypeRef llvm_type,
@@ -34,11 +39,19 @@ static BackendError get_const_composite_value(CompositeType composite,
                                      llvm_value);
 }
 
-BackendError impl_reference_const(TypeValue* value, LLVMValueRef* llvm_value) {
+BackendError impl_reference_const(LLVMBackendCompileUnit* unit, LLVMBuilderRef builder, TypeValue* value, LLVMValueRef* llvm_value) {
     BackendError err = SUCCESS;
     if (value->type->kind == TypeKindReference && compareTypes(value->type, (Type*) &StringLiteralType)) {
         // is string literal
-        *llvm_value = LLVMConstString(value->value, strlen(value->value), FALSE);
+        LLVMValueRef string_value = LLVMConstString(value->value, strlen(value->value), false);
+
+        char* uuid = guid();
+
+        LLVMValueRef string_global = LLVMAddGlobal(unit->module, LLVMTypeOf(string_value), uuid);
+        LLVMSetInitializer(string_global, string_value);
+        LLVMSetGlobalConstant(string_global, true);
+
+        *llvm_value = LLVMGetNamedGlobal(unit->module, uuid);
     } else {
         err = new_backend_impl_error(Implementation, value->nodePtr, "reference initializer can only be string literals");
     }
@@ -46,11 +59,11 @@ BackendError impl_reference_const(TypeValue* value, LLVMValueRef* llvm_value) {
 }
 
 BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
+                                  LLVMBuilderRef builder,
                                   LLVMGlobalScope* scope,
                                   TypeValue* gemstone_value,
                                   LLVMValueRef* llvm_value) {
-    BackendError err = new_backend_impl_error(
-        Implementation, gemstone_value->nodePtr, "No default value for type");
+    BackendError err;
 
     LLVMTypeRef llvm_type = NULL;
     err = get_type_impl(unit, scope, gemstone_value->type, &llvm_type);
@@ -70,7 +83,7 @@ BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
                                             llvm_value);
             break;
         case TypeKindReference:
-            err = impl_reference_const(gemstone_value, llvm_value);
+            err = impl_reference_const(unit, builder, gemstone_value, llvm_value);
             break;
         case TypeKindBox:
             err =
@@ -164,7 +177,7 @@ BackendError impl_composite_type(LLVMBackendCompileUnit* unit,
             if (composite->sign == Signed) {
                 err = impl_float_type(unit, composite->scale, llvm_type);
             } else {
-                ERROR("unsgined floating point not supported");
+                ERROR("unsigned floating point not supported");
                 err = new_backend_impl_error(
                     Implementation, composite->nodePtr,
                     "unsigned floating-point not supported");
@@ -412,8 +425,7 @@ BackendError get_box_default_value(LLVMBackendCompileUnit* unit,
 BackendError get_type_default_value(LLVMBackendCompileUnit* unit,
                                     LLVMGlobalScope* scope, Type* gemstone_type,
                                     LLVMValueRef* llvm_value) {
-    BackendError err = new_backend_impl_error(
-        Implementation, gemstone_type->nodePtr, "No default value for type");
+    BackendError err;
 
     LLVMTypeRef llvm_type = NULL;
     err = get_type_impl(unit, scope, gemstone_type, &llvm_type);

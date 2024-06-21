@@ -89,7 +89,7 @@ enum AST_SyntaxElement_t {
  *  - kind: The type of the node. Such as AST_Expr, AST_Add, ...
  *  - value: A string representing an optional value. Can be a integer literal for kind AST_int
  */
-struct AST_Node_t {
+typedef struct AST_Node_t {
     // parent node that owns this node
     struct AST_Node_t *parent;
 
@@ -100,12 +100,9 @@ struct AST_Node_t {
 
     TokenLocation location;
 
-    // number of child nodes ownd by this node
-    // length of children array
-    size_t child_count;
-    // variable amount of child nodes
-    struct AST_Node_t **children;
-};
+    // children array
+    GArray* children;
+} AST_Node;
 
 /**
  * Shorthand type for a single AST node
@@ -199,6 +196,8 @@ struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_N
 [[gnu::nonnull(1)]]
 struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, size_t idx);
 
+AST_NODE_PTR AST_get_last_node(AST_NODE_PTR node);
+
 /**
  * @brief Execute a function for every child, grandchild, ... and the supplied node as topmost ancestor
  * @param root the root to recursively execute a function for
@@ -226,5 +225,7 @@ void AST_merge_modules(AST_NODE_PTR dst, size_t i, AST_NODE_PTR src);
 
 [[gnu::nonnull(1), gnu::nonnull(3)]]
 void AST_insert_node(AST_NODE_PTR owner, size_t idx, AST_NODE_PTR child);
+
+size_t AST_get_child_count(AST_NODE_PTR node);
 
 #endif

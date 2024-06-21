@@ -8,11 +8,11 @@
 
 # Unsigned integrals
 
-type unsgined half half int: u8
-type unsgined half int: u16
-type unsgined int: u32
-type unsgined double int: u64
-type unsgined double double int: u128
+type unsigned half half int: u8
+type unsigned half int: u16
+type unsigned int: u32
+type unsigned double int: u64
+type unsigned double double int: u128
 
 # Signed integrals
 

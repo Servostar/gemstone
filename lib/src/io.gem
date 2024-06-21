@@ -9,7 +9,7 @@
 import "def.gem"
 
 # platform specific handle to an I/O device
-# can a file, buffer, window or something else
+# can be a file, buffer, window or something else
 # NOTE: this reference is not meant to be dereferenced
 #       which can lead to errors and undefined behavior
 type ptr: handle
@@ -37,14 +37,14 @@ fun getStderrHandle(out handle: stderr)
 # -- Implementation note
 # On Linux this will use the syscall write
 # On Windows this will use the WriteFile function
-fun writeBytes(in handle: dev, in ref u8: buf, in ref u32: len)(out u32: written)
+fun writeBytes(in handle: dev, in ref u8: buf, in u32: len)(out u32: written)
 
 # Read atmost `len` bytes to `buf` from the I/O resource specified by `dev`
 # Returns the number of read bytes in `written`
 # -- Implementation note
 # On Linux this will use the syscall read
 # On Windows this will use the ReadFile function
-fun readBytes(in handle: dev, in ref u8: buf, in ref u32: len)(out u32: read)
+fun readBytes(in handle: dev, in ref u8: buf, in u32: len)(out u32: read)
 
 # Flushes the buffers of the I/O resource specified by `dev`
 # -- Implementation note

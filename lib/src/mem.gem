@@ -20,8 +20,8 @@ fun heap_realloc(in u32: len, in out ref u8: ptr)
 fun heap_free(in ref u8: ptr)
 
 # Copy `len` bytes from `dst` into `src`
-fun copy(in ref u8: dst, in ref u8: src, in u32 len)
+fun copy(in ref u8: dst, in ref u8: src, in u32: len)
 
 # Fill `len` bytes of `dst` with `byte`
-fun fill(in ref u8: dst, in u8: byte, in u32 len)
+fun fill(in ref u8: dst, in u8: byte, in u32: len)
 
