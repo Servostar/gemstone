@@ -84,3 +84,41 @@ int getNextLine(void) {
 
   return 0;
 }
+
+struct ConstEscSeq {
+    char* esc;
+    char* rep;
+};
+
+static struct ConstEscSeq sequences[] = {
+    {
+        "\\n",
+        "\n"
+    },
+    {
+        "\\\\",
+        "\\"
+    },
+    {
+        "\\t",
+        "\t"
+    },
+    {
+        "\\r",
+        "\r"
+    }
+};
+
+char* collapse_escape_sequences(char* string) {
+    GString* unesc = g_string_new(string);
+
+    for (int i = 0; i < 4; i++) {
+        g_string_replace(unesc, sequences[i].esc, sequences[i].rep, 0);
+    }
+
+    char* str = mem_strdup(MemoryNamespaceLex, unesc->str);
+
+    g_string_free(unesc, TRUE);
+
+    return str;
+}

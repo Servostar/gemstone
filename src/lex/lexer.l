@@ -98,7 +98,10 @@
     yytext = yytext +1;
     yytext[yyleng - 2] = 0;
     
-    DEBUG("\"%s\" tokenized with \'ValStr\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValStr);};
+    DEBUG("\"%s\" tokenized with \'ValStr\'", yytext);
+    yylval.string = collapse_escape_sequences(yytext);
+    return(ValStr);
+};
 \"\"\"[^\"]*\"\"\" {
     yytext = yytext +3;
     yytext[yyleng - 6] = 0;
