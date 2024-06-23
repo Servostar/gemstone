@@ -6,7 +6,7 @@
 # |            Memory Management           |
 # `----------------------------------------`
 
-import "def.gem"
+import "def.gsc"
 
 # Allocate `len` bytes of heap memory
 # Returns a pointer to the memory as `ptr`

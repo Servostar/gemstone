@@ -7,10 +7,10 @@
 # `----------------------------------------`
 
 # standard type definitions
-import "def.gem"
+import "def.gsc"
 
 # I/O operations
-import "io.gem"
+import "io.gsc"
 
 # memory management
-import "mem.gem"
+import "mem.gsc"

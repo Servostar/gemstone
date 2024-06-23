@@ -1,5 +1,5 @@
 
-import "def.gem"
+import "def.gsc"
 
 type unsigned int: bool
 

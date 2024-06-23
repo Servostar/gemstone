@@ -6,7 +6,7 @@
 # |         Generic Input/Output           |
 # `----------------------------------------`
 
-import "def.gem"
+import "def.gsc"
 
 # platform specific handle to an I/O device
 # can be a file, buffer, window or something else

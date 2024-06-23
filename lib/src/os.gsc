@@ -6,7 +6,7 @@
 # |           Operating System             |
 # `----------------------------------------`
 
-import "def.gem"
+import "def.gsc"
 
 # Return a hard coded C string identifying the underlying operating system
 # Will return one of the following:
