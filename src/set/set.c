@@ -16,7 +16,11 @@ static GHashTable *definedFunctions = NULL;
 static GHashTable *declaredFunctions = NULL;
 static GArray *Scope = NULL;//list of hashtables. last Hashtable is current depth of program. hashtable key: ident, value: Variable* to var
 
+int createTypeCastFromExpression(Expression *expression, Type *resultType, Expression **result);
+
 bool compareTypes(Type *leftType, Type *rightType);
+
+char* type_to_string(Type* type);
 
 const Type ShortShortUnsingedIntType = {
         .kind = TypeKindComposite,
@@ -343,7 +347,6 @@ int createRef(AST_NODE_PTR currentNode, Type **reftype) {
     referenceType->impl.reference = type;
     *reftype = referenceType;
     return SEMANTIC_OK;
-
 }
 
 int createDecl(AST_NODE_PTR currentNode, GArray **variables) {
@@ -454,7 +457,23 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
     if (name == NULL) {
         status = SEMANTIC_OK;
     }
-    def.initializer = name;
+
+    if (!compareTypes(def.declaration.type, name->result)) {
+        char* expected_type = type_to_string(def.declaration.type);
+        char* gotten_type = type_to_string(name->result);
+
+        print_diagnostic(&name->nodePtr->location, Warning, "expected `%s` got `%s`", expected_type, gotten_type);
+
+        free(expected_type);
+        free(gotten_type);
+
+        def.initializer = mem_alloc(MemoryNamespaceSet, sizeof(Expression));
+        if (createTypeCastFromExpression(name, def.declaration.type, &def.initializer) == SEMANTIC_ERROR) {
+            return SEMANTIC_ERROR;
+        }
+    } else {
+        def.initializer = name;
+    }
 
     for (size_t i = 0; i < ident_list->children->len; i++) {
         Variable *variable = mem_alloc(MemoryNamespaceSet, sizeof(Variable));
@@ -472,6 +491,61 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
     }
 
     return status;
+}
+
+char* type_to_string(Type* type) {
+    char* string = NULL;
+
+    switch (type->kind) {
+        case TypeKindPrimitive:
+            if (type->impl.primitive == Int) {
+                string = mem_strdup(MemoryNamespaceSet, "int");
+            } else {
+                string = mem_strdup(MemoryNamespaceSet, "float");
+            }
+            break;
+        case TypeKindComposite: {
+            if (type->impl.composite.primitive == Int) {
+                string = mem_strdup(MemoryNamespaceSet, "int");
+            } else {
+                string = mem_strdup(MemoryNamespaceSet, "float");
+            }
+
+            if (type->impl.composite.scale < 1.0) {
+                for (int i = 0; i < (int) (type->impl.composite.scale * 4); i++) {
+                    char* concat = g_strconcat("half ", string, NULL);
+                    free(string);
+                    string = concat;
+                }
+            } else if (type->impl.composite.scale > 1.0) {
+                for (int i = 0; i < (int) type->impl.composite.scale; i++) {
+                    char* concat = g_strconcat("long ", string, NULL);
+                    free(string);
+                    string = concat;
+                }
+            }
+
+            if (type->impl.composite.sign == Unsigned) {
+                char* concat = g_strconcat("unsigned ", string, NULL);
+                free(string);
+                string = concat;
+            }
+
+            break;
+        }
+        case TypeKindReference: {
+            char* type_string = type_to_string(type->impl.reference);
+            char* concat = g_strconcat("ref ", type_string, NULL);
+            free(type_string);
+            string = concat;
+            break;
+        }
+        case TypeKindBox:
+            string = mem_strdup(MemoryNamespaceSet, "box");
+            break;
+    }
+
+    return string;
 }
 
 int getVariableFromScope(const char *name, Variable **variable) {
@@ -545,7 +619,6 @@ int fillTablesWithVars(GHashTable *variableTable, const GArray *variables) {
 }
 
 [[nodiscard("type must be freed")]]
-
 TypeValue createTypeValue(AST_NODE_PTR currentNode) {
     DEBUG("create TypeValue");
     TypeValue value;
@@ -757,10 +830,10 @@ int createRelationalOperation(Expression *ParentExpression, AST_NODE_PTR current
             ParentExpression->impl.operation.impl.relational = Equal;
             break;
         case AST_Less:
-            ParentExpression->impl.operation.impl.relational = Greater;
+            ParentExpression->impl.operation.impl.relational = Less;
             break;
         case AST_Greater:
-            ParentExpression->impl.operation.impl.relational = Less;
+            ParentExpression->impl.operation.impl.relational = Greater;
             break;
         default:
             PANIC("Current node is not an relational operater");
@@ -1505,10 +1578,7 @@ bool compareTypes(Type *leftType, Type *rightType) {
         return FALSE;
     }
     if (leftType->kind == TypeKindPrimitive) {
-        if (leftType->impl.primitive != rightType->impl.primitive) {
-            return FALSE;
-        }
-        return TRUE;
+        return leftType->impl.primitive == rightType->impl.primitive;
     }
     if (leftType->kind == TypeKindComposite) {
         CompositeType leftComposite = leftType->impl.composite;

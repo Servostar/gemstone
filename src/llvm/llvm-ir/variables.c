@@ -102,7 +102,7 @@ BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
     gpointer key = NULL;
     gpointer val = NULL;
 
-    BackendError err;
+    BackendError err = SUCCESS;
 
     size_t variable_count = 0;
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
