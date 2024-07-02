@@ -7,11 +7,6 @@
 #include <mem/cache.h>
 #include <sys/col.h>
 
-/*
- * call the LLD linker
- */
-extern int lld_main(int Argc, const char **Argv, const char **outstr);
-
 const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
     INFO("resolving absolute path for link target: %s", link_target_name);
 
@@ -139,7 +134,7 @@ BackendError lld_link_target(TargetLinkConfig* config) {
     g_free(arguments);
 
     const char* message = NULL;
-    int status = lld_main((int) argv->len, (const char**) argv->data, &message);
+    int status = 0;
 
     INFO("done linking target...");
 

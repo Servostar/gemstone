@@ -107,20 +107,6 @@ link_libraries(tomlc99)
 add_subdirectory(lib)
 
 # ------------------------------------------------ #
-#  LLD-C-Layer                                     #
-# ------------------------------------------------ #
-
-add_subdirectory(dep/lldcl)
-
-# Link lld libs and C++ LIBC
-link_libraries(lldcl
-        lldCommon
-        lldCOFF
-        lldELF
-        lldMinGW
-        stdc++)
-
-# ------------------------------------------------ #
 #  LLVM backend                                    #
 # ------------------------------------------------ #
 
