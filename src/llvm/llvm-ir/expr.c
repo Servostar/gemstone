@@ -17,7 +17,7 @@ BackendError impl_bitwise_operation(LLVMBackendCompileUnit *unit,
     LLVMValueRef llvm_rhs = NULL;
     LLVMValueRef llvm_lhs = NULL;
 
-    if (operation->impl.arithmetic == BitwiseNot) {
+    if (operation->impl.bitwise == BitwiseNot) {
         // single operand
         rhs = g_array_index(operation->operands, Expression*, 0);
         impl_expr(unit, scope, builder, rhs, FALSE, &llvm_rhs);
@@ -56,6 +56,7 @@ BackendError impl_bitwise_operation(LLVMBackendCompileUnit *unit,
  * @param integral
  * @return
  */
+ [[maybe_unused]]
 static LLVMValueRef convert_integral_to_boolean(
         LLVMBuilderRef builder, LLVMValueRef integral) {
     // type of input
@@ -390,7 +391,6 @@ BackendError impl_address_of(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope
                                 LLVMBuilderRef builder, AddressOf* addressOf,
                                 LLVMValueRef *llvm_result) {
 
-    LLVMValueRef llvm_variable = NULL;
     BackendError err = impl_expr(unit, scope, builder, addressOf->variable, FALSE, llvm_result);
 
     if (err.kind != Success) {
@@ -434,7 +434,7 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
 
     switch (expr->kind) {
         case ExpressionKindConstant:
-            err = get_const_type_value(unit, builder, scope->func_scope->global_scope,
+            err = get_const_type_value(unit, scope->func_scope->global_scope,
                                        &expr->impl.constant, llvm_result);
             break;
         case ExpressionKindTransmute:

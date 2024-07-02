@@ -1664,13 +1664,14 @@ int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
     assign.destination = mem_alloc(MemoryNamespaceSet, sizeof(StorageExpr));
 
     int status = createStorageExpr(assign.destination, AST_get_node(currentNode, 0));
+    if (status == SEMANTIC_ERROR) {
+        return SEMANTIC_ERROR;
+    }
 
     assign.value = createExpression(AST_get_node(currentNode, 1));
     if (assign.value == NULL) {
         return SEMANTIC_ERROR;
     }
-
-    Type *varType = NULL;
 
     // TODO: check assignment type compatability
 

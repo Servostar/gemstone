@@ -40,7 +40,7 @@ static BackendError get_const_composite_value(CompositeType composite,
                                      llvm_value);
 }
 
-BackendError impl_reference_const(LLVMBackendCompileUnit* unit, LLVMBuilderRef builder, TypeValue* value, LLVMValueRef* llvm_value) {
+BackendError impl_reference_const(LLVMBackendCompileUnit* unit, TypeValue* value, LLVMValueRef* llvm_value) {
     BackendError err = SUCCESS;
     if (value->type->kind == TypeKindReference && compareTypes(value->type, (Type*) &StringLiteralType)) {
         // is string literal
@@ -63,7 +63,6 @@ BackendError impl_reference_const(LLVMBackendCompileUnit* unit, LLVMBuilderRef b
 }
 
 BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
-                                  LLVMBuilderRef builder,
                                   LLVMGlobalScope* scope,
                                   TypeValue* gemstone_value,
                                   LLVMValueRef* llvm_value) {
@@ -87,7 +86,7 @@ BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
                                             llvm_value);
             break;
         case TypeKindReference:
-            err = impl_reference_const(unit, builder, gemstone_value, llvm_value);
+            err = impl_reference_const(unit, gemstone_value, llvm_value);
             break;
         case TypeKindBox:
             err =
@@ -251,8 +250,8 @@ BackendError impl_box_type(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
 
         DEBUG("implementing member: %s ", ((BoxMember*)val)->name);
 
-        LLVMTypeRef llvm_type = NULL;
-        err = get_type_impl(unit, scope, member_type, &llvm_type);
+        LLVMTypeRef llvm_local_type = NULL;
+        err = get_type_impl(unit, scope, member_type, &llvm_local_type);
 
         if (err.kind != Success) {
             break;

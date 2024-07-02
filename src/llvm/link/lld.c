@@ -35,7 +35,7 @@ const char* get_absolute_link_path(const TargetConfig* config, const char* link_
     return NULL;
 }
 
-TargetLinkConfig* lld_create_link_config(const Target* target, const TargetConfig* target_config, const Module* module) {
+TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* target, const TargetConfig* target_config, const Module* module) {
     DEBUG("generating link configuration");
 
     TargetLinkConfig* config = mem_alloc(MemoryNamespaceLld, sizeof(TargetLinkConfig));
@@ -132,9 +132,6 @@ BackendError lld_link_target(TargetLinkConfig* config) {
     char* arguments = g_strjoinv(" ", (char**) argv->data);
     print_message(Info, "%s", arguments);
     g_free(arguments);
-
-    const char* message = NULL;
-    int status = 0;
 
     INFO("done linking target...");
 

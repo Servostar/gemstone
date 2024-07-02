@@ -19,7 +19,6 @@ BackendError get_type_default_value(LLVMBackendCompileUnit* unit,
                                     LLVMValueRef* llvm_value);
 
 BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
-                                  LLVMBuilderRef builder,
                                   LLVMGlobalScope* scope,
                                   TypeValue* gemstone_value,
                                   LLVMValueRef* llvm_value);

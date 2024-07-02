@@ -8,7 +8,7 @@
 #include <codegen/backend.h>
 #include <llvm/backend.h>
 
-TargetLinkConfig* lld_create_link_config(const Target * target, const TargetConfig* target_config, const Module* module);
+TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target * target, const TargetConfig* target_config, const Module* module);
 
 BackendError lld_link_target(TargetLinkConfig* config);
 

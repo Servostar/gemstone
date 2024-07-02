@@ -50,7 +50,7 @@ LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name) {
         return param;
     }
 
-    LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, name);
+    LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, (char*) name);
     return global_var;
 }
 
@@ -68,7 +68,7 @@ LLVMBool is_parameter(const LLVMLocalScope* scope, const char* name) {
         return TRUE;
     }
 
-    LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, name);
+    LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, (char*) name);
     return global_var != NULL;
 }
 
@@ -139,7 +139,7 @@ BackendError impl_func_type(LLVMBackendCompileUnit* unit,
 
     *llvm_fun = LLVMAddFunction(unit->module, func->name, llvm_fun_type);
 
-    g_hash_table_insert(scope->functions, func->name, llvm_fun_type);
+    g_hash_table_insert(scope->functions, (char*) func->name, llvm_fun_type);
 
     g_array_free(llvm_params, FALSE);
 
@@ -217,12 +217,10 @@ BackendError impl_function_types(LLVMBackendCompileUnit* unit,
     gpointer val = NULL;
 
     BackendError err = SUCCESS;
-    size_t function_count = 0;
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
         Function* func = (Function*) val;
         LLVMValueRef llvm_func;
         err = impl_func_type(unit, scope, func, &llvm_func);
-        function_count++;
     }
 
     return err;
