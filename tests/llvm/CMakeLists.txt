@@ -36,8 +36,11 @@ add_executable(global_vars
         ${PROJECT_SOURCE_DIR}/src/codegen/backend.c
         ${PROJECT_SOURCE_DIR}/src/sys/log.c
         ${PROJECT_SOURCE_DIR}/src/sys/col.c
+        ${PROJECT_SOURCE_DIR}/src/set/set.c
+        ${PROJECT_SOURCE_DIR}/src/ast/ast.c
         ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
         ${PROJECT_SOURCE_DIR}/src/io/files.c
+        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
         global_vars.c
         ${SOURCE_FILES})
 set_target_properties(global_vars
