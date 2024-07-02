@@ -140,21 +140,6 @@ BackendError lld_link_target(TargetLinkConfig* config) {
 
     g_array_free(argv, TRUE);
 
-    if (message != NULL) {
-        if (strcmp("", message) != 0) {
-            print_message(Error, "%s", message);
-        }
-
-        free((void*) message);
-    }
-
-    if (status) {
-        err = new_backend_impl_error(Implementation, NULL, "failed to link target");
-        print_message(Error, "Linker exited with: %d", status);
-    } else {
-        print_message(Info, "Successfully linked target to: %s", config->output_file);
-    }
-
     return err;
 }
 
