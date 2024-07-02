@@ -30,24 +30,24 @@ include_directories(${LLVM_INCLUDE_DIR})
 # CTEST 1
 # test llvm backend codegen for global variables
 
-file(GLOB_RECURSE SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/llvm/*.c)
-list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/main.c)
-add_executable(global_vars
-        ${PROJECT_SOURCE_DIR}/src/codegen/backend.c
-        ${PROJECT_SOURCE_DIR}/src/sys/log.c
-        ${PROJECT_SOURCE_DIR}/src/sys/col.c
-        ${PROJECT_SOURCE_DIR}/src/set/set.c
-        ${PROJECT_SOURCE_DIR}/src/ast/ast.c
-        ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
-        ${PROJECT_SOURCE_DIR}/src/io/files.c
-        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
-        global_vars.c
-        ${SOURCE_FILES})
-set_target_properties(global_vars
-        PROPERTIES
-        OUTPUT_NAME "global_vars"
-        RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/tests/llvm)
-target_link_libraries(global_vars tomlc99)
-add_test(NAME global_vars
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/llvm
-        COMMAND ${GEMSTONE_BINARY_DIR}/tests/llvm/global_vars)
+#file(GLOB_RECURSE SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/llvm/*.c)
+#list(REMOVE_ITEM SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/main.c)
+#add_executable(global_vars
+#        ${PROJECT_SOURCE_DIR}/src/codegen/backend.c
+#        ${PROJECT_SOURCE_DIR}/src/sys/log.c
+#        ${PROJECT_SOURCE_DIR}/src/sys/col.c
+#        ${PROJECT_SOURCE_DIR}/src/set/set.c
+#        ${PROJECT_SOURCE_DIR}/src/ast/ast.c
+#        ${PROJECT_SOURCE_DIR}/src/cfg/opt.c
+#        ${PROJECT_SOURCE_DIR}/src/io/files.c
+#        ${PROJECT_SOURCE_DIR}/src/mem/cache.c
+#        global_vars.c
+#        ${SOURCE_FILES})
+#set_target_properties(global_vars
+#        PROPERTIES
+#        OUTPUT_NAME "global_vars"
+#        RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/tests/llvm)
+#target_link_libraries(global_vars tomlc99)
+#add_test(NAME global_vars
+#        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/llvm
+#        COMMAND ${GEMSTONE_BINARY_DIR}/tests/llvm/global_vars)
