@@ -12,6 +12,7 @@ COPY --chown=lorang .env /home/lorang/
 COPY --chown=lorang run-docker-build.sh /home/lorang/
 COPY --chown=lorang run-lib-build.sh /home/lorang/
 COPY --chown=lorang dep /home/lorang/dep
+COPY --chown=lorang lib /home/lorang/lib
 COPY --chown=lorang .git /home/lorang/.git
 
 RUN cmake .
