@@ -6,6 +6,7 @@
 #include <set/types.h>
 #include <sys/log.h>
 #include <set/set.h>
+#include <stdlib.h>
 #include <mem/cache.h>
 
 #define BASE_BYTES 4
@@ -45,13 +46,16 @@ BackendError impl_reference_const(LLVMBackendCompileUnit* unit, LLVMBuilderRef b
         // is string literal
         LLVMValueRef string_value = LLVMConstString(value->value, strlen(value->value), false);
 
-        char* uuid = guid();
+        char uuid[9];
+        sprintf(uuid, "%08x", g_str_hash(value->value));
 
         LLVMValueRef string_global = LLVMAddGlobal(unit->module, LLVMTypeOf(string_value), uuid);
         LLVMSetInitializer(string_global, string_value);
         LLVMSetGlobalConstant(string_global, true);
+        LLVMSetUnnamedAddress(string_global, LLVMGlobalUnnamedAddr);
+        LLVMSetAlignment(string_global, 1);
 
-        *llvm_value = LLVMGetNamedGlobal(unit->module, uuid);
+        *llvm_value = string_global;
     } else {
         err = new_backend_impl_error(Implementation, value->nodePtr, "reference initializer can only be string literals");
     }

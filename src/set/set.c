@@ -1610,17 +1610,60 @@ bool compareTypes(Type *leftType, Type *rightType) {
     return FALSE;
 }
 
+Type* getVariableType(Variable* variable) {
+    if (variable->kind == VariableKindDeclaration) {
+        return variable->impl.declaration.type;
+    } else {
+        return variable->impl.definiton.declaration.type;
+    }
+}
+
+int createStorageExpr(StorageExpr* expr, AST_NODE_PTR node) {
+    switch (node->kind) {
+        case AST_Ident:
+            expr->kind = StorageExprKindVariable;
+            int status = getVariableFromScope(node->value, &expr->impl.variable);
+            if (status == SEMANTIC_ERROR) {
+                return SEMANTIC_ERROR;
+            }
+            expr->target_type = getVariableType(expr->impl.variable);
+            break;
+        case AST_Dereference:
+            expr->kind = StorageExprKindDereference;
+
+            AST_NODE_PTR array_node = AST_get_node(node, 0);
+            AST_NODE_PTR index_node = AST_get_node(node, 1);
+
+            expr->impl.dereference.index = createExpression(index_node);
+            expr->impl.dereference.array = mem_alloc(MemoryNamespaceSet, sizeof(StorageExpr));
+            if (createStorageExpr(expr->impl.dereference.array, array_node) == SEMANTIC_ERROR){
+                return SEMANTIC_ERROR;
+            }
+
+            if (expr->impl.dereference.array->target_type->kind == TypeKindReference) {
+                expr->target_type = expr->impl.dereference.array->target_type->impl.reference;
+            } else {
+                print_diagnostic(&array_node->location, Error, "Cannot dereference non reference type: %s",
+                                 type_to_string(expr->impl.dereference.array->target_type));
+                return SEMANTIC_ERROR;
+            };
+            break;
+        default:
+            print_message(Error, "Unimplemented");
+            return SEMANTIC_ERROR;
+            break;
+    }
+
+    return SEMANTIC_OK;
+}
+
 int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
     DEBUG("create Assign");
     Assignment assign;
     assign.nodePtr = currentNode;
+    assign.destination = mem_alloc(MemoryNamespaceSet, sizeof(StorageExpr));
 
-    // TODO: get variable
-    const char *varName = AST_get_node(currentNode, 0)->value;
-    int status = getVariableFromScope(varName, &assign.variable);
-    if (status) {
-        return SEMANTIC_ERROR;
-    }
+    int status = createStorageExpr(assign.destination, AST_get_node(currentNode, 0));
 
     assign.value = createExpression(AST_get_node(currentNode, 1));
     if (assign.value == NULL) {
@@ -1629,17 +1672,7 @@ int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
 
     Type *varType = NULL;
 
-    if (assign.variable->kind == VariableKindDeclaration) {
-        varType = assign.variable->impl.declaration.type;
-    } else if (assign.variable->kind == VariableKindDefinition) {
-        varType = assign.variable->impl.definiton.declaration.type;
-    }
-
-    bool result = compareTypes(varType, assign.value->result);
-    if (result == FALSE) {
-        print_diagnostic(&currentNode->location, Error, "Assignment expression has incompatible type");
-        return SEMANTIC_ERROR;
-    }
+    // TODO: check assignment type compatability
 
     ParentStatement->impl.assignment = assign;
     return SEMANTIC_OK;

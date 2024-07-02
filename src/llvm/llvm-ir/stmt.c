@@ -12,6 +12,56 @@
 #include <assert.h>
 #include <mem/cache.h>
 
+BackendError impl_storage_expr(
+        LLVMBackendCompileUnit *unit,
+        LLVMBuilderRef
+        builder,
+        LLVMLocalScope *scope,
+        const StorageExpr *expr,
+        LLVMValueRef* storage_target) {
+
+    BackendError err = SUCCESS;
+
+    switch (expr->kind) {
+        case StorageExprKindVariable:
+            *storage_target =
+                    get_variable(scope, expr->impl.variable->name);
+            break;
+        case StorageExprKindDereference:
+
+            LLVMValueRef index = NULL;
+            err = impl_expr(unit, scope, builder, expr->impl.dereference.index, false, &index);
+            if (err.kind != Success) {
+                return err;
+            }
+
+            LLVMValueRef array = NULL;
+            err = impl_storage_expr(unit, builder, scope, expr->impl.dereference.array, &array);
+            if (err.kind != Success) {
+                return err;
+            }
+
+            LLVMTypeRef deref_type = NULL;
+            err = get_type_impl(unit, scope->func_scope->global_scope, expr->target_type, &deref_type);
+            if (err.kind != Success) {
+                return err;
+            }
+
+            if (expr->target_type->kind == TypeKindReference) {
+                array = LLVMBuildLoad2(builder, deref_type, array, "strg.deref.indirect-load");
+            }
+
+            *storage_target = LLVMBuildGEP2(builder, deref_type, array, &index, 1, "strg.deref");
+
+            break;
+        case StorageExprKindBoxAccess:
+            // TODO: resolve LLVMValueRef from BoxAccess
+            break;
+    }
+
+    return err;
+}
+
 BackendError impl_assign_stmt(
         LLVMBackendCompileUnit *unit,
         LLVMBuilderRef
@@ -20,27 +70,21 @@ BackendError impl_assign_stmt(
         const Assignment *assignment
 ) {
     BackendError err = SUCCESS;
-    DEBUG("implementing assignment for variable: %s", assignment->variable->name);
+    DEBUG("implementing assignment for variable: %p", assignment);
 
     LLVMValueRef llvm_value = NULL;
-    err = impl_expr(unit, scope, builder, assignment->value, FALSE, &llvm_value);
+    err = impl_expr(unit, scope, builder, assignment->value, TRUE, &llvm_value);
     if (err.kind != Success) {
         return err;
     }
 
-    switch (assignment->variable->kind) {
-        case VariableKindDeclaration:
-        case VariableKindDefinition:
-            LLVMValueRef llvm_ptr =
-                    get_variable(scope, assignment->variable->name);
-
-            LLVMBuildStore(builder, llvm_value, llvm_ptr
-            );
-            break;
-        case VariableKindBoxMember:
-            // TODO: resolve LLVMValueRef from BoxAccess
-            break;
+    LLVMValueRef llvm_array = NULL;
+    err = impl_storage_expr(unit, builder, scope, assignment->destination, &llvm_array);
+    if (err.kind != Success) {
+        return err;
     }
+
+    LLVMBuildStore(builder, llvm_value, llvm_array);
 
     return err;
 }

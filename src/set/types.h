@@ -287,6 +287,14 @@ typedef struct Dereference_t {
     AST_NODE_PTR nodePtr;
 }Dereference;
 
+typedef struct StorageExpr_t StorageExpr;
+
+typedef struct StorageDereference_t {
+    Expression* index;
+    StorageExpr* array;
+    AST_NODE_PTR nodePtr;
+} StorageDereference;
+
 typedef struct AddressOf_t {
     Expression* variable;
     AST_NODE_PTR node_ptr;
@@ -516,8 +524,24 @@ typedef struct Branch_t {
 // |                 Statements                     |
 // '------------------------------------------------'
 
+typedef enum StorageExprKind_t {
+    StorageExprKindVariable,
+    StorageExprKindBoxAccess,
+    StorageExprKindDereference,
+} StorageExprKind;
+
+typedef struct StorageExpr_t {
+    StorageExprKind kind;
+    Type* target_type;
+    union StorageExprImpl {
+        Variable* variable;
+        BoxAccess boxAccess;
+        StorageDereference dereference;
+    } impl;
+} StorageExpr;
+
 typedef struct Assignment_t {
-    Variable* variable;
+    StorageExpr* destination;
     Expression* value;
     AST_NODE_PTR nodePtr;
 } Assignment;
