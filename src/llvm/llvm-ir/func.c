@@ -1,5 +1,4 @@
 
-#include <alloca.h>
 #include <codegen/backend.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Types.h>
