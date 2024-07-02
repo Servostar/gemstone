@@ -3,6 +3,8 @@
 //
 
 #include <io/files.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <sys/log.h>
 #include <assert.h>
 #include <sys/col.h>
@@ -40,22 +42,24 @@ ModuleFile *push_file(ModuleFileStack *stack, const char *path) {
 
     // lazy init of heap stack
     if (stack->files == NULL) {
-        stack->files = g_array_new(FALSE, FALSE, sizeof(ModuleFile));
+        stack->files = g_array_new(FALSE, FALSE, sizeof(ModuleFile*));
     }
 
-    ModuleFile new_file = {
-            .path = path,
-            .handle = NULL
-    };
+    ModuleFile* new_file = mem_alloc(MemoryNamespaceStatic, sizeof(ModuleFile));
+    new_file->handle = NULL;
+    new_file->path = path;
+    new_file->statistics.warning_count = 0;
+    new_file->statistics.error_count = 0;
+    new_file->statistics.info_count = 0;
 
     g_array_append_val(stack->files, new_file);
 
-    return ((ModuleFile *) stack->files->data) + stack->files->len - 1;
+    return new_file;
 }
 
 void delete_files(ModuleFileStack *stack) {
     for (size_t i = 0; i < stack->files->len; i++) {
-        const ModuleFile *file = (ModuleFile *) stack->files->data + i;
+        const ModuleFile *file = g_array_index(stack->files, ModuleFile*, i);
 
         if (file->handle != NULL) {
             DEBUG("closing file: %s", file->path);
@@ -74,6 +78,11 @@ void delete_files(ModuleFileStack *stack) {
 
 // behaves like fgets except that it has defined behavior when n == 1
 static void custom_fgets(char *buffer, size_t n, FILE *stream) {
+    if (feof(stream)) {
+        buffer[0] = '\n';
+        buffer[1] = 0;
+        return;
+    }
     if (n == 1) {
         buffer[0] = (char) fgetc(stream);
         buffer[1] = 0;
@@ -82,19 +91,20 @@ static void custom_fgets(char *buffer, size_t n, FILE *stream) {
     }
 }
 
-void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message) {
-    assert(file->handle != NULL);
+void print_diagnostic(TokenLocation *location, Message kind, const char *message, ...) {
+    assert(location->file != NULL);
+    assert(location->file->handle != NULL);
     assert(location != NULL);
     assert(message != NULL);
 
     // reset to start
-    rewind(file->handle);
+    rewind(location->file->handle);
 
     char *buffer = alloca(SEEK_BUF_BYTES);
     unsigned long int line_count = 1;
 
     // seek to first line
-    while (line_count < location->line_start && fgets(buffer, SEEK_BUF_BYTES, file->handle) != NULL) {
+    while (line_count < location->line_start && fgets(buffer, SEEK_BUF_BYTES, location->file->handle) != NULL) {
         line_count += strchr(buffer, '\n') != NULL;
     }
 
@@ -104,24 +114,32 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
         case Info:
             kind_text = "info";
             accent_color = CYAN;
-            file->statistics.info_count++;
+            location->file->statistics.info_count++;
             break;
         case Warning:
             kind_text = "warning";
             accent_color = YELLOW;
-            file->statistics.warning_count++;
+            location->file->statistics.warning_count++;
             break;
         case Error:
             kind_text = "error";
             accent_color = RED;
-            file->statistics.error_count++;
+            location->file->statistics.error_count++;
             break;
     }
 
-    const char *absolute_path = get_absolute_path(file->path);
+    const char *absolute_path = get_absolute_path(location->file->path);
 
-    printf("%s%s:%ld:%s %s%s:%s %s\n", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET,
-           message);
+    printf("%s%s:%ld:%s %s%s:%s ", BOLD, absolute_path, location->line_start, RESET, accent_color, kind_text, RESET);
+
+    va_list args;
+    va_start(args, message);
+
+    vprintf(message, args);
+
+    va_end(args);
+
+    printf("\n");
 
     mem_free((void *) absolute_path);
 
@@ -135,7 +153,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
         // print line before token group start
         unsigned long int limit = min(location->col_start, SEEK_BUF_BYTES);
         while (limit > 1) {
-            custom_fgets(buffer, (int) limit, file->handle);
+            custom_fgets(buffer, (int) limit, location->file->handle);
             chars += printf("%s", buffer);
             limit = min(location->col_start - chars, SEEK_BUF_BYTES);
 
@@ -149,7 +167,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
         chars = 0;
         limit = min(location->col_end - location->col_start + 1, SEEK_BUF_BYTES);
         while (limit > 0) {
-            custom_fgets(buffer, (int) limit, file->handle);
+            custom_fgets(buffer, (int) limit, location->file->handle);
             chars += printf("%s", buffer);
             limit = min(location->col_end - location->col_start + 1 - chars, SEEK_BUF_BYTES);
 
@@ -162,7 +180,7 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
 
         // print rest of the line
         do {
-            custom_fgets(buffer, SEEK_BUF_BYTES, file->handle);
+            custom_fgets(buffer, SEEK_BUF_BYTES, location->file->handle);
             printf("%s", buffer);
         } while (strchr(buffer, '\n') == NULL);
 
@@ -185,24 +203,26 @@ void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, c
 }
 
 TokenLocation new_location(unsigned long int line_start, unsigned long int col_start, unsigned long int line_end,
-                           unsigned long int col_end) {
+                           unsigned long int col_end, ModuleFile* file) {
     TokenLocation location;
 
     location.line_start = line_start;
     location.line_end = line_end;
     location.col_start = col_start;
     location.col_end = col_end;
+    location.file = file;
 
     return location;
 }
 
-TokenLocation empty_location(void) {
+TokenLocation empty_location(ModuleFile* file) {
     TokenLocation location;
 
     location.line_start = 0;
     location.line_end = 0;
     location.col_start = 0;
     location.col_end = 0;
+    location.file = file;
 
     return location;
 }
@@ -236,7 +256,7 @@ void print_unit_statistics(ModuleFileStack *file_stack) {
     stats.error_count = 0;
 
     for (size_t i = 0; i < file_stack->files->len; i++) {
-        ModuleFile *file = (ModuleFile *) file_stack->files->data;
+        ModuleFile* file = g_array_index(file_stack->files, ModuleFile*, i);
 
         stats.info_count += file->statistics.warning_count;
         stats.warning_count += file->statistics.warning_count;
@@ -297,14 +317,7 @@ int create_directory(const char *path) {
 
     DEBUG("creating directory: %s", path);
 
-    int result;
-#ifdef __unix__
-    result = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-#elif defined(_WIN32) || defined(WIN32)
-    result = _mkdir(path);
-#endif
-
-    return result;
+    return g_mkdir_with_parents(path, 0755);
 }
 
 const char *get_last_error() {
@@ -316,44 +329,9 @@ const char *get_absolute_path(const char *path) {
 
     DEBUG("resolving absolute path of: %s", path);
 
-#ifdef __unix__
-    // use unix specific function
-    char absolute_path[MAX_PATH_BYTES];
-    realpath(path, absolute_path);
-#elif defined(_WIN32) || defined(WIN32)
-    // use Windows CRT specific function
-    char absolute_path[MAX_PATH_BYTES];
-    _fullpath((char*) path, absolute_path, _MAX_PATH);
-#endif
+    char* cwd = g_get_current_dir();
+    char* canoical = g_canonicalize_filename(path, cwd);
+    g_free(cwd);
 
-    return mem_strdup(MemoryNamespaceIo, absolute_path);
-}
-
-const char* make_file_path(const char* name, const char* ext, int count, ...) {
-    DEBUG("building file path...");
-
-    va_list args;
-    va_start(args, count); // Initialize the va_list with the first variadic argument
-
-    char* path = calloc(MAX_PATH_BYTES, sizeof(char));
-
-    for (int i = 0; i < count; i++) {
-        const char* arg = va_arg(args, const char*);
-        assert(arg != NULL);
-
-        strcat(path, arg);
-        strcat(path, PATH_SEPARATOR);
-    }
-
-    va_end(args); // Clean up the va_list
-
-    if (name != NULL) {
-        strcat(path, name);
-    }
-
-    if (name != NULL) {
-        strcat(path, ext);
-    }
-
-    return path;
+    return canoical;
 }

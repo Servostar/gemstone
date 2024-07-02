@@ -47,7 +47,7 @@ echo "+--------------------------------------+"
 echo "| RUNNING check test                   |"
 echo "+--------------------------------------+"
 
-docker run servostar/gemstone:devkit-"$SDK" sh run-check-test.sh
+docker run --rm --name "devkit-$SDK-check-test"- servostar/gemstone:devkit-"$SDK" sh run-check-test.sh
 if [ ! $? -eq 0 ]; then
   echo "===> failed to run build or checks"
   exit 1

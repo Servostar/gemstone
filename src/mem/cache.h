@@ -7,6 +7,7 @@
 
 #include <mem/cache.h>
 #include <stddef.h>
+#include <glib.h>
 
 typedef char* MemoryNamespaceName;
 
@@ -16,6 +17,7 @@ typedef char* MemoryNamespaceName;
 #define MemoryNamespaceOpt "Options"
 #define MemoryNamespaceSet "SET"
 #define MemoryNamespaceLlvm "LLVM"
+#define MemoryNamespaceLld "LLD"
 #define MemoryNamespaceIo "I/O"
 #define MemoryNamespaceStatic "Static"
 
@@ -85,5 +87,9 @@ char* mem_strdup(MemoryNamespaceName name, char* string);
 void* mem_clone(MemoryNamespaceName name, void* data, size_t size);
 
 void print_memory_statistics();
+
+GArray* mem_new_g_array(MemoryNamespaceName name, guint element_size);
+
+GHashTable* mem_new_g_hash_table(MemoryNamespaceName name, GHashFunc hash_func, GEqualFunc key_equal_func);
 
 #endif //GEMSTONE_CACHE_H

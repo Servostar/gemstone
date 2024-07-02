@@ -5,6 +5,7 @@
 #include <lex/util.h>
 #include <cfg/opt.h>
 #include <compiler.h>
+#include <llvm/parser.h>
 #include <mem/cache.h>
 
 /**
@@ -58,9 +59,14 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
+    if (is_option_set("list-targets")) {
+        list_available_targets();
+        exit(0);
+    }
+
     run_compiler();
 
-    if (is_option_set("print-memory-stats")) {
+    if (is_option_set("print-gc-stats")) {
         print_memory_statistics();
     }
 

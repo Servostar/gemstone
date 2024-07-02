@@ -36,4 +36,6 @@ int nextChar(char *dst);
  */
 int getNextLine(void);
 
+char* collapse_escape_sequences(char* string);
+
 #endif // LEX_UTIL_H_

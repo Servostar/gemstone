@@ -72,8 +72,11 @@ add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
 # Setup Glib 2.0                                   #
 # ------------------------------------------------ #
 
+include(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
+
+link_libraries(PkgConfig::GLIB)
 
 # ------------------------------------------------ #
 #  TOML-C99                                        #
@@ -95,6 +98,30 @@ set_target_properties(tomlc99
 
 include_directories(${PROJECT_SOURCE_DIR}/dep/tomlc99)
 
+link_libraries(tomlc99)
+
+# ------------------------------------------------ #
+#  Standard library                                #
+# ------------------------------------------------ #
+
+add_subdirectory(lib)
+
+# ------------------------------------------------ #
+#  LLVM backend                                    #
+# ------------------------------------------------ #
+
+# Fetch LLVM link configuration
+execute_process(COMMAND llvm-config --libs all
+                OUTPUT_VARIABLE LLVM_LIBS)
+# Strip whitespace from output
+string(STRIP "${LLVM_LIBS}" LLVM_LIBS)
+# Link all targets to LLVM
+link_libraries(${LLVM_LIBS})
+
+execute_process(COMMAND llvm-config --includedir
+                OUTPUT_VARIABLE LLVM_INCLUDE_DIR)
+string(STRIP "${LLVM_INCLUDE_DIR}" LLVM_INCLUDE_DIR)
+include_directories(${LLVM_INCLUDE_DIR})
 
 # ------------------------------------------------ #
 #  Source                                          #
@@ -125,10 +152,6 @@ set_target_properties(release
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/release)
-
-target_link_libraries(release PkgConfig::GLIB)
-
-target_link_libraries(release tomlc99)
 
 # FIXME: cannot compile with /O2 because of /RTC1 flag
 if (MSVC)
@@ -165,10 +188,6 @@ set_target_properties(debug
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/debug)
 
-target_link_libraries(debug PkgConfig::GLIB)
-
-target_link_libraries(debug tomlc99)
-
 if (MSVC)
     set(DEBUG_FLAGS /DEBUG)
 else()
@@ -197,10 +216,6 @@ set_target_properties(check
         PROPERTIES
         OUTPUT_NAME "gsc"
         RUNTIME_OUTPUT_DIRECTORY ${GEMSTONE_BINARY_DIR}/check)
-
-target_link_libraries(check PkgConfig::GLIB)
-
-target_link_libraries(check tomlc99)
 
 if (MSVC)
     set(CHECK_FLAGS /DEBUG /WX)

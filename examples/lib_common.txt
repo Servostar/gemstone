@@ -1,0 +1,6 @@
+
+fun swap(in out float: a, in out float: b) {
+    float: c = a
+    a = b
+    b = c
+}

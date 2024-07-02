@@ -41,6 +41,7 @@ typedef struct TokenLocation_t {
     unsigned long int col_start;
     unsigned long int line_end;
     unsigned long int col_end;
+    ModuleFile* file;
 } TokenLocation;
 
 /**
@@ -75,24 +76,23 @@ void delete_files(ModuleFileStack *stack);
  * @return
  */
 TokenLocation new_location(unsigned long int line_start, unsigned long int col_start, unsigned long int line_end,
-                           unsigned long int col_end);
+                           unsigned long int col_end, ModuleFile* file);
 
 /**
  * @brief Create a new empty location with all of its contents set to zero
  * @return
  */
-TokenLocation empty_location(void);
+TokenLocation empty_location(ModuleFile* file);
 
 /**
  * @brief Prints some diagnostic message to stdout.
  *        This also print the token group and the attached source as context.
- * @param file
  * @param location
  * @param kind
  * @param message
  */
-[[gnu::nonnull(1), gnu::nonnull(2)]]
-void print_diagnostic(ModuleFile *file, TokenLocation *location, Message kind, const char *message);
+[[gnu::nonnull(1)]]
+void print_diagnostic(TokenLocation *location, Message kind, const char *message, ...);
 
 [[gnu::nonnull(2)]]
 /**
@@ -141,16 +141,5 @@ const char* get_last_error();
 [[gnu::nonnull(1)]]
 [[nodiscard("pointer must be freed")]]
 const char* get_absolute_path(const char* path);
-
-/**
- * @brief Create a file path from a base name, extension a variable amount of directory path segments.
- * @param count Amount of path segments to prepend to the basename
- * @param name Basename of the file
- * @param ext Extension of the file
- * @param ... Path segments without path separator
- * @return A relative path of a file
- */
-[[nodiscard("pointer must be freed")]]
-const char* make_file_path(const char* name, const char* ext, int count, ...);
 
 #endif //GEMSTONE_FILES_H

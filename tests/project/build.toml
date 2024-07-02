@@ -6,8 +6,8 @@ description = "This is a test project"
 
 [target.debug]
 root = "src/main.txt"
-output = "bin"
-archive = "archive"
+output = "bin/debug"
+archive = "archive/debug"
 opt = 1
 print_ast = true
 print_asm = true

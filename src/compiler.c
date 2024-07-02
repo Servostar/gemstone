@@ -11,7 +11,12 @@
 #include <io/files.h>
 #include <assert.h>
 #include <cfg/opt.h>
+#include <codegen/backend.h>
+#include <llvm/backend.h>
 #include <mem/cache.h>
+#include <set/set.h>
+
+#define GRAPHVIZ_FILE_EXTENSION "gv"
 
 extern void yyrestart(FILE *);
 
@@ -52,14 +57,14 @@ static int compile_file_to_ast(AST_NODE_PTR ast, ModuleFile *file) {
     yyrestart(yyin);
     lex_reset();
 
-    yyparse();
+    int status = yyparse();
 
     // clean up global state
     // current_file = NULL;
     root = NULL;
     yyin = NULL;
 
-    return EXIT_SUCCESS;
+    return status;
 }
 
 /**
@@ -93,6 +98,8 @@ static int setup_target_environment(const TargetConfig *target) {
         return EXIT_FAILURE;
     }
 
+    INFO("setup environment successfully");
+
     return EXIT_SUCCESS;
 }
 
@@ -101,29 +108,134 @@ static int setup_target_environment(const TargetConfig *target) {
  * @param ast
  * @param target
  */
-static void print_ast_to_file(const AST_NODE_PTR ast, const TargetConfig *target) {
+static void print_ast_to_file(AST_NODE_PTR ast, const TargetConfig *target) {
     assert(ast != NULL);
     assert(target != NULL);
+    DEBUG("printing AST to file: %s", target->name);
 
-    if (!target->print_ast)
+    if (!target->print_ast) {
+        INFO("no need to print AST");
         return;
+    }
 
     // create file path to write graphviz to
-    const char *path = make_file_path(target->name, ".gv", 1, target->archive_directory);
+    // basename of ile
+    char* filename = g_strjoin(".", target->name, GRAPHVIZ_FILE_EXTENSION, NULL);
+    // relative path to file
+    char *path = g_build_filename(target->archive_directory, filename, NULL);
 
-    FILE *output = fopen((const char *) path, "w");
+    DEBUG("Opening file to graph: %s", path);
+
+    FILE *output = fopen(path, "w");
     if (output == NULL) {
-        const char *message = get_last_error();
+        char *message = (char*) get_last_error();
         print_message(Error, "Unable to open file for syntax tree at: %s: %s", path, message);
-        free((void *) message);
+        free(message);
     } else {
+        DEBUG("writing graph to file...");
 
         AST_fprint_graphviz(output, ast);
 
         fclose(output);
+
+        print_message(Info, "AST graph was written to: %s", path);
     }
 
-    free((void *) path);
+    g_free(filename);
+    g_free(path);
+}
+
+static void run_backend_codegen(const Module* module, const TargetConfig* target) {
+    DEBUG("initializing LLVM codegen backend...");
+    llvm_backend_init();
+
+    DEBUG("initiializing backend for codegen...");
+    BackendError err = init_backend();
+    if (err.kind != Success) {
+        return;
+    }
+
+    DEBUG("generating code...");
+    err = generate_code(module, target);
+    if (err.kind != Success) {
+        print_message(Error, "Backend failed: %s", err.impl.message);
+        return;
+    }
+
+    print_message(Info, "Compilation finished successfully");
+
+    err = deinit_backend();
+}
+
+const char* get_absolute_import_path(const TargetConfig* config, const char* import_target_name) {
+    INFO("resolving absolute path for import target: %s", import_target_name);
+
+    for (guint i = 0; i < config->import_paths->len; i++) {
+        const char* import_directory_path = g_array_index(config->import_paths, char*, i);
+
+        char* path = g_build_filename(import_directory_path, import_target_name, NULL);
+        char* cwd = g_get_current_dir();
+        char* canonical = g_canonicalize_filename(path, cwd);
+
+        const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
+        const gboolean is_dir = g_file_test(canonical, G_FILE_TEST_IS_DIR);
+
+        g_free(path);
+        g_free(cwd);
+
+        if (exists && !is_dir) {
+            INFO("import target found at: %s", canonical);
+            return canonical;
+        }
+
+        g_free(canonical);
+    }
+
+    // file not found
+    return NULL;
+}
+
+static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file, const TargetConfig *target, AST_NODE_PTR root_module) {
+
+    GHashTable* imports = mem_new_g_hash_table(MemoryNamespaceAst, g_str_hash, g_str_equal);
+
+    if (compile_file_to_ast(root_module, file) == EXIT_SUCCESS) {
+
+        for (size_t i = 0; i < AST_get_child_count(root_module); i++) {
+            AST_NODE_PTR child = AST_get_node(root_module, i);
+
+            if (child->kind == AST_Import) {
+
+                const char* path = get_absolute_import_path(target, child->value);
+                if (path == NULL) {
+                    print_message(Error, "Cannot resolve path for import: `%s`", child->value);
+                    return EXIT_FAILURE;
+                }
+
+                if (g_hash_table_contains(imports, path)) {
+                    continue;
+                }
+
+                ModuleFile *imported_file = push_file(unit, path);
+                AST_NODE_PTR imported_module = AST_new_node(empty_location(imported_file), AST_Module, NULL);
+
+                if (compile_file_to_ast(imported_module, imported_file) == EXIT_SUCCESS) {
+                    AST_merge_modules(root_module, i + 1, imported_module);
+                } else {
+                    return EXIT_FAILURE;
+                }
+
+                g_hash_table_insert(imports, (gpointer) path, NULL);
+
+                gchar* directory = g_path_get_dirname(path);
+                g_array_append_val(target->import_paths, directory);
+            }
+        }
+    } else {
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -134,23 +246,28 @@ static void print_ast_to_file(const AST_NODE_PTR ast, const TargetConfig *target
 static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     print_message(Info, "Building target: %s", target->name);
 
-    AST_NODE_PTR ast = AST_new_node(empty_location(), AST_Module, NULL);
     ModuleFile *file = push_file(unit, target->root_module);
+    AST_NODE_PTR root_module = AST_new_node(empty_location(file), AST_Module, NULL);
 
-    if (compile_file_to_ast(ast, file) == EXIT_SUCCESS) {
-        if (setup_target_environment(target) == 0) {
+    if (compile_module_with_dependencies(unit, file, target, root_module) == EXIT_SUCCESS) {
+        if (root_module != NULL) {
+            if (setup_target_environment(target) == 0) {
 
-            print_ast_to_file(ast, target);
+                print_ast_to_file(root_module, target);
+                Module *module = create_set(root_module);
 
-            // TODO: parse AST to semantic values
-            // TODO: backend codegen
+                if (module != NULL) {
+                    run_backend_codegen(module, target);
+                }
+            }
+
+            AST_delete_node(root_module);
         }
     }
 
-    AST_delete_node(ast);
-
     mem_purge_namespace(MemoryNamespaceLex);
     mem_purge_namespace(MemoryNamespaceAst);
+    mem_purge_namespace(MemoryNamespaceSet);
 
     print_file_statistics(file);
 }

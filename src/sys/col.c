@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/col.h>
 #include <sys/log.h>
+#include <cfg/opt.h>
 
 #ifdef __unix__
 #include <unistd.h>
@@ -54,6 +55,10 @@ void enable_ansi_colors() {
 }
 
 int stdout_supports_ansi_esc() {
+
+    if (is_option_set("color-always")) {
+        return ANSI_ENABLED;
+    }
 
 #ifdef __unix__
   // check if TTY

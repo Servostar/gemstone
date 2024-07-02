@@ -103,6 +103,10 @@ TargetConfig* default_target_config() {
     config->output_directory = mem_strdup(MemoryNamespaceOpt, "bin");
     config->optimization_level = 1;
     config->root_module = NULL;
+    config->link_search_paths = g_array_new(FALSE, FALSE, sizeof(char*));
+    config->lld_fatal_warnings = FALSE;
+    config->gsc_fatal_warnings = FALSE;
+    config->import_paths = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
 
     return config;
 }
@@ -111,6 +115,16 @@ TargetConfig* default_target_config_from_args() {
     DEBUG("generating default target from command line...");
 
     TargetConfig* config = default_target_config();
+
+    gboolean fatal_warnings = is_option_set("all-fatal-warnings");
+
+    if (fatal_warnings || is_option_set("lld-fatal-warnings")) {
+        config->lld_fatal_warnings = true;
+    }
+
+    if (fatal_warnings || is_option_set("gsc-fatal-warnings")) {
+        config->gsc_fatal_warnings = true;
+    }
 
     if (is_option_set("print-ast")) {
         config->print_ast = true;
@@ -146,6 +160,40 @@ TargetConfig* default_target_config_from_args() {
         }
     }
 
+    // TODO: free vvvvvvvvvvvvv
+    char* cwd = g_get_current_dir();
+    g_array_append_val(config->link_search_paths, cwd);
+
+    if (is_option_set("link-paths")) {
+        const Option* opt = get_option("link-paths");
+
+        if (opt->value != NULL) {
+
+            const char* start = opt->value;
+            const char* end = NULL;
+            while((end = strchr(start, ',')) != NULL) {
+
+                const int len = end - start;
+                char* link_path = malloc(len + 1);
+                memcpy(link_path, start, len);
+                link_path[len] = 0;
+
+                g_array_append_val(config->link_search_paths, link_path);
+
+                start = end;
+            }
+
+            const int len = strlen(start);
+            if (len > 0) {
+                char* link_path = malloc(len + 1);
+                memcpy(link_path, start, len);
+                link_path[len] = 0;
+
+                g_array_append_val(config->link_search_paths, link_path);
+            }
+        }
+    }
+
     GArray* files = get_non_options_after("compile");
 
     if (files == NULL) {
@@ -161,6 +209,9 @@ TargetConfig* default_target_config_from_args() {
         g_array_free(files, TRUE);
     }
 
+    char* default_import_path = mem_strdup(MemoryNamespaceOpt, ".");
+    g_array_append_val(config->import_paths, default_import_path);
+
     return config;
 }
 
@@ -173,17 +224,23 @@ void print_help(void) {
         "Compile non-project file: gsc compile <target-options> [file]",
         "Output information: gsc <option>",
         "Target options:",
-        "    --print-ast      print resulting abstract syntax tree to a file",
-        "    --print-asm      print resulting assembly language to a file",
-        "    --print-ir       print resulting LLVM-IR to a file",
-        "    --mode=[app|lib] set the compilation mode to either application or library",
-        "    --output=name    name of output files without extension",
+        "    --print-ast           print resulting abstract syntax tree to a file",
+        "    --print-asm           print resulting assembly language to a file",
+        "    --print-ir            print resulting LLVM-IR to a file",
+        "    --mode=[app|lib]      set the compilation mode to either application or library",
+        "    --output=name         name of output files without extension",
+        "    --link-paths=[paths,] set a list of directories to for libraries in",
+        "    --all-fatal-warnings  treat all warnings as errors",
+        "    --lld-fatal-warnings  treat linker warnings as errors",
+        "    --gsc-fatal-warnings  treat parser warnings as errors",
         "Options:",
-        "    --verbose            print logs with level information or higher",
-        "    --debug              print debug logs (if not disabled at compile time)",
-        "    --version            print the version",
-        "    --help               print this hel dialog",
-        "    --print-memory-stats print statistics of the garbage collector"
+        "    --verbose        print logs with level information or higher",
+        "    --debug          print debug logs (if not disabled at compile time)",
+        "    --version        print the version",
+        "    --list-targets   print a list of all available targets supported",
+        "    --help           print this help dialog",
+        "    --color-always   always colorize output",
+        "    --print-gc-stats print statistics of the garbage collector"
     };
 
     for (unsigned int i = 0; i < sizeof(lines) / sizeof(const char *); i++) {
@@ -289,6 +346,8 @@ static int parse_target(const ProjectConfig *config, const toml_table_t *target_
     get_str(&target_config->root_module, target_table, "root");
     get_str(&target_config->output_directory, target_table, "output");
     get_str(&target_config->archive_directory, target_table, "archive");
+    get_bool(&target_config->lld_fatal_warnings, target_table, "lld_fatal_warnings");
+    get_bool(&target_config->gsc_fatal_warnings, target_table, "gsc_fatal_warnings");
 
     get_int(&target_config->optimization_level, target_table, "opt");
 
@@ -373,6 +432,12 @@ void delete_target_config(TargetConfig* config) {
     }
     if (config->output_directory != NULL) {
         mem_free(config->output_directory);
+    }
+    if (config->link_search_paths) {
+        for (guint i = 0; i < config->link_search_paths->len; i++) {
+            free(g_array_index(config->link_search_paths, char*, i));
+        }
+        g_array_free(config->link_search_paths, TRUE);
     }
     mem_free(config);
 }

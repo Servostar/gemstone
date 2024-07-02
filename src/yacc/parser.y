@@ -17,7 +17,7 @@
     extern int yylex();
     extern AST_NODE_PTR root;
 
-    #define new_loc() new_location(yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column)
+    #define new_loc() new_location(yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column, current_file)
 }
 
 %union {
@@ -55,6 +55,7 @@
 %type <node_ptr> moduleimport
 %type <node_ptr> programbody
 %type <node_ptr> fundef
+%type <node_ptr> fundecl
 %type <node_ptr> box
 %type <node_ptr> typedef
 %type <node_ptr> exprlist
@@ -68,6 +69,7 @@
 %type <node_ptr> typecast
 %type <node_ptr> reinterpretcast
 %type <node_ptr> program
+%type <node_ptr> storage_expr
 
 
 %token KeyInt
@@ -135,11 +137,13 @@
 %left '(' ')' '[' ']'
 
 %%
-program: program programbody {AST_push_node(root, $2);}
+program: program programbody {AST_push_node(root, $2); 
+                              }
        | programbody {AST_push_node(root, $1);};
 
 programbody: moduleimport {$$ = $1;}
        | fundef{$$ = $1;}
+       | fundecl{$$ = $1;}
        | box{$$ = $1;}
        | definition{$$ = $1;}
        | decl{$$ = $1;}
@@ -189,6 +193,13 @@ fundef: KeyFun Ident paramlist '{' statementlist'}' {AST_NODE_PTR fun = AST_new_
                                                      AST_push_node(fun, $5);
                                                      $$ = fun;
                                                             DEBUG("Function");};
+
+fundecl: KeyFun Ident paramlist {AST_NODE_PTR fun = AST_new_node(new_loc(), AST_Fun, NULL);
+                                 AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $2);
+                                 AST_push_node(fun, ident);
+                                 AST_push_node(fun, $3);
+                                 $$ = fun;
+                                        DEBUG("Function");};
 
 paramlist: paramlist '(' params ')' {AST_push_node($1, $3);
                                      $$ = $1;}
@@ -376,7 +387,7 @@ decl: type ':' identlist {AST_NODE_PTR decl = AST_new_node(new_loc(), AST_Decl, 
                                            AST_push_node(decl, $1);
                                            AST_push_node(decl, $2);
                                            AST_push_node(decl, $4);
-                                           $$ = decl;}
+                                           $$ = decl;};
 
 
 definition: decl '=' expr { AST_NODE_PTR def = AST_new_node(new_loc(), AST_Def, NULL);
@@ -389,15 +400,18 @@ storagequalifier: KeyGlobal {$$ = AST_new_node(new_loc(), AST_Storage, "global")
         | KeyStatic {$$ = AST_new_node(new_loc(), AST_Storage, "static");}
         | KeyLocal {$$ = AST_new_node(new_loc(), AST_Storage, "local");};
 
-assign: Ident '=' expr { AST_NODE_PTR assign = AST_new_node(new_loc(), AST_Assign, NULL);
-                         AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $1);
-                         AST_push_node(assign, ident);
+assign: storage_expr '=' expr { AST_NODE_PTR assign = AST_new_node(new_loc(), AST_Assign, NULL);
+                         AST_push_node(assign, $1);
                          AST_push_node(assign, $3);
-                         $$ = assign;
-    DEBUG("Assignment"); }
-    
-      | boxaccess '=' expr 
-      | boxselfaccess '=' expr ;
+                         $$ = assign; };
+
+storage_expr: Ident { $$ = AST_new_node(new_loc(), AST_Ident, $1); }
+    | boxaccess  { $$ = $1; }
+    | boxselfaccess  { $$ = $1; }
+    | storage_expr '[' expr ']' { AST_NODE_PTR deref = AST_new_node(new_loc(), AST_Dereference, NULL);
+                                                                    AST_push_node(deref, $1);
+                                                                    AST_push_node(deref, $3);
+                                                                    $$ = deref; };
 
 sign: KeySigned {$$ = AST_new_node(new_loc(), AST_Sign, "signed");}
     | KeyUnsigned{$$ = AST_new_node(new_loc(), AST_Sign, "unsigned");};
@@ -534,6 +548,6 @@ opbit: expr OpBitand expr {AST_NODE_PTR and = AST_new_node(new_loc(), AST_BitAnd
 
 int yyerror(const char *s) {
     TokenLocation location = new_loc();
-    print_diagnostic(current_file, &location, Error, s);
+    print_diagnostic(&location, Error, s);
     return 0;
 }
