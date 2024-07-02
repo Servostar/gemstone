@@ -464,9 +464,6 @@ int createDef(AST_NODE_PTR currentNode, GArray **variables) {
 
         print_diagnostic(&name->nodePtr->location, Warning, "expected `%s` got `%s`", expected_type, gotten_type);
 
-        free(expected_type);
-        free(gotten_type);
-
         def.initializer = mem_alloc(MemoryNamespaceSet, sizeof(Expression));
         if (createTypeCastFromExpression(name, def.declaration.type, &def.initializer) == SEMANTIC_ERROR) {
             return SEMANTIC_ERROR;
@@ -514,20 +511,17 @@ char* type_to_string(Type* type) {
             if (type->impl.composite.scale < 1.0) {
                 for (int i = 0; i < (int) (type->impl.composite.scale * 4); i++) {
                     char* concat = g_strconcat("half ", string, NULL);
-                    free(string);
                     string = concat;
                 }
             } else if (type->impl.composite.scale > 1.0) {
                 for (int i = 0; i < (int) type->impl.composite.scale; i++) {
                     char* concat = g_strconcat("long ", string, NULL);
-                    free(string);
                     string = concat;
                 }
             }
 
             if (type->impl.composite.sign == Unsigned) {
                 char* concat = g_strconcat("unsigned ", string, NULL);
-                free(string);
                 string = concat;
             }
 
@@ -536,7 +530,6 @@ char* type_to_string(Type* type) {
         case TypeKindReference: {
             char* type_string = type_to_string(type->impl.reference);
             char* concat = g_strconcat("ref ", type_string, NULL);
-            free(type_string);
             string = concat;
             break;
         }
