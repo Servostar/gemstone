@@ -259,9 +259,13 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
             if (config->mode == Application) {
                 TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
 
-                lld_link_target(link_config);
+                if (link_config != NULL) {
+                    lld_link_target(link_config);
 
-                lld_delete_link_config(link_config);
+                    lld_delete_link_config(link_config);
+                } else {
+                    err = new_backend_impl_error(Implementation, NULL, "libclang error");
+                }
             }
         }
 

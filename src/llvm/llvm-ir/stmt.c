@@ -41,14 +41,20 @@ BackendError impl_storage_expr(
                 return err;
             }
 
+            if (expr->impl.dereference.array->kind == StorageExprKindDereference) {
+                LLVMTypeRef deref_type = NULL;
+                err = get_type_impl(unit, scope->func_scope->global_scope, expr->impl.dereference.array->target_type, &deref_type);
+                if (err.kind != Success) {
+                    return err;
+                }
+
+                array = LLVMBuildLoad2(builder, deref_type, array, "strg.deref.indirect-load");
+            }
+
             LLVMTypeRef deref_type = NULL;
             err = get_type_impl(unit, scope->func_scope->global_scope, expr->target_type, &deref_type);
             if (err.kind != Success) {
                 return err;
-            }
-
-            if (expr->target_type->kind == TypeKindReference) {
-                array = LLVMBuildLoad2(builder, deref_type, array, "strg.deref.indirect-load");
             }
 
             *storage_target = LLVMBuildGEP2(builder, deref_type, array, &index, 1, "strg.deref");
@@ -209,6 +215,8 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
         LLVMBool reference = FALSE;
         Parameter parameter = g_array_index(param_list, Parameter, i);
         if (is_parameter_out(&parameter)) {
+            reference = TRUE;
+        } else if (parameter.impl.declaration.type->kind == TypeKindReference) {
             reference = TRUE;
         }
 

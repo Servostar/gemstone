@@ -65,12 +65,6 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     g_array_append_val(config->object_file_names, target_object);
     INFO("resolved path of target object: %s", target_object);
 
-    // if it is an app, add entrypoint library
-    if (target_config->mode == Application) {
-        char* entrypoint = g_strdup("libentrypoint.a");
-        g_array_append_val(module->imports, entrypoint);
-    }
-
     // resolve absolute paths to dependent library object files
     DEBUG("resolving target dependencies...");
     for (guint i = 0; i < module->imports->len; i++) {
@@ -78,9 +72,9 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
 
         const char* dependency_object = get_absolute_link_path(target_config, dependency);
         if (dependency_object == NULL) {
-            ERROR("failed to resolve path to dependency object: %s", dependency);
-            lld_delete_link_config(config);
-            return NULL;
+            INFO("failed to resolve path to dependency object: %s", dependency);
+            print_message(Warning, "failed to resolve path to dependency object: %s", dependency);
+            continue;
         }
         g_array_append_val(config->object_file_names, dependency_object);
         INFO("resolved path of target object: %s", dependency_object);
@@ -91,53 +85,8 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     return config;
 }
 
-GArray* lld_create_lld_arguments(TargetLinkConfig* config) {
-    GArray* argv = g_array_new(TRUE, FALSE, sizeof(char*));
-
-    gchar* arg = g_strdup("ld.lld");
-    g_array_append_val(argv, arg);
-
-    if (config->fatal_warnings) {
-        arg = g_strdup("--fatal-warnings");
-        g_array_append_val(argv, arg);
-    }
-
-    if (config->colorize) {
-        arg = g_strdup("--color-diagnostics=always");
-        g_array_append_val(argv, arg);
-    }
-
-    {
-        arg = g_strjoin("", "-o", config->output_file, NULL);
-        g_array_append_val(argv, arg);
-    }
-
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        char* object_file_path = g_array_index(config->object_file_names, char*, i);
-        arg = g_strjoin("", object_file_path, NULL);
-        g_array_append_val(argv, arg);
-    }
-
-    return argv;
-}
-
 BackendError lld_link_target(TargetLinkConfig* config) {
-    DEBUG("linking target...");
-    BackendError err = SUCCESS;
-
-    GArray* argv = lld_create_lld_arguments(config);
-
-    INFO("Linking target...");
-
-    char* arguments = g_strjoinv(" ", (char**) argv->data);
-    print_message(Info, "%s", arguments);
-    g_free(arguments);
-
-    INFO("done linking target...");
-
-    g_array_free(argv, TRUE);
-
-    return err;
+    return SUCCESS;
 }
 
 void lld_delete_link_config(TargetLinkConfig* config) {
