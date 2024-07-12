@@ -26,7 +26,7 @@ void delete_local_scope(LLVMLocalScope* scope) {
     free(scope);
 }
 
-static LLVMValueRef get_parameter(const LLVMFuncScope* scope,
+LLVMValueRef get_parameter(const LLVMFuncScope* scope,
                                   const char* name) {
     if (g_hash_table_contains(scope->params, name)) {
         return g_hash_table_lookup(scope->params, name);
@@ -42,11 +42,6 @@ LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name) {
 
     if (scope->parent_scope != NULL) {
         return get_variable(scope->parent_scope, name);
-    }
-
-    LLVMValueRef param = get_parameter(scope->func_scope, name);
-    if (param != NULL) {
-        return param;
     }
 
     LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, (char*) name);

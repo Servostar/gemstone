@@ -541,6 +541,18 @@ char* type_to_string(Type* type) {
     return string;
 }
 
+int getParameter(const char *name, Parameter **parameter) {
+    // loop through all variable scope and find a variable
+    if (functionParameter != NULL) {
+        if (g_hash_table_contains(functionParameter, name)) {
+            *parameter = g_hash_table_lookup(functionParameter, name);
+            return SEMANTIC_OK;
+        }
+    }
+
+    return SEMANTIC_ERROR;
+}
+
 int getVariableFromScope(const char *name, Variable **variable) {
     assert(name != NULL);
     assert(variable != NULL);
@@ -548,13 +560,6 @@ int getVariableFromScope(const char *name, Variable **variable) {
     DEBUG("getting var from scope");
     int found = 0;
 
-    // loop through all variable scope and find a variable
-    if (functionParameter != NULL) {
-        if (g_hash_table_contains(functionParameter, name)) {
-            *variable = g_hash_table_lookup(functionParameter, name);
-            found += 1;
-        }
-    }
     for (size_t i = 0; i < Scope->len; i++) {
 
         GHashTable *variable_table = g_array_index(Scope, GHashTable*, i);
@@ -1435,6 +1440,14 @@ int createAddressOf(Expression *ParentExpression, AST_NODE_PTR currentNode) {
     return SEMANTIC_OK;
 }
 
+IO_Qualifier getParameterQualifier(Parameter* parameter) {
+    if (parameter->kind == ParameterDeclarationKind) {
+        return parameter->impl.declaration.qualifier;
+    } else {
+        return parameter->impl.definiton.declaration.qualifier;
+    }
+}
+
 Expression *createExpression(AST_NODE_PTR currentNode) {
     DEBUG("create Expression");
     Expression *expression = mem_alloc(MemoryNamespaceSet, sizeof(Expression));
@@ -1455,23 +1468,32 @@ Expression *createExpression(AST_NODE_PTR currentNode) {
         case AST_Ident:
             DEBUG("find var");
             expression->kind = ExpressionKindVariable;
-            int status = getVariableFromScope(currentNode->value, &(expression->impl.variable));
+            int status = getVariableFromScope(currentNode->value, &expression->impl.variable);
             if (status == SEMANTIC_ERROR) {
-                DEBUG("Identifier is not in current scope");
-                print_diagnostic(&currentNode->location, Error, "Variable not found");
-                return NULL;
-            }
-            switch (expression->impl.variable->kind) {
-                case VariableKindDeclaration:
+                expression->kind = ExpressionKindParameter;
+                status = getParameter(currentNode->value, &expression->impl.parameter);
+                if (status == SEMANTIC_ERROR) {
+                    DEBUG("Identifier is not in current scope");
+                    print_diagnostic(&currentNode->location, Error, "Unknown identifier: `%s`", currentNode->value);
+                    return NULL;
+                }
+
+                if (getParameterQualifier(expression->impl.parameter) == Out) {
+                    print_diagnostic(&currentNode->location, Error, "Parameter is write-only: `%s`", currentNode->value);
+                    return NULL;
+                }
+
+                if (expression->impl.parameter->kind == VariableKindDeclaration) {
+                    expression->result = expression->impl.parameter->impl.declaration.type;
+                } else {
+                    expression->result = expression->impl.parameter->impl.definiton.declaration.type;
+                }
+            } else {
+                if (expression->impl.variable->kind == VariableKindDeclaration) {
                     expression->result = expression->impl.variable->impl.declaration.type;
-                    DEBUG("%d", expression->impl.variable->impl.declaration.type->kind);
-                    break;
-                case VariableKindDefinition:
+                } else {
                     expression->result = expression->impl.variable->impl.definiton.declaration.type;
-                    break;
-                default:
-                    PANIC("current Variable should not be an BoxMember");
-                    break;
+                }
             }
             break;
         case AST_Add:
@@ -1611,15 +1633,33 @@ Type* getVariableType(Variable* variable) {
     }
 }
 
+Type* getParameterType(Parameter* parameter) {
+    if (parameter->kind == ParameterDeclarationKind) {
+        return parameter->impl.declaration.type;
+    } else {
+        return parameter->impl.definiton.declaration.type;
+    }
+}
+
 int createStorageExpr(StorageExpr* expr, AST_NODE_PTR node) {
     switch (node->kind) {
         case AST_Ident:
             expr->kind = StorageExprKindVariable;
             int status = getVariableFromScope(node->value, &expr->impl.variable);
             if (status == SEMANTIC_ERROR) {
-                return SEMANTIC_ERROR;
+
+                expr->kind = StorageExprKindParameter;
+                status = getParameter(node->value, &expr->impl.parameter);
+                if (status == SEMANTIC_ERROR) {
+                    print_diagnostic(&node->location, Error, "Unknown token: `%s`", node->value);
+                    return SEMANTIC_ERROR;
+                } else {
+                    expr->target_type = getParameterType(expr->impl.parameter);
+                }
+
+            } else {
+                expr->target_type = getVariableType(expr->impl.variable);
             }
-            expr->target_type = getVariableType(expr->impl.variable);
             break;
         case AST_Dereference:
             expr->kind = StorageExprKindDereference;
@@ -1656,9 +1696,17 @@ int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
     assign.nodePtr = currentNode;
     assign.destination = mem_alloc(MemoryNamespaceSet, sizeof(StorageExpr));
 
-    int status = createStorageExpr(assign.destination, AST_get_node(currentNode, 0));
+    AST_NODE_PTR strg_expr = AST_get_node(currentNode, 0);
+    int status = createStorageExpr(assign.destination, strg_expr);
     if (status == SEMANTIC_ERROR) {
         return SEMANTIC_ERROR;
+    }
+
+    if (strg_expr->kind == StorageExprKindParameter) {
+        if (getParameterQualifier(assign.destination->impl.parameter) == In) {
+            print_diagnostic(&currentNode->location, Error, "Parameter is read-only: `%s`", assign.destination->impl.parameter->name);
+            return SEMANTIC_ERROR;
+        }
     }
 
     assign.value = createExpression(AST_get_node(currentNode, 1));
@@ -1682,7 +1730,8 @@ int fillBlock(Block *block, AST_NODE_PTR currentNode) {
     g_array_append_val(Scope, lowerScope);
 
     for (size_t i = 0; i < currentNode->children->len; i++) {
-        int signal = createStatement(block, AST_get_node(currentNode, i));
+        AST_NODE_PTR stmt_node = AST_get_node(currentNode, i);
+        int signal = createStatement(block, stmt_node);
         if (signal) {
             return SEMANTIC_ERROR;
         }
@@ -2003,30 +2052,20 @@ int createParam(GArray *Paramlist, AST_NODE_PTR currentNode) {
     if (set_get_type_impl(AST_get_node(paramdecl, 0), &(decl.type))) {
         return SEMANTIC_ERROR;
     }
-    Parameter param;
-    param.nodePtr = currentNode;
-    param.kind = ParameterDeclarationKind;
-    param.impl.declaration = decl;
-    param.name = AST_get_node(paramdecl, 1)->value;
+    Parameter* param = mem_alloc(MemoryNamespaceSet, sizeof(Parameter));
+    param->nodePtr = currentNode;
+    param->kind = ParameterDeclarationKind;
+    param->impl.declaration = decl;
+    param->name = AST_get_node(paramdecl, 1)->value;
 
-    DEBUG("param name: %s", param.name);
-    g_array_append_val(Paramlist, param);
+    DEBUG("param name: %s", param->name);
+    g_array_append_val(Paramlist, *param);
 
-    DEBUG("create var for param");
-
-    Variable *paramvar = mem_alloc(MemoryNamespaceSet, sizeof(Variable));
-    paramvar->kind = VariableKindDeclaration;
-    paramvar->name = param.name;
-    paramvar->nodePtr = currentNode;
-    paramvar->impl.declaration.nodePtr = currentNode;
-    paramvar->impl.declaration.qualifier = Local;
-    paramvar->impl.declaration.type = param.impl.declaration.type;
-
-    if (g_hash_table_contains(functionParameter, param.name)) {
-        print_diagnostic(&param.nodePtr->location, Error, "Names of function parameters must be unique: %s", param.name);
+    if (g_hash_table_contains(functionParameter, param->name)) {
+        print_diagnostic(&param->nodePtr->location, Error, "Names of function parameters must be unique: %s", param->name);
         return SEMANTIC_ERROR;
     }
-    g_hash_table_insert(functionParameter, (gpointer) param.name, paramvar);
+    g_hash_table_insert(functionParameter, (gpointer) param->name, param);
 
     DEBUG("created param successfully");
     return SEMANTIC_OK;

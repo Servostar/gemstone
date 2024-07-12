@@ -27,6 +27,10 @@ BackendError impl_storage_expr(
             *storage_target =
                     get_variable(scope, expr->impl.variable->name);
             break;
+        case StorageExprKindParameter:
+            *storage_target =
+                    get_parameter(scope->func_scope, expr->impl.parameter->name);
+            break;
         case StorageExprKindDereference:
 
             LLVMValueRef index = NULL;
