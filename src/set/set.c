@@ -1714,7 +1714,12 @@ int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
         return SEMANTIC_ERROR;
     }
 
-    // TODO: check assignment type compatability
+    if (!compareTypes(assign.destination->target_type, assign.value->result)) {
+        print_diagnostic(&assign.value->nodePtr->location, Error, "assignment requires `%s` but got `%s`",
+                         type_to_string(assign.destination->target_type),
+                         type_to_string(assign.value->result));
+        return SEMANTIC_ERROR;
+    }
 
     ParentStatement->impl.assignment = assign;
     return SEMANTIC_OK;
