@@ -412,7 +412,7 @@ BackendError impl_parameter_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *s
         return new_backend_impl_error(Implementation, NULL, "Variable not found");
     }
 
-    if (decl.qualifier == In) {
+    if (decl.qualifier == In || reference) {
         *llvm_result = llvm_variable;
     } else {
         // no referencing, load value
