@@ -111,7 +111,7 @@ BackendError impl_assign_stmt(
     DEBUG("implementing assignment for variable: %p", assignment);
 
     LLVMValueRef llvm_value = NULL;
-    err = impl_expr(unit, scope, builder, assignment->value, TRUE, &llvm_value);
+    err = impl_expr(unit, scope, builder, assignment->value, false, &llvm_value);
     if (err.kind != Success) {
         return err;
     }
