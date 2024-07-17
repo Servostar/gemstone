@@ -85,7 +85,34 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     return config;
 }
 
+gboolean lld_generate_link_command(TargetLinkConfig* config, char** command) {
+    GString* commandString = g_string_new("");
+
+    g_string_append(commandString, "clang");
+
+    for (guint i = 0; i < config->object_file_names->len; i++) {
+        g_string_append(commandString, " ");
+        g_string_append(commandString, g_array_index(config->object_file_names, char*, i));
+    }
+
+    *command = commandString->str;
+
+    return true;
+}
+
 BackendError lld_link_target(TargetLinkConfig* config) {
+
+    char* command = NULL;
+    lld_generate_link_command(config, &command);
+
+    print_message(Info, "invoking binary driver with: %s", command);
+
+    if (system(command)) {
+        print_message(Error, "failed generating binary...");
+    }
+
+    g_free(command);
+
     return SUCCESS;
 }
 
