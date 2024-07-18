@@ -13,6 +13,8 @@ const char* get_absolute_link_path(const TargetConfig* config, const char* link_
     for (guint i = 0; i < config->link_search_paths->len; i++) {
         const char* link_directory_path = g_array_index(config->link_search_paths, char*, i);
 
+        INFO("searching at: %s", link_directory_path);
+
         char* path = g_build_filename(link_directory_path, link_target_name, NULL);
         char* cwd = g_get_current_dir();
         char* canonical = g_canonicalize_filename(path, cwd);

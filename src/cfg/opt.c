@@ -103,7 +103,7 @@ TargetConfig* default_target_config() {
     config->output_directory = mem_strdup(MemoryNamespaceOpt, "bin");
     config->optimization_level = 1;
     config->root_module = NULL;
-    config->link_search_paths = g_array_new(FALSE, FALSE, sizeof(char*));
+    config->link_search_paths = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
     config->lld_fatal_warnings = FALSE;
     config->gsc_fatal_warnings = FALSE;
     config->import_paths = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
@@ -311,6 +311,21 @@ static void get_int(int* integer, const toml_table_t *table, const char* name) {
     }
 }
 
+static void get_array(GArray* array, const toml_table_t *table, const char* name) {
+    const toml_array_t* toml_array = toml_array_in(table, name);
+
+    if (toml_array) {
+        for (int i = 0; i < toml_array_nelem(toml_array); i++) {
+            toml_datum_t value = toml_string_at(toml_array, i);
+
+            if (value.ok) {
+                char* copy = mem_strdup(MemoryNamespaceOpt, value.u.s);
+                g_array_append_val(array, copy);
+            }
+        }
+    }
+}
+
 static int parse_project_table(ProjectConfig *config, const toml_table_t *project_table) {
     DEBUG("parsing project table...");
 
@@ -387,6 +402,13 @@ static int parse_target(const ProjectConfig *config, const toml_table_t *target_
     if (err != PROJECT_OK) {
         return err;
     }
+    char* cwd = g_get_current_dir();
+
+    g_array_append_val(target_config->link_search_paths, cwd);
+    get_array(target_config->link_search_paths, target_table, "link-paths");
+
+    g_array_append_val(target_config->import_paths, cwd);
+    get_array(target_config->import_paths, target_table, "import-paths");
 
     g_hash_table_insert(config->targets, target_config->name, target_config);
 
