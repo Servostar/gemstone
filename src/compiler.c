@@ -356,8 +356,6 @@ static void build_project(ModuleFileStack *unit) {
 void run_compiler() {
     ModuleFileStack files = new_file_stack();
 
-    link_init();
-
     if (is_option_set("build")) {
         build_project(&files);
     } else if (is_option_set("compile")) {

@@ -268,6 +268,7 @@ void print_help(void) {
         "    --debug          print debug logs (if not disabled at compile time)",
         "    --version        print the version",
         "    --list-targets   print a list of all available targets supported",
+        "    --list-driver    print a list of all available binary driver",
         "    --help           print this help dialog",
         "    --color-always   always colorize output",
         "    --print-gc-stats print statistics of the garbage collector"

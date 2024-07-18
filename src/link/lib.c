@@ -21,9 +21,17 @@ void link_init() {
 
         for (unsigned long int i = 0; i < sizeof(AVAILABLE_DRIVER)/sizeof(driver_init); i++) {
             BinaryDriver* driver = AVAILABLE_DRIVER[i]();
+
+            if (driver == NULL) {
+                ERROR("failed to init driver by index: %d", i);
+                continue;
+            }
+
             g_hash_table_insert(binary_driver, (gpointer) driver->name, driver);
             INFO("initialized `%s` driver", driver->name);
         }
+    } else {
+        PANIC("binary driver already initialized");
     }
 }
 
@@ -43,5 +51,18 @@ bool link_run(TargetLinkConfig* config) {
     } else {
         print_message(Error, "Binary driver not available: `%s`", config->driver);
         return false;
+    }
+}
+
+void link_print_available_driver() {
+    printf("Available binary driver:\n");
+
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, binary_driver);
+
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+
+        printf(" - %s\n", (char*) key);
     }
 }

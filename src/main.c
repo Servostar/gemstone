@@ -7,6 +7,7 @@
 #include <compiler.h>
 #include <llvm/parser.h>
 #include <mem/cache.h>
+#include <link/lib.h>
 
 /**
  * @brief Log a debug message to inform about beginning exit procedures
@@ -38,6 +39,8 @@ void setup(int argc, char *argv[]) {
 
     lex_init();
 
+    link_init();
+
     DEBUG("finished starting up gemstone...");
 }
 
@@ -61,6 +64,11 @@ int main(int argc, char *argv[]) {
 
     if (is_option_set("list-targets")) {
         list_available_targets();
+        exit(0);
+    }
+
+    if (is_option_set("list-driver")) {
+        link_print_available_driver();
         exit(0);
     }
 
