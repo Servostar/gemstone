@@ -84,6 +84,7 @@ def run_check_print_node():
 53 address of
 54 deref
 55 ref
+56 value
 """ == p.stdout
 
 
