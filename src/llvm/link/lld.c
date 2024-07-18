@@ -100,6 +100,9 @@ gboolean lld_generate_link_command(TargetLinkConfig* config, char** command) {
         g_string_append(commandString, g_array_index(config->object_file_names, char*, i));
     }
 
+    g_string_append(commandString, " -o ");
+    g_string_append(commandString, config->output_file);
+
     *command = commandString->str;
 
     return true;
