@@ -24,6 +24,7 @@ typedef struct TargetLinkConfig_t {
     // colorize linker output
     bool colorize;
     char* output_file;
+    char* driver;
 } TargetLinkConfig;
 
 typedef enum TargetCompilationMode_t {

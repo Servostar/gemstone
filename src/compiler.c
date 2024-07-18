@@ -15,6 +15,7 @@
 #include <llvm/backend.h>
 #include <mem/cache.h>
 #include <set/set.h>
+#include <link/lib.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
 
@@ -354,6 +355,8 @@ static void build_project(ModuleFileStack *unit) {
 
 void run_compiler() {
     ModuleFileStack files = new_file_stack();
+
+    link_init();
 
     if (is_option_set("build")) {
         build_project(&files);

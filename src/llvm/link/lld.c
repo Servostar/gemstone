@@ -6,6 +6,7 @@
 #include <sys/log.h>
 #include <mem/cache.h>
 #include <sys/col.h>
+#include <link/lib.h>
 
 const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
     INFO("resolving absolute path for link target: %s", link_target_name);
@@ -45,6 +46,7 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     config->fatal_warnings = target_config->lld_fatal_warnings;
     config->object_file_names = g_array_new(FALSE, FALSE, sizeof(char*));
     config->colorize = stdout_supports_ansi_esc();
+    config->driver = mem_strdup(MemoryNamespaceLld, "clang");
 
     // append build object file
     char* basename = g_strjoin(".", target_config->name, "o", NULL);
@@ -90,36 +92,11 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     return config;
 }
 
-gboolean lld_generate_link_command(TargetLinkConfig* config, char** command) {
-    GString* commandString = g_string_new("");
-
-    g_string_append(commandString, "clang");
-
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        g_string_append(commandString, " ");
-        g_string_append(commandString, g_array_index(config->object_file_names, char*, i));
-    }
-
-    g_string_append(commandString, " -o ");
-    g_string_append(commandString, config->output_file);
-
-    *command = commandString->str;
-
-    return true;
-}
-
 BackendError lld_link_target(TargetLinkConfig* config) {
 
-    char* command = NULL;
-    lld_generate_link_command(config, &command);
-
-    print_message(Info, "invoking binary driver with: %s", command);
-
-    if (system(command)) {
-        print_message(Error, "failed generating binary...");
+    if (link_run(config)) {
+        return new_backend_impl_error(Implementation, NULL, "linking failed");
     }
-
-    g_free(command);
 
     return SUCCESS;
 }
