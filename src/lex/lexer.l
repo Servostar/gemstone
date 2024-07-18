@@ -81,6 +81,7 @@
 "!" {DEBUG("\"%s\" tokenized with \'OpBitnot\'", yytext); return(OpBitnot);};
 "^" {DEBUG("\"%s\" tokenized with \'OpBitxor\'", yytext); return(OpBitxor);};
 "import" {DEBUG("\"%s\" tokenized with \'KeyImport\'", yytext); return(KeyImport);};
+"include" {DEBUG("\"%s\" tokenized with \'KeyInclude\'", yytext); return(KeyInclude);};
 "silent" {DEBUG("\"%s\" tokenized with \'KeySilent\'", yytext); return(KeySilent);};
 "box" {DEBUG("\"%s\" tokenized with \'KeyBox\'", yytext); return(KeyBox);};
 "typeof" {DEBUG("\"%s\" tokenized with \'FunTypeof\'", yytext); return(FunTypeof);};

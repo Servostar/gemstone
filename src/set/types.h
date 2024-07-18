@@ -584,6 +584,7 @@ typedef struct Module_t {
     GHashTable* variables;
     // to be resolved after the module has been parsed completely
     GArray* imports;
+    GArray* includes;
 } Module;
 
 

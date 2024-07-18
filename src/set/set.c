@@ -2423,12 +2423,14 @@ Module *create_set(AST_NODE_PTR currentNode) {
     GHashTable *functions = g_hash_table_new(g_str_hash, g_str_equal);
     GHashTable *variables = g_hash_table_new(g_str_hash, g_str_equal);
     GArray *imports = g_array_new(FALSE, FALSE, sizeof(const char *));
+    GArray *includes = g_array_new(FALSE, FALSE, sizeof(const char *));
 
     rootModule->boxes = boxes;
     rootModule->types = types;
     rootModule->functions = functions;
     rootModule->variables = variables;
     rootModule->imports = imports;
+    rootModule->includes = includes;
 
     DEBUG("created Module struct");
 
@@ -2499,6 +2501,10 @@ Module *create_set(AST_NODE_PTR currentNode) {
             case AST_Import:
                 DEBUG("create Import");
                 g_array_append_val(imports, AST_get_node(currentNode, i)->value);
+                break;
+            case AST_Include:
+                DEBUG("create Include");
+                g_array_append_val(includes, AST_get_node(currentNode, i)->value);
                 break;
             default:
                 INFO("Provided source file could not be parsed because of semantic error.");

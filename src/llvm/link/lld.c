@@ -70,11 +70,14 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     for (guint i = 0; i < module->imports->len; i++) {
         const char* dependency = g_array_index(module->imports, const char*, i);
 
-        const char* dependency_object = get_absolute_link_path(target_config, dependency);
+        const char* library = g_strjoin("", "libgsc", dependency, ".a", NULL);
+
+        const char* dependency_object = get_absolute_link_path(target_config, library);
         if (dependency_object == NULL) {
-            INFO("failed to resolve path to dependency object: %s", dependency);
-            print_message(Warning, "failed to resolve path to dependency object: %s", dependency);
-            continue;
+            ERROR("failed to resolve path to dependency object: %s", library);
+            print_message(Warning, "failed to resolve path to dependency object: %s", dependency);            lld_delete_link_config(config);
+            lld_delete_link_config(config);
+            return NULL;
         }
         g_array_append_val(config->object_file_names, dependency_object);
         INFO("resolved path of target object: %s", dependency_object);

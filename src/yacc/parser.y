@@ -53,6 +53,7 @@
 %type <node_ptr> opbool
 %type <node_ptr> opbit
 %type <node_ptr> moduleimport
+%type <node_ptr> moduleinclude
 %type <node_ptr> programbody
 %type <node_ptr> fundef
 %type <node_ptr> fundecl
@@ -109,6 +110,7 @@
 %token OpBitnot
 %token OpBitxor
 %token KeyImport
+%token KeyInclude
 %token KeySilent
 %token KeyBox
 %token FunTypeof
@@ -142,6 +144,7 @@ program: program programbody {AST_push_node(root, $2);
        | programbody {AST_push_node(root, $1);};
 
 programbody: moduleimport {$$ = $1;}
+       | moduleinclude {$$ = $1;}
        | fundef{$$ = $1;}
        | fundecl{$$ = $1;}
        | box{$$ = $1;}
@@ -327,6 +330,9 @@ funcall: Ident argumentlist {AST_NODE_PTR funcall = AST_new_node(new_loc(), AST_
 
 moduleimport: KeyImport ValStr {$$ = AST_new_node(new_loc(), AST_Import, $2);
                                  DEBUG("Module-Import"); };
+
+moduleinclude: KeyInclude ValStr {$$ = AST_new_node(new_loc(), AST_Include, $2);
+                                 DEBUG("Module-Include"); };
 
 statementlist: statementlist statement  {AST_push_node($1, $2);
                                         $$ = $1;}
