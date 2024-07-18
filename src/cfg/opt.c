@@ -69,7 +69,7 @@ GArray* get_non_options_after(const char* command) {
         return NULL;
     }
 
-    GArray* array = g_array_new(FALSE, FALSE, sizeof(const char*));
+    GArray* array = mem_new_g_array(MemoryNamespaceOpt, sizeof(const char*));
 
     GHashTableIter iter;
     gpointer key, value;
@@ -83,7 +83,6 @@ GArray* get_non_options_after(const char* command) {
     }
 
     if (array->len == 0) {
-        g_array_free(array, FALSE);
         return NULL;
     }
 
@@ -215,8 +214,6 @@ TargetConfig* default_target_config_from_args() {
         }
 
         config->root_module = mem_strdup(MemoryNamespaceOpt, ((char**) files->data) [0]);
-
-        g_array_free(files, TRUE);
     }
 
     char* default_import_path = mem_strdup(MemoryNamespaceOpt, ".");
@@ -354,7 +351,7 @@ static int parse_project_table(ProjectConfig *config, const toml_table_t *projec
     // author names
     toml_array_t *authors = toml_array_in(project_table, "authors");
     if (authors) {
-        config->authors = g_array_new(FALSE, FALSE, sizeof(char *));
+        config->authors = mem_new_g_array(MemoryNamespaceOpt, sizeof(char *));
 
         for (int i = 0;; i++) {
             toml_datum_t author = toml_string_at(authors, i);
@@ -437,7 +434,7 @@ static int parse_targets(ProjectConfig *config, const toml_table_t *root) {
         return PROJECT_SEMANTIC_ERR;
     }
 
-    config->targets = g_hash_table_new(g_str_hash, g_str_equal);
+    config->targets = mem_new_g_hash_table(MemoryNamespaceOpt, g_str_hash, g_str_equal);
 
     for (int i = 0; i < MAX_TARGETS_PER_PROJECT; i++) {
         const char *key = toml_key_in(targets, i);
@@ -502,7 +499,6 @@ void delete_target_config(TargetConfig* config) {
         for (guint i = 0; i < config->link_search_paths->len; i++) {
             free(g_array_index(config->link_search_paths, char*, i));
         }
-        g_array_free(config->link_search_paths, TRUE);
     }
     mem_free(config);
 }
@@ -512,7 +508,7 @@ void delete_project_config(ProjectConfig* config) {
         mem_free(config->name);
     }
     if (config->authors != NULL) {
-        g_array_free(config->authors, TRUE);
+        mem_free(config->authors);
     }
     if (config->desc != NULL) {
         mem_free(config->desc);
