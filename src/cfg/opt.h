@@ -51,6 +51,8 @@ typedef struct TargetConfig_t {
     char* output_directory;
     // output directory for intermediate representations (LLVM-IR, Assembly, ...)
     char* archive_directory;
+    // binary driver for executable generation
+    char* driver;
     // mode of compilation
     TargetCompilationMode mode;
     // number between 1 and 3

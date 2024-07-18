@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <toml.h>
 #include <mem/cache.h>
+#include <link/driver.h>
 
 static GHashTable* args = NULL;
 
@@ -98,6 +99,7 @@ TargetConfig* default_target_config() {
     config->print_ast = false;
     config->print_asm = false;
     config->print_ir = false;
+    config->driver = DEFAULT_DRIVER;
     config->mode = Application;
     config->archive_directory = mem_strdup(MemoryNamespaceOpt, "archive");
     config->output_directory = mem_strdup(MemoryNamespaceOpt, "bin");
@@ -157,6 +159,14 @@ TargetConfig* default_target_config_from_args() {
 
         if (opt->value != NULL) {
             config->name = mem_strdup(MemoryNamespaceOpt, (char*) opt->value);
+        }
+    }
+
+    if (is_option_set("driver")) {
+        const Option* opt = get_option("driver");
+
+        if (opt->value != NULL) {
+            config->driver = mem_strdup(MemoryNamespaceOpt, (char*) opt->value);
         }
     }
 
@@ -259,6 +269,7 @@ void print_help(void) {
         "    --print-ir            print resulting LLVM-IR to a file",
         "    --mode=[app|lib]      set the compilation mode to either application or library",
         "    --output=name         name of output files without extension",
+        "    --driver              set binary driver to use",
         "    --link-paths=[paths,] set a list of directories to for libraries in",
         "    --all-fatal-warnings  treat all warnings as errors",
         "    --lld-fatal-warnings  treat linker warnings as errors",
@@ -389,6 +400,7 @@ static int parse_target(const ProjectConfig *config, const toml_table_t *target_
     get_bool(&target_config->print_asm, target_table, "print_asm");
     get_bool(&target_config->print_ir, target_table, "print_ir");
 
+    get_str(&target_config->driver, target_table, "driver");
     get_str(&target_config->root_module, target_table, "root");
     get_str(&target_config->output_directory, target_table, "output");
     get_str(&target_config->archive_directory, target_table, "archive");

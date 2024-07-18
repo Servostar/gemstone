@@ -46,7 +46,7 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     config->fatal_warnings = target_config->lld_fatal_warnings;
     config->object_file_names = g_array_new(FALSE, FALSE, sizeof(char*));
     config->colorize = stdout_supports_ansi_esc();
-    config->driver = mem_strdup(MemoryNamespaceLld, "clang");
+    config->driver = target_config->driver;
 
     // append build object file
     char* basename = g_strjoin(".", target_config->name, "o", NULL);
