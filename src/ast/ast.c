@@ -101,6 +101,7 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
         case AST_Ident:
         case AST_Macro:
         case AST_Import:
+        case AST_Include:
         case AST_Storage:
         case AST_Typekind:
         case AST_Sign:

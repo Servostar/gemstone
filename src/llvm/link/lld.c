@@ -65,20 +65,16 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     g_array_append_val(config->object_file_names, target_object);
     INFO("resolved path of target object: %s", target_object);
 
-    // if it is an app, add entrypoint library
-    if (target_config->mode == Application) {
-        char* entrypoint = g_strdup("libentrypoint.a");
-        g_array_append_val(module->imports, entrypoint);
-    }
-
     // resolve absolute paths to dependent library object files
     DEBUG("resolving target dependencies...");
     for (guint i = 0; i < module->imports->len; i++) {
         const char* dependency = g_array_index(module->imports, const char*, i);
 
-        const char* dependency_object = get_absolute_link_path(target_config, dependency);
+        const char* library = g_strjoin("", "libgsc", dependency, ".a", NULL);
+
+        const char* dependency_object = get_absolute_link_path(target_config, library);
         if (dependency_object == NULL) {
-            ERROR("failed to resolve path to dependency object: %s", dependency);
+            ERROR("failed to resolve path to dependency object: %s", library);
             lld_delete_link_config(config);
             return NULL;
         }
