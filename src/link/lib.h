@@ -5,7 +5,7 @@
 #ifndef GEMSTONE_LIB_H
 #define GEMSTONE_LIB_H
 
-#include <link/clang/driver.h>
+#include <link/driver.h>
 
 typedef BinaryDriver* (*driver_init)();
 

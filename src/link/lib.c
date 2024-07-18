@@ -7,8 +7,12 @@
 #include <sys/log.h>
 #include <io/files.h>
 
+#include <link/clang/driver.h>
+#include <link/gcc/driver.h>
+
 static driver_init AVAILABLE_DRIVER[] = {
-    clang_get_driver
+    clang_get_driver,
+    gcc_get_driver
 };
 
 static GHashTable* binary_driver = NULL;
