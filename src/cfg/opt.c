@@ -212,6 +212,36 @@ TargetConfig* default_target_config_from_args() {
     char* default_import_path = mem_strdup(MemoryNamespaceOpt, ".");
     g_array_append_val(config->import_paths, default_import_path);
 
+    if (is_option_set("import-paths")) {
+        const Option* opt = get_option("import-paths");
+
+        if (opt->value != NULL) {
+
+            const char* start = opt->value;
+            const char* end = NULL;
+            while((end = strchr(start, ',')) != NULL) {
+
+                const int len = end - start;
+                char* import_path = malloc(len + 1);
+                memcpy(import_path, start, len);
+                import_path[len] = 0;
+
+                g_array_append_val(config->import_paths, import_path);
+
+                start = end;
+            }
+
+            const int len = strlen(start);
+            if (len > 0) {
+                char* import_path = malloc(len + 1);
+                memcpy(import_path, start, len);
+                import_path[len] = 0;
+
+                g_array_append_val(config->import_paths, import_path);
+            }
+        }
+    }
+
     return config;
 }
 

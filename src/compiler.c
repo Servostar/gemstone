@@ -170,6 +170,10 @@ static void run_backend_codegen(const Module* module, const TargetConfig* target
 const char* get_absolute_import_path(const TargetConfig* config, const char* import_target_name) {
     INFO("resolving absolute path for import target: %s", import_target_name);
 
+    if (!g_str_has_suffix(import_target_name, ".gsc")) {
+        import_target_name = g_strjoin("", import_target_name, ".gsc", NULL);
+    }
+
     for (guint i = 0; i < config->import_paths->len; i++) {
         const char* import_directory_path = g_array_index(config->import_paths, char*, i);
 
@@ -204,7 +208,7 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
         for (size_t i = 0; i < AST_get_child_count(root_module); i++) {
             AST_NODE_PTR child = AST_get_node(root_module, i);
 
-            if (child->kind == AST_Import) {
+            if (child->kind == AST_Import || child->kind == AST_Include) {
 
                 const char* path = get_absolute_import_path(target, child->value);
                 if (path == NULL) {
