@@ -95,10 +95,10 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
 BackendError lld_link_target(TargetLinkConfig* config) {
 
     if (link_run(config)) {
-        return new_backend_impl_error(Implementation, NULL, "linking failed");
+        return SUCCESS;
     }
 
-    return SUCCESS;
+    return new_backend_impl_error(Implementation, NULL, "linking failed");
 }
 
 void lld_delete_link_config(TargetLinkConfig* config) {

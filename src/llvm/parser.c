@@ -260,7 +260,7 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
                 TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
 
                 if (link_config != NULL) {
-                    lld_link_target(link_config);
+                    err = lld_link_target(link_config);
 
                     lld_delete_link_config(link_config);
                 } else {
