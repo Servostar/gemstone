@@ -1483,7 +1483,7 @@ Expression *createExpression(AST_NODE_PTR currentNode) {
                     return NULL;
                 }
 
-                if (expression->impl.parameter->kind == VariableKindDeclaration) {
+                if (expression->impl.parameter->kind == ParameterDeclarationKind) {
                     expression->result = expression->impl.parameter->impl.declaration.type;
                 } else {
                     expression->result = expression->impl.parameter->impl.definiton.declaration.type;
@@ -1702,7 +1702,7 @@ int createAssign(Statement *ParentStatement, AST_NODE_PTR currentNode) {
         return SEMANTIC_ERROR;
     }
 
-    if (strg_expr->kind == StorageExprKindParameter) {
+    if (strg_expr->kind == AST_Parameter) {
         if (getParameterQualifier(assign.destination->impl.parameter) == In) {
             print_diagnostic(&currentNode->location, Error, "Parameter is read-only: `%s`", assign.destination->impl.parameter->name);
             return SEMANTIC_ERROR;
