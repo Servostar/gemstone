@@ -79,6 +79,7 @@ enum AST_SyntaxElement_t {
     AST_AddressOf,
     AST_Dereference,
     AST_Reference,
+    AST_Include,
     AST_ELEMENT_COUNT
 };
 
