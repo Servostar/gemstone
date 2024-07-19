@@ -136,33 +136,23 @@ For creating the build pipeline build the Dockerfile in the root folder of this 
 Then the make targets are generated. Running `make release` will build gemstone from source in release mode.
 The generated binaries can be found either in `bin/release/gsc` or `bin/debug/gsc` depending on the chosen target.
 The following graph visualizes the build pipeline:
-```
-                 SDK (environment)
-                  │
-                  │ configure build environment
-                  │  cmake, make, gcc, yacc, lex
-                  │
-                  ▼
-                 Devkit (pipeline)
-                  │
-                  │ create build pipeline
-                  │  create make targets
-                  ▼
-                 Pipeline
-     
-
-yacc (generate files)    GCC (compile)   Extra Source Files (src/*.c)
-│                             │                     │
-├─ parser.tab.h ─────────────►│◄────────────────────┘
-│                             │
-└─ parser.tab.c ─────────────►│
-                              │
-lex (generate file)           │
-│                             │
-└─ lexer.ll.c  ──────────────►│
-                              │
-                              ▼
-                             gsc
+```mermaid
+flowchart LR
+    
+    subgraph Docker 
+        alpine[Alpine Linux] --> sdk[SDK] --> dev[Devkit]
+    end
+    
+    subgraph Build 
+        dev --> |generate parser| bison[Bison]
+        dev --> |generate lexer| flex[Flex]
+        bison --> cc[GCC/Clang/MSVC]
+        flex --> cc
+        cc --> debug
+        cc --> release
+        cc --> check
+    end
+    
 ```
 
 ## Docker images
