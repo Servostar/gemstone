@@ -11,6 +11,51 @@
 Gemstone is a programming language compiler (short: GSC) written in C based on flex and GNU bison.
 It uses LLVM to produce optimized native binaries for many platforms and uses its own builtin build system for more complex project management.
 
+## Architecture
+
+Gemstone is a LALR enabled non-reentrant compiler utilizing a linear flow of components. The compiler has multiple stages of operation, each representing a crucial step in compilation.
+
+```mermaid
+---
+title: GSC Architecture Overview
+---
+flowchart LR
+    lex["`**Lexical Analysis**
+        tokenization via flex`"]
+    bison["`**Syntax Analysis**
+        parsing via bison`"]
+    set["`**Semantic Analysis**
+        parse tree generation`"]
+    llvm["`**Codegen**
+        code generation via LLVM`"]
+    driver["`**Linking**
+          Linkage via Clang/GCC`"]
+    
+    start(("Start")) --> lex
+    
+    subgraph compile AST
+        lex --> bison
+    end
+    
+    subgraph Validation
+        bison --> import{"Import/Include?"}
+        import --> |yes| ast[[compile AST]] --> merge["Merge AST"] --> import
+        import --> |no| set
+        set --> llvm
+    end
+
+    stop(("End"))
+
+    subgraph Codegen
+        llvm --> lib{"Produce Library?"}
+        lib -->|no| driver --> executable(["Executable"])
+        lib -->|yes| library(["Library"])
+    end
+    
+    library --> stop
+    executable --> stop
+```
+
 ## Dependencies (build)
 
 ### Windows 11
