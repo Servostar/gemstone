@@ -13,6 +13,10 @@
     <img src="https://img.shields.io/github/license/Servostar/gemstone"/>
     <img src="https://img.shields.io/github/languages/count/Servostar/gemstone"/>
     <img src="https://img.shields.io/github/languages/top/Servostar/gemstone"/>
+    <br>
+    <img src="https://img.shields.io/badge/c-%2300599C.svg?style=flat&logo=c&logoColor=white"/>
+    <img src="https://img.shields.io/badge/CMake-%23008FBA.svg?&logo=cmake&color=064F8C&logoColor=white"/>
+    <img src="https://img.shields.io/badge/LLVM-%20?style=flat&color=262D3A&logo=llvm&logoColor=white"/>
 </div>
 
 ## About
