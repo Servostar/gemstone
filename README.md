@@ -1,5 +1,5 @@
 
-<div style="text-align: center">
+<div align="center">
     <img alt="gemstone logo" src="https://github.com/Servostar/gemstone/assets/72654954/fdb37c1b-81ca-4e6a-a9e9-c46effb12dae" width="75%">
     <br>
     <p>
