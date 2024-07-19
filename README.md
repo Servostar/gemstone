@@ -1,12 +1,21 @@
 
-<div align="center">
-  <picture>
+<div style="text-align: center">
     <img alt="gemstone logo" src="https://github.com/Servostar/gemstone/assets/72654954/fdb37c1b-81ca-4e6a-a9e9-c46effb12dae" width="75%">
-  </picture>
+    <br>
+    <p>
+        Open source programming language compiler based on LLVM, GLib and GNU Bison/Flex
+        <br>
+        capable of multi target cross compilation powered by simple build system.
+    </p>
+    <br>
+    <img src="https://img.shields.io/github/actions/workflow/status/Servostar/gemstone/build-check-sdk.yaml?label=Linux"/>
+    <img src="https://img.shields.io/github/actions/workflow/status/Servostar/gemstone/msys2-cross-compile.yml?label=Windows"/>
+    <img src="https://img.shields.io/github/license/Servostar/gemstone"/>
+    <img src="https://img.shields.io/github/languages/count/Servostar/gemstone"/>
+    <img src="https://img.shields.io/github/languages/top/Servostar/gemstone"/>
 </div>
-<br>
 
-## Gemstone
+## About
 
 Gemstone is a programming language compiler (short: GSC) written in C based on flex and GNU bison.
 It uses LLVM to produce optimized native binaries for many platforms and uses its own builtin build system for more complex project management.
