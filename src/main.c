@@ -41,6 +41,8 @@ void setup(int argc, char *argv[]) {
 
     link_init();
 
+    init_toml();
+
     DEBUG("finished starting up gemstone...");
 }
 

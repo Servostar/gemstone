@@ -98,7 +98,7 @@ TargetConfig* default_target_config() {
     config->print_ast = false;
     config->print_asm = false;
     config->print_ir = false;
-    config->driver = DEFAULT_DRIVER;
+    config->driver = mem_strdup(MemoryNamespaceOpt, DEFAULT_DRIVER);
     config->mode = Application;
     config->archive_directory = mem_strdup(MemoryNamespaceOpt, "archive");
     config->output_directory = mem_strdup(MemoryNamespaceOpt, "bin");
@@ -169,9 +169,10 @@ TargetConfig* default_target_config_from_args() {
         }
     }
 
-    // TODO: free vvvvvvvvvvvvv
     char* cwd = g_get_current_dir();
-    g_array_append_val(config->link_search_paths, cwd);
+    char* cached_cwd = mem_strdup(MemoryNamespaceOpt, cwd);
+    g_array_append_val(config->link_search_paths, cached_cwd);
+    free(cwd);
 
     if (is_option_set("link-paths")) {
         const Option* opt = get_option("link-paths");
@@ -183,7 +184,7 @@ TargetConfig* default_target_config_from_args() {
             while((end = strchr(start, ',')) != NULL) {
 
                 const int len = end - start;
-                char* link_path = malloc(len + 1);
+                char* link_path = mem_alloc(MemoryNamespaceOpt, len + 1);
                 memcpy(link_path, start, len);
                 link_path[len] = 0;
 
@@ -194,7 +195,7 @@ TargetConfig* default_target_config_from_args() {
 
             const int len = strlen(start);
             if (len > 0) {
-                char* link_path = malloc(len + 1);
+                char* link_path = mem_alloc(MemoryNamespaceOpt, len + 1);
                 memcpy(link_path, start, len);
                 link_path[len] = 0;
 
@@ -213,7 +214,7 @@ TargetConfig* default_target_config_from_args() {
             print_message(Warning, "Got more than one file to compile, using first, ignoring others.");
         }
 
-        config->root_module = mem_strdup(MemoryNamespaceOpt, ((char**) files->data) [0]);
+        config->root_module = mem_strdup(MemoryNamespaceOpt, g_array_index(files, char*, 0));
     }
 
     char* default_import_path = mem_strdup(MemoryNamespaceOpt, ".");
@@ -229,7 +230,7 @@ TargetConfig* default_target_config_from_args() {
             while((end = strchr(start, ',')) != NULL) {
 
                 const int len = end - start;
-                char* import_path = malloc(len + 1);
+                char* import_path = mem_alloc(MemoryNamespaceOpt, len + 1);
                 memcpy(import_path, start, len);
                 import_path[len] = 0;
 
@@ -240,7 +241,7 @@ TargetConfig* default_target_config_from_args() {
 
             const int len = strlen(start);
             if (len > 0) {
-                char* import_path = malloc(len + 1);
+                char* import_path = mem_alloc(MemoryNamespaceOpt, len + 1);
                 memcpy(import_path, start, len);
                 import_path[len] = 0;
 
@@ -382,7 +383,7 @@ static int get_mode_from_str(TargetCompilationMode* mode, const char* name) {
         *mode = Library;
         return PROJECT_OK;
     }
-    printf("Invalid project configuration, mode is invalid: %s\n\n", name);
+    print_message(Error, "Invalid project configuration, mode is invalid: %s", name);
     return PROJECT_SEMANTIC_ERR;
 }
 
@@ -413,11 +414,13 @@ static int parse_target(const ProjectConfig *config, const toml_table_t *target_
         return err;
     }
     char* cwd = g_get_current_dir();
+    char* cached_cwd = mem_strdup(MemoryNamespaceOpt, cwd);
+    free(cwd);
 
-    g_array_append_val(target_config->link_search_paths, cwd);
+    g_array_append_val(target_config->link_search_paths, cached_cwd);
     get_array(target_config->link_search_paths, target_table, "link-paths");
 
-    g_array_append_val(target_config->import_paths, cwd);
+    g_array_append_val(target_config->import_paths, cached_cwd);
     get_array(target_config->import_paths, target_table, "import-paths");
 
     g_hash_table_insert(config->targets, target_config->name, target_config);
@@ -436,14 +439,14 @@ static int parse_targets(ProjectConfig *config, const toml_table_t *root) {
 
     config->targets = mem_new_g_hash_table(MemoryNamespaceOpt, g_str_hash, g_str_equal);
 
-    for (int i = 0; i < MAX_TARGETS_PER_PROJECT; i++) {
+    for (int i = 0; i < toml_table_ntab(targets); i++) {
         const char *key = toml_key_in(targets, i);
 
         if (key == NULL)
             break;
 
         toml_table_t *target = toml_table_in(targets, key);
-        parse_target(config, target, key);
+        parse_target(config, target, mem_strdup(MemoryNamespaceOpt, (char*) key));
     }
 
     return PROJECT_OK;
@@ -455,8 +458,7 @@ int load_project_config(ProjectConfig *config) {
     FILE *config_file = fopen(PROJECT_CONFIG_FILE, "r");
     if (config_file == NULL) {
         print_message(Error, "Cannot open file %s: %s", PROJECT_CONFIG_FILE, strerror(errno));
-        INFO("project file not found");
-        return PROJECT_TOML_ERR;
+        return PROJECT_SEMANTIC_ERR;
     }
 
     char err_buf[TOML_ERROR_MSG_BUF];
@@ -464,21 +466,24 @@ int load_project_config(ProjectConfig *config) {
     toml_table_t *conf = toml_parse_file(config_file, err_buf, sizeof(err_buf));
     fclose(config_file);
 
-    if (conf == NULL) {
+    if (conf != NULL) {
+        int status = PROJECT_SEMANTIC_ERR;
+        toml_table_t *project = toml_table_in(conf, "project");
+
+        if (project != NULL) {
+            if (parse_project_table(config, project) == PROJECT_OK) {
+                status = parse_targets(config, conf);
+            }
+        } else {
+            print_message(Error, "Invalid project configuration: missing project table.");
+        }
+
+        toml_free(conf);
+        return status;
+    } else {
         print_message(Error, "Invalid project configuration: %s", err_buf);
-        return PROJECT_SEMANTIC_ERR;
     }
 
-    toml_table_t *project = toml_table_in(conf, "project");
-    if (project == NULL) {
-        print_message(Error, "Invalid project configuration: missing project table.");
-    }
-
-    if (parse_project_table(config, project) == PROJECT_OK) {
-        return parse_targets(config, conf);
-    }
-
-    toml_free(conf);
     return PROJECT_SEMANTIC_ERR;
 }
 
@@ -497,7 +502,7 @@ void delete_target_config(TargetConfig* config) {
     }
     if (config->link_search_paths) {
         for (guint i = 0; i < config->link_search_paths->len; i++) {
-            free(g_array_index(config->link_search_paths, char*, i));
+            mem_free(g_array_index(config->link_search_paths, char*, i));
         }
     }
     mem_free(config);
@@ -527,7 +532,7 @@ void delete_project_config(ProjectConfig* config) {
             delete_target_config(val);
         }
 
-        g_hash_table_destroy(config->targets);
+        mem_free(config->targets);
     }
 
     mem_free_from(MemoryNamespaceOpt, config);
@@ -544,4 +549,17 @@ ProjectConfig* default_project_config() {
     config->desc = NULL;
 
     return config;
+}
+
+static void* toml_cached_malloc(size_t bytes) {
+    return mem_alloc(MemoryNamespaceTOML, bytes);
+}
+
+static void toml_cached_free(void* ptr) {
+    mem_free(ptr);
+}
+
+void init_toml() {
+    INFO("setting up cached memory for TOML C99...");
+    toml_set_memutil(toml_cached_malloc, toml_cached_free);
 }

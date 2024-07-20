@@ -42,7 +42,7 @@ ModuleFile *push_file(ModuleFileStack *stack, const char *path) {
 
     // lazy init of heap stack
     if (stack->files == NULL) {
-        stack->files = g_array_new(FALSE, FALSE, sizeof(ModuleFile*));
+        stack->files = mem_new_g_array(MemoryNamespaceStatic, sizeof(ModuleFile*));
     }
 
     ModuleFile* new_file = mem_alloc(MemoryNamespaceStatic, sizeof(ModuleFile));
@@ -66,9 +66,10 @@ void delete_files(ModuleFileStack *stack) {
             fclose(file->handle);
         }
 
+        mem_free((void*) file);
     }
 
-    g_array_free(stack->files, TRUE);
+    mem_free(stack->files);
     DEBUG("deleted module file stack");
 }
 
@@ -330,8 +331,11 @@ const char *get_absolute_path(const char *path) {
     DEBUG("resolving absolute path of: %s", path);
 
     char* cwd = g_get_current_dir();
-    char* canoical = g_canonicalize_filename(path, cwd);
+    char* canonical = g_canonicalize_filename(path, cwd);
     g_free(cwd);
 
-    return canoical;
+    char* cached_canonical = mem_strdup(MemoryNamespaceStatic, canonical);
+    g_free(canonical);
+
+    return cached_canonical;
 }

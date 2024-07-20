@@ -15,7 +15,6 @@
 #include <llvm/backend.h>
 #include <mem/cache.h>
 #include <set/set.h>
-#include <link/lib.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
 
@@ -166,13 +165,18 @@ static void run_backend_codegen(const Module* module, const TargetConfig* target
     print_message(Info, "Compilation finished successfully");
 
     err = deinit_backend();
+    if (err.kind != Success) {
+        ERROR("Unable to deinit backend: %s", err.impl.message);
+    }
 }
 
 const char* get_absolute_import_path(const TargetConfig* config, const char* import_target_name) {
     INFO("resolving absolute path for import target: %s", import_target_name);
 
     if (!g_str_has_suffix(import_target_name, ".gsc")) {
-        import_target_name = g_strjoin("", import_target_name, ".gsc", NULL);
+        char* full_filename = g_strjoin("", import_target_name, ".gsc", NULL);
+        import_target_name = mem_strdup(MemoryNamespaceLld, full_filename);
+        g_free(full_filename);
     }
 
     for (guint i = 0; i < config->import_paths->len; i++) {
@@ -185,15 +189,16 @@ const char* get_absolute_import_path(const TargetConfig* config, const char* imp
         const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
         const gboolean is_dir = g_file_test(canonical, G_FILE_TEST_IS_DIR);
 
+        char* cached_canonical = mem_strdup(MemoryNamespaceLld, canonical);
+
         g_free(path);
         g_free(cwd);
+        g_free(canonical);
 
         if (exists && !is_dir) {
-            INFO("import target found at: %s", canonical);
-            return canonical;
+            INFO("import target found at: %s", cached_canonical);
+            return cached_canonical;
         }
-
-        g_free(canonical);
     }
 
     // file not found
@@ -233,7 +238,9 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
                 g_hash_table_insert(imports, (gpointer) path, NULL);
 
                 gchar* directory = g_path_get_dirname(path);
-                g_array_append_val(target->import_paths, directory);
+                gchar* cached_directory = mem_strdup(MemoryNamespaceLld, directory);
+                g_free(directory);
+                g_array_append_val(target->import_paths, cached_directory);
             }
         }
     } else {
@@ -323,7 +330,7 @@ static void build_project_targets(ModuleFileStack *unit, const ProjectConfig *co
 
     if (targets != NULL) {
         for (guint i = 0; i < targets->len; i++) {
-            const char *target_name = (((Option*) targets->data) + i)->string;
+            const char *target_name = g_array_index(targets, const char*, i);
 
             if (g_hash_table_contains(config->targets, target_name)) {
                 build_target(unit, g_hash_table_lookup(config->targets, target_name));
@@ -332,7 +339,7 @@ static void build_project_targets(ModuleFileStack *unit, const ProjectConfig *co
             }
         }
 
-        g_array_free(targets, FALSE);
+        mem_free(targets);
     } else {
         print_message(Error, "No targets specified.");
     }

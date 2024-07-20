@@ -103,7 +103,7 @@ BackendError impl_func_type(LLVMBackendCompileUnit* unit,
     DEBUG("implementing function declaration: %s()", func->name);
     BackendError err = SUCCESS;
 
-    GArray* llvm_params = g_array_new(FALSE, FALSE, sizeof(LLVMTypeRef));
+    GArray* llvm_params = mem_new_g_array(MemoryNamespaceLlvm, sizeof(LLVMTypeRef));
     GArray* func_params = NULL;
 
     if (func->kind == FunctionDeclarationKind) {
@@ -134,8 +134,6 @@ BackendError impl_func_type(LLVMBackendCompileUnit* unit,
     *llvm_fun = LLVMAddFunction(unit->module, func->name, llvm_fun_type);
 
     g_hash_table_insert(scope->functions, (char*) func->name, llvm_fun_type);
-
-    g_array_free(llvm_params, FALSE);
 
     return err;
 }

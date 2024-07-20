@@ -186,4 +186,6 @@ const Option* get_option(const char* option);
 [[nodiscard("must be freed")]]
 GArray* get_non_options_after(const char* command);
 
+void init_toml();
+
 #endif //GEMSTONE_OPT_H

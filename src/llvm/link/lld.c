@@ -19,19 +19,19 @@ const char* get_absolute_link_path(const TargetConfig* config, const char* link_
         char* path = g_build_filename(link_directory_path, link_target_name, NULL);
         char* cwd = g_get_current_dir();
         char* canonical = g_canonicalize_filename(path, cwd);
+        char* cached_canonical = mem_strdup(MemoryNamespaceLld, canonical);
 
         const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
         const gboolean is_dir = g_file_test(canonical, G_FILE_TEST_IS_DIR);
 
         g_free(path);
         g_free(cwd);
+        g_free(canonical);
 
         if (exists && !is_dir) {
-            INFO("link target found at: %s", canonical);
-            return canonical;
+            INFO("link target found at: %s", cached_canonical);
+            return cached_canonical;
         }
-
-        g_free(canonical);
     }
 
     // file not found
@@ -44,26 +44,33 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     TargetLinkConfig* config = mem_alloc(MemoryNamespaceLld, sizeof(TargetLinkConfig));
 
     config->fatal_warnings = target_config->lld_fatal_warnings;
-    config->object_file_names = g_array_new(FALSE, FALSE, sizeof(char*));
+    config->object_file_names = mem_new_g_array(MemoryNamespaceLld, sizeof(char*));
     config->colorize = stdout_supports_ansi_esc();
     config->driver = target_config->driver;
 
     // append build object file
     char* basename = g_strjoin(".", target_config->name, "o", NULL);
     char* filename = g_build_filename(target_config->archive_directory, basename, NULL);
+    g_free(basename);
     const char* target_object = get_absolute_link_path(target_config, (const char*) filename);
     if (target_object == NULL) {
         ERROR("failed to resolve path to target object: %s", filename);
+        g_free(filename);
         lld_delete_link_config(config);
+        g_free(filename);
         return NULL;
     }
+    g_free(filename);
 
     {
         // output file after linking
         basename = g_strjoin(".", target_config->name, "out", NULL);
         filename = g_build_filename(target_config->output_directory, basename, NULL);
 
-        config->output_file = filename;
+        config->output_file = mem_strdup(MemoryNamespaceLld, filename);
+
+        g_free(basename);
+        g_free(filename);
     }
 
     g_array_append_val(config->object_file_names, target_object);
@@ -81,8 +88,10 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
             ERROR("failed to resolve path to dependency object: %s", library);
             print_message(Warning, "failed to resolve path to dependency object: %s", dependency);            lld_delete_link_config(config);
             lld_delete_link_config(config);
+            g_free((void*) library);
             return NULL;
         }
+        g_free((void*) library);
         g_array_append_val(config->object_file_names, dependency_object);
         INFO("resolved path of target object: %s", dependency_object);
     }
@@ -102,9 +111,6 @@ BackendError lld_link_target(TargetLinkConfig* config) {
 }
 
 void lld_delete_link_config(TargetLinkConfig* config) {
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        free((void*) g_array_index(config->object_file_names, const char*, i));
-    }
-    g_array_free(config->object_file_names, TRUE);
+    mem_free(config->object_file_names);
     mem_free(config);
 }
