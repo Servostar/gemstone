@@ -1,6 +1,0 @@
-
-import "std.io"
-
-fun main {
-    print("Hello, World!!!")
-}

@@ -1,15 +1,73 @@
 
 <div align="center">
-  <picture>
     <img alt="gemstone logo" src="https://github.com/Servostar/gemstone/assets/72654954/fdb37c1b-81ca-4e6a-a9e9-c46effb12dae" width="75%">
-  </picture>
+    <br>
+    <p>
+        Open source programming language compiler based on LLVM, GLib and GNU Bison/Flex
+        <br>
+        capable of multi target cross compilation powered by simple build system.
+    </p>
+    <br>
+    <img src="https://img.shields.io/github/actions/workflow/status/Servostar/gemstone/build-check-sdk.yaml?label=Linux"/>
+    <img src="https://img.shields.io/github/actions/workflow/status/Servostar/gemstone/msys2-cross-compile.yml?label=Windows"/>
+    <img src="https://img.shields.io/github/license/Servostar/gemstone"/>
+    <img src="https://img.shields.io/github/languages/count/Servostar/gemstone"/>
+    <img src="https://img.shields.io/github/languages/top/Servostar/gemstone"/>
+    <br>
+    <img src="https://img.shields.io/badge/c-%2300599C.svg?style=flat&logo=c&logoColor=white"/>
+    <img src="https://img.shields.io/badge/CMake-%23008FBA.svg?&logo=cmake&color=064F8C&logoColor=white"/>
+    <img src="https://img.shields.io/badge/LLVM-%20?style=flat&color=262D3A&logo=llvm&logoColor=white"/>
 </div>
-<br>
 
-## Gemstone
+## About
 
 Gemstone is a programming language compiler (short: GSC) written in C based on flex and GNU bison.
 It uses LLVM to produce optimized native binaries for many platforms and uses its own builtin build system for more complex project management.
+
+## Architecture
+
+Gemstone is a LALR enabled non-reentrant compiler utilizing a linear flow of components. The compiler has multiple stages of operation, each representing a crucial step in compilation.
+
+```mermaid
+---
+title: GSC Architecture Overview
+---
+flowchart LR
+    lex["`**Lexical Analysis**
+        tokenization via flex`"]
+    bison["`**Syntax Analysis**
+        parsing via bison`"]
+    set["`**Semantic Analysis**
+        parse tree generation`"]
+    llvm["`**Codegen**
+        code generation via LLVM`"]
+    driver["`**Linking**
+          Linkage via Clang/GCC`"]
+    
+    start(("Start")) --> lex
+    
+    subgraph compile AST
+        lex --> bison
+    end
+    
+    subgraph Validation
+        bison --> import{"Import/Include?"}
+        import --> |yes| ast[[compile AST]] --> merge["Merge AST"] --> import
+        import --> |no| set
+        set --> llvm
+    end
+
+    stop(("End"))
+
+    subgraph Codegen
+        llvm --> lib{"Produce Library?"}
+        lib -->|no| driver --> executable(["Executable"])
+        lib -->|yes| library(["Library"])
+    end
+    
+    library --> stop
+    executable --> stop
+```
 
 ## Dependencies (build)
 
@@ -78,33 +136,23 @@ For creating the build pipeline build the Dockerfile in the root folder of this 
 Then the make targets are generated. Running `make release` will build gemstone from source in release mode.
 The generated binaries can be found either in `bin/release/gsc` or `bin/debug/gsc` depending on the chosen target.
 The following graph visualizes the build pipeline:
-```
-                 SDK (environment)
-                  │
-                  │ configure build environment
-                  │  cmake, make, gcc, yacc, lex
-                  │
-                  ▼
-                 Devkit (pipeline)
-                  │
-                  │ create build pipeline
-                  │  create make targets
-                  ▼
-                 Pipeline
-     
-
-yacc (generate files)    GCC (compile)   Extra Source Files (src/*.c)
-│                             │                     │
-├─ parser.tab.h ─────────────►│◄────────────────────┘
-│                             │
-└─ parser.tab.c ─────────────►│
-                              │
-lex (generate file)           │
-│                             │
-└─ lexer.ll.c  ──────────────►│
-                              │
-                              ▼
-                             gsc
+```mermaid
+flowchart LR
+    
+    subgraph Docker 
+        alpine[Alpine Linux] --> sdk[SDK] --> dev[Devkit]
+    end
+    
+    subgraph Build 
+        dev --> |generate parser| bison[Bison]
+        dev --> |generate lexer| flex[Flex]
+        bison --> cc[GCC/Clang/MSVC]
+        flex --> cc
+        cc --> debug
+        cc --> release
+        cc --> check
+    end
+    
 ```
 
 ## Docker images

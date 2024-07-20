@@ -15,6 +15,7 @@ typedef char* MemoryNamespaceName;
 #define MemoryNamespaceLex "Lexer"
 #define MemoryNamespaceLog "Logging"
 #define MemoryNamespaceOpt "Options"
+#define MemoryNamespaceTOML "TOML"
 #define MemoryNamespaceSet "SET"
 #define MemoryNamespaceLlvm "LLVM"
 #define MemoryNamespaceLld "LLD"

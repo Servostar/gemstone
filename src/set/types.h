@@ -432,6 +432,7 @@ typedef enum ExpressionKind_t {
     ExpressionKindTransmute,
     ExpressionKindConstant,
     ExpressionKindVariable,
+    ExpressionKindParameter,
     ExpressionKindDereference,
     ExpressionKindAddressOf,
 } ExpressionKind;
@@ -446,6 +447,7 @@ typedef struct Expression_t {
         Transmute transmute;
         TypeValue constant;
         Variable* variable;
+        Parameter* parameter;
         Dereference dereference;
         AddressOf addressOf;
     } impl;
@@ -526,6 +528,7 @@ typedef struct Branch_t {
 
 typedef enum StorageExprKind_t {
     StorageExprKindVariable,
+    StorageExprKindParameter,
     StorageExprKindBoxAccess,
     StorageExprKindDereference,
 } StorageExprKind;
@@ -535,6 +538,7 @@ typedef struct StorageExpr_t {
     Type* target_type;
     union StorageExprImpl {
         Variable* variable;
+        Parameter* parameter;
         BoxAccess boxAccess;
         StorageDereference dereference;
     } impl;
@@ -580,6 +584,7 @@ typedef struct Module_t {
     GHashTable* variables;
     // to be resolved after the module has been parsed completely
     GArray* imports;
+    GArray* includes;
 } Module;
 
 

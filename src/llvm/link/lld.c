@@ -6,6 +6,7 @@
 #include <sys/log.h>
 #include <mem/cache.h>
 #include <sys/col.h>
+#include <link/lib.h>
 
 const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
     INFO("resolving absolute path for link target: %s", link_target_name);
@@ -13,22 +14,24 @@ const char* get_absolute_link_path(const TargetConfig* config, const char* link_
     for (guint i = 0; i < config->link_search_paths->len; i++) {
         const char* link_directory_path = g_array_index(config->link_search_paths, char*, i);
 
+        INFO("searching at: %s", link_directory_path);
+
         char* path = g_build_filename(link_directory_path, link_target_name, NULL);
         char* cwd = g_get_current_dir();
         char* canonical = g_canonicalize_filename(path, cwd);
+        char* cached_canonical = mem_strdup(MemoryNamespaceLld, canonical);
 
         const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
         const gboolean is_dir = g_file_test(canonical, G_FILE_TEST_IS_DIR);
 
         g_free(path);
         g_free(cwd);
+        g_free(canonical);
 
         if (exists && !is_dir) {
-            INFO("link target found at: %s", canonical);
-            return canonical;
+            INFO("link target found at: %s", cached_canonical);
+            return cached_canonical;
         }
-
-        g_free(canonical);
     }
 
     // file not found
@@ -41,47 +44,54 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     TargetLinkConfig* config = mem_alloc(MemoryNamespaceLld, sizeof(TargetLinkConfig));
 
     config->fatal_warnings = target_config->lld_fatal_warnings;
-    config->object_file_names = g_array_new(FALSE, FALSE, sizeof(char*));
+    config->object_file_names = mem_new_g_array(MemoryNamespaceLld, sizeof(char*));
     config->colorize = stdout_supports_ansi_esc();
+    config->driver = target_config->driver;
 
     // append build object file
     char* basename = g_strjoin(".", target_config->name, "o", NULL);
     char* filename = g_build_filename(target_config->archive_directory, basename, NULL);
+    g_free(basename);
     const char* target_object = get_absolute_link_path(target_config, (const char*) filename);
     if (target_object == NULL) {
         ERROR("failed to resolve path to target object: %s", filename);
+        g_free(filename);
         lld_delete_link_config(config);
+        g_free(filename);
         return NULL;
     }
+    g_free(filename);
 
     {
         // output file after linking
         basename = g_strjoin(".", target_config->name, "out", NULL);
         filename = g_build_filename(target_config->output_directory, basename, NULL);
 
-        config->output_file = filename;
+        config->output_file = mem_strdup(MemoryNamespaceLld, filename);
+
+        g_free(basename);
+        g_free(filename);
     }
 
     g_array_append_val(config->object_file_names, target_object);
     INFO("resolved path of target object: %s", target_object);
-
-    // if it is an app, add entrypoint library
-    if (target_config->mode == Application) {
-        char* entrypoint = g_strdup("libentrypoint.a");
-        g_array_append_val(module->imports, entrypoint);
-    }
 
     // resolve absolute paths to dependent library object files
     DEBUG("resolving target dependencies...");
     for (guint i = 0; i < module->imports->len; i++) {
         const char* dependency = g_array_index(module->imports, const char*, i);
 
-        const char* dependency_object = get_absolute_link_path(target_config, dependency);
+        const char* library = g_strjoin("", "libgsc", dependency, ".a", NULL);
+
+        const char* dependency_object = get_absolute_link_path(target_config, library);
         if (dependency_object == NULL) {
-            ERROR("failed to resolve path to dependency object: %s", dependency);
+            ERROR("failed to resolve path to dependency object: %s", library);
+            print_message(Warning, "failed to resolve path to dependency object: %s", dependency);            lld_delete_link_config(config);
             lld_delete_link_config(config);
+            g_free((void*) library);
             return NULL;
         }
+        g_free((void*) library);
         g_array_append_val(config->object_file_names, dependency_object);
         INFO("resolved path of target object: %s", dependency_object);
     }
@@ -91,59 +101,16 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     return config;
 }
 
-GArray* lld_create_lld_arguments(TargetLinkConfig* config) {
-    GArray* argv = g_array_new(TRUE, FALSE, sizeof(char*));
-
-    gchar* arg = g_strdup("ld.lld");
-    g_array_append_val(argv, arg);
-
-    if (config->fatal_warnings) {
-        arg = g_strdup("--fatal-warnings");
-        g_array_append_val(argv, arg);
-    }
-
-    if (config->colorize) {
-        arg = g_strdup("--color-diagnostics=always");
-        g_array_append_val(argv, arg);
-    }
-
-    {
-        arg = g_strjoin("", "-o", config->output_file, NULL);
-        g_array_append_val(argv, arg);
-    }
-
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        char* object_file_path = g_array_index(config->object_file_names, char*, i);
-        arg = g_strjoin("", object_file_path, NULL);
-        g_array_append_val(argv, arg);
-    }
-
-    return argv;
-}
-
 BackendError lld_link_target(TargetLinkConfig* config) {
-    DEBUG("linking target...");
-    BackendError err = SUCCESS;
 
-    GArray* argv = lld_create_lld_arguments(config);
+    if (link_run(config)) {
+        return SUCCESS;
+    }
 
-    INFO("Linking target...");
-
-    char* arguments = g_strjoinv(" ", (char**) argv->data);
-    print_message(Info, "%s", arguments);
-    g_free(arguments);
-
-    INFO("done linking target...");
-
-    g_array_free(argv, TRUE);
-
-    return err;
+    return new_backend_impl_error(Implementation, NULL, "linking failed");
 }
 
 void lld_delete_link_config(TargetLinkConfig* config) {
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        free((void*) g_array_index(config->object_file_names, const char*, i));
-    }
-    g_array_free(config->object_file_names, TRUE);
+    mem_free(config->object_file_names);
     mem_free(config);
 }

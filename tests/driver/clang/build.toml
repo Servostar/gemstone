@@ -1,0 +1,19 @@
+[project]
+name = "driver compilation test"
+version = "0.1.0"
+description = "Print a string to stdout"
+license = "GPL-2.0"
+authors = [ "Sven Vogel <sven.vogel123@web.de>" ]
+
+[target.release]
+link-paths = [ "../../../bin/std" ]
+import-paths = [ "../../../lib/src" ]
+driver = "clang"
+root = "main.gsc"
+mode = "application"
+output = "bin"
+archive = "archive"
+print_ast = false
+print_asm = false
+print_ir = false
+opt = 3

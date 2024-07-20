@@ -24,6 +24,7 @@ typedef struct TargetLinkConfig_t {
     // colorize linker output
     bool colorize;
     char* output_file;
+    char* driver;
 } TargetLinkConfig;
 
 typedef enum TargetCompilationMode_t {
@@ -50,6 +51,8 @@ typedef struct TargetConfig_t {
     char* output_directory;
     // output directory for intermediate representations (LLVM-IR, Assembly, ...)
     char* archive_directory;
+    // binary driver for executable generation
+    char* driver;
     // mode of compilation
     TargetCompilationMode mode;
     // number between 1 and 3
@@ -182,5 +185,7 @@ const Option* get_option(const char* option);
 [[gnu::nonnull(1)]]
 [[nodiscard("must be freed")]]
 GArray* get_non_options_after(const char* command);
+
+void init_toml();
 
 #endif //GEMSTONE_OPT_H

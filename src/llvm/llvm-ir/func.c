@@ -26,7 +26,7 @@ void delete_local_scope(LLVMLocalScope* scope) {
     free(scope);
 }
 
-static LLVMValueRef get_parameter(const LLVMFuncScope* scope,
+LLVMValueRef get_parameter(const LLVMFuncScope* scope,
                                   const char* name) {
     if (g_hash_table_contains(scope->params, name)) {
         return g_hash_table_lookup(scope->params, name);
@@ -42,11 +42,6 @@ LLVMValueRef get_variable(const LLVMLocalScope* scope, const char* name) {
 
     if (scope->parent_scope != NULL) {
         return get_variable(scope->parent_scope, name);
-    }
-
-    LLVMValueRef param = get_parameter(scope->func_scope, name);
-    if (param != NULL) {
-        return param;
     }
 
     LLVMValueRef global_var = get_global_variable(scope->func_scope->global_scope, (char*) name);
@@ -108,7 +103,7 @@ BackendError impl_func_type(LLVMBackendCompileUnit* unit,
     DEBUG("implementing function declaration: %s()", func->name);
     BackendError err = SUCCESS;
 
-    GArray* llvm_params = g_array_new(FALSE, FALSE, sizeof(LLVMTypeRef));
+    GArray* llvm_params = mem_new_g_array(MemoryNamespaceLlvm, sizeof(LLVMTypeRef));
     GArray* func_params = NULL;
 
     if (func->kind == FunctionDeclarationKind) {
@@ -139,8 +134,6 @@ BackendError impl_func_type(LLVMBackendCompileUnit* unit,
     *llvm_fun = LLVMAddFunction(unit->module, func->name, llvm_fun_type);
 
     g_hash_table_insert(scope->functions, (char*) func->name, llvm_fun_type);
-
-    g_array_free(llvm_params, FALSE);
 
     return err;
 }

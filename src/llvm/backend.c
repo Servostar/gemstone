@@ -7,6 +7,7 @@
 #include <llvm/backend.h>
 #include <llvm/parser.h>
 #include <sys/log.h>
+#include <mem/cache.h>
 
 Target create_native_target() {
     DEBUG("creating native target...");
@@ -54,7 +55,11 @@ static char* create_target_output_name(const TargetConfig* config) {
         prefix = "lib";
     }
 
-    return g_strjoin("", prefix, config->name, NULL);
+    char* name = g_strjoin("", prefix, config->name, NULL);
+    char* cached_name = mem_strdup(MemoryNamespaceLlvm, name);
+    g_free(name);
+
+    return cached_name;
 }
 
 Target create_target_from_config(const TargetConfig* config) {

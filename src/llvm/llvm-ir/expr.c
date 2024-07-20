@@ -387,6 +387,49 @@ BackendError impl_variable_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *sc
     return SUCCESS;
 }
 
+BackendError impl_parameter_load(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
+                                LLVMBuilderRef builder, Parameter *parameter,
+                                LLVMBool reference,
+                                LLVMValueRef *llvm_result) {
+
+    LLVMValueRef llvm_variable = NULL;
+    if (g_hash_table_contains(scope->func_scope->params, parameter->name)) {
+        llvm_variable = g_hash_table_lookup(scope->func_scope->params, parameter->name);
+    }
+
+    Type* type;
+
+    ParameterDeclaration decl;
+
+    if (parameter->kind == ParameterDeclarationKind) {
+        decl = parameter->impl.definiton.declaration;
+    } else {
+        decl = parameter->impl.declaration;
+    }
+    type = decl.type;
+
+    if (llvm_variable == NULL) {
+        return new_backend_impl_error(Implementation, NULL, "Variable not found");
+    }
+
+    if (decl.qualifier == In || reference) {
+        *llvm_result = llvm_variable;
+    } else {
+        // no referencing, load value
+        LLVMTypeRef llvm_type;
+
+        get_type_impl(unit, scope->func_scope->global_scope, type, &llvm_type);
+
+        if (LLVMGetTypeKind(LLVMTypeOf(llvm_variable)) == LLVMPointerTypeKind) {
+            *llvm_result = LLVMBuildLoad2(builder, llvm_type, llvm_variable, "");
+        } else {
+            *llvm_result = llvm_variable;
+        }
+    }
+
+    return SUCCESS;
+}
+
 BackendError impl_address_of(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                                 LLVMBuilderRef builder, AddressOf* addressOf,
                                 LLVMValueRef *llvm_result) {
@@ -405,7 +448,12 @@ BackendError impl_deref(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                              LLVMValueRef *llvm_result) {
     BackendError err;
 
-    LLVMValueRef llvm_pointer = get_variable(scope, dereference->variable->impl.variable->name);
+    LLVMValueRef llvm_pointer = NULL;
+    err = impl_expr(unit, scope, builder, dereference->variable, TRUE, &llvm_pointer);
+    if (err.kind != Success) {
+        return err;
+    }
+
     LLVMTypeRef llvm_deref_type = NULL;
     err = get_type_impl(unit, scope->func_scope->global_scope, dereference->variable->result->impl.reference, &llvm_deref_type);
     if (err.kind != Success) {
@@ -451,6 +499,11 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
             break;
         case ExpressionKindVariable:
             err = impl_variable_load(unit, scope, builder, expr->impl.variable,
+                                     reference,
+                                     llvm_result);
+            break;
+        case ExpressionKindParameter:
+            err = impl_parameter_load(unit, scope, builder, expr->impl.parameter,
                                      reference,
                                      llvm_result);
             break;

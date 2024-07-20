@@ -7,10 +7,10 @@
 # `----------------------------------------`
 
 # standard type definitions
-import "def.gsc"
+include "def.gsc"
 
 # I/O operations
-import "io.gsc"
+include "io.gsc"
 
 # memory management
-import "mem.gsc"
+include "mem.gsc"

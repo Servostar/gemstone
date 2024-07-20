@@ -12,6 +12,27 @@
 #include <assert.h>
 #include <mem/cache.h>
 
+BackendError impl_param_load(
+        LLVMBackendCompileUnit *unit,
+        LLVMBuilderRef builder,
+        LLVMLocalScope *scope,
+        const StorageExpr *expr,
+        LLVMValueRef* storage_target) {
+    BackendError err = SUCCESS;
+
+    if (expr->impl.parameter->impl.declaration.qualifier == Out || expr->impl.parameter->impl.declaration.qualifier == InOut) {
+        LLVMTypeRef llvm_type = NULL;
+        err = get_type_impl(unit, scope->func_scope->global_scope, expr->impl.parameter->impl.declaration.type, &llvm_type);
+        if (err.kind != Success) {
+            return err;
+        }
+
+        *storage_target = LLVMBuildLoad2(builder, llvm_type, *storage_target, "strg.param.out.load");
+    }
+
+    return err;
+}
+
 BackendError impl_storage_expr(
         LLVMBackendCompileUnit *unit,
         LLVMBuilderRef
@@ -27,6 +48,10 @@ BackendError impl_storage_expr(
             *storage_target =
                     get_variable(scope, expr->impl.variable->name);
             break;
+        case StorageExprKindParameter:
+            *storage_target =
+                    get_parameter(scope->func_scope, expr->impl.parameter->name);
+            break;
         case StorageExprKindDereference:
 
             LLVMValueRef index = NULL;
@@ -41,14 +66,27 @@ BackendError impl_storage_expr(
                 return err;
             }
 
+            if (expr->impl.dereference.array->kind == StorageExprKindParameter) {
+                err = impl_param_load(unit, builder, scope, expr->impl.dereference.array, &array);
+                if (err.kind != Success) {
+                    return err;
+                }
+            }
+
+            if (expr->impl.dereference.array->kind == StorageExprKindDereference) {
+                LLVMTypeRef deref_type = NULL;
+                err = get_type_impl(unit, scope->func_scope->global_scope, expr->impl.dereference.array->target_type, &deref_type);
+                if (err.kind != Success) {
+                    return err;
+                }
+
+                array = LLVMBuildLoad2(builder, deref_type, array, "strg.deref.indirect-load");
+            }
+
             LLVMTypeRef deref_type = NULL;
             err = get_type_impl(unit, scope->func_scope->global_scope, expr->target_type, &deref_type);
             if (err.kind != Success) {
                 return err;
-            }
-
-            if (expr->target_type->kind == TypeKindReference) {
-                array = LLVMBuildLoad2(builder, deref_type, array, "strg.deref.indirect-load");
             }
 
             *storage_target = LLVMBuildGEP2(builder, deref_type, array, &index, 1, "strg.deref");
@@ -73,7 +111,7 @@ BackendError impl_assign_stmt(
     DEBUG("implementing assignment for variable: %p", assignment);
 
     LLVMValueRef llvm_value = NULL;
-    err = impl_expr(unit, scope, builder, assignment->value, TRUE, &llvm_value);
+    err = impl_expr(unit, scope, builder, assignment->value, false, &llvm_value);
     if (err.kind != Success) {
         return err;
     }
@@ -206,17 +244,22 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
             param_list = call->function->impl.declaration.parameter;
         }
 
-        LLVMBool reference = FALSE;
-        Parameter parameter = g_array_index(param_list, Parameter, i);
-        if (is_parameter_out(&parameter)) {
-            reference = TRUE;
-        }
+        Parameter param = g_array_index(param_list, Parameter, i);
 
         LLVMValueRef llvm_arg = NULL;
-        err = impl_expr(unit, scope, builder, arg, reference, &llvm_arg);
+        err = impl_expr(unit, scope, builder, arg, is_parameter_out(&param), &llvm_arg);
 
         if (err.kind != Success) {
             break;
+        }
+
+        if (is_parameter_out(&param)) {
+            if ((arg->kind == ExpressionKindParameter && !is_parameter_out(arg->impl.parameter)) || arg->kind != ExpressionKindParameter) {
+                LLVMValueRef index = LLVMConstInt(LLVMInt32Type(), 0, false);
+                LLVMTypeRef llvm_type = NULL;
+                get_type_impl(unit, scope->func_scope->global_scope, param.impl.declaration.type, &llvm_type);
+                llvm_arg = LLVMBuildGEP2(builder, llvm_type, llvm_arg, &index, 1, "");
+            }
         }
 
         arguments[i] = llvm_arg;

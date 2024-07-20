@@ -1,6 +1,6 @@
-FROM servostar/gemstone:sdk-0.2.5-alpine-3.19.1
+FROM servostar/gemstone:sdk-0.2.6-alpine-3.19.1
 LABEL authors="servostar"
-LABEL version="0.2.5"
+LABEL version="0.2.6"
 LABEL description="docker image for setting up the build pipeline on SDK"
 LABEL website="https://github.com/Servostar/gemstone"
 

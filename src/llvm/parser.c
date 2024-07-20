@@ -90,10 +90,11 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
         ERROR("failed to emit code: %s", error);
         err =
             new_backend_impl_error(Implementation, NULL, "failed to emit code");
-        LLVMDisposeMessage(error);
+
     } else {
         print_message(Info, "Generated code was written to: %s", filename);
     }
+    LLVMDisposeMessage(error);
 
     g_free((void*) filename);
     g_free((void*) basename);
@@ -124,9 +125,9 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
         ERROR("failed to create target machine: %s", error);
         err = new_backend_impl_error(Implementation, NULL,
                                      "unable to create target machine");
-        LLVMDisposeMessage(error);
         return err;
     }
+    LLVMDisposeMessage(error);
 
     DEBUG("Creating target machine...");
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(
@@ -146,6 +147,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
 
     err = emit_module_to_file(unit, target_machine, LLVMObjectFile, error,
                               config);
+
+    LLVMDisposeTargetMachine(target_machine);
 
     return err;
 }
@@ -223,9 +226,9 @@ static BackendError build_module(LLVMBackendCompileUnit* unit,
     char* error = NULL;
     if (LLVMVerifyModule(unit->module, LLVMReturnStatusAction, &error)) {
         print_message(Error, "Unable to compile due to: %s", error);
-        LLVMDisposeMessage(error);
         err = new_backend_impl_error(Implementation, NULL, "LLVM backend verification error, see stdout");
     }
+    LLVMDisposeMessage(error);
 
     return err;
 }
@@ -259,9 +262,13 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
             if (config->mode == Application) {
                 TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
 
-                lld_link_target(link_config);
+                if (link_config != NULL) {
+                    err = lld_link_target(link_config);
 
-                lld_delete_link_config(link_config);
+                    lld_delete_link_config(link_config);
+                } else {
+                    err = new_backend_impl_error(Implementation, NULL, "libclang error");
+                }
             }
         }
 

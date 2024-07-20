@@ -321,7 +321,7 @@ BackendError impl_types(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
     gpointer key = NULL;
     gpointer val = NULL;
 
-    BackendError err;
+    BackendError err = SUCCESS;
 
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
         err = impl_type_define(unit, (Typedefine*) val, (const char*)key, scope);
