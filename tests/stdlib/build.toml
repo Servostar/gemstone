@@ -1,0 +1,15 @@
+[project]
+name = "Stdlib tests"
+version = "0.1.0"
+description = "Test applications for the GSC standard library."
+license = "GPL-2.0"
+authors = [ "Sven Vogel <sven.vogel123@web.de>" ]
+
+[target.echo]
+link-paths = [ "../../bin/std" ]
+import-paths = [ "../../lib/src" ]
+root = "src/echo.gsc"
+mode = "application"
+output = "bin"
+archive = "archive"
+print_ir = true

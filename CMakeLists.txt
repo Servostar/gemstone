@@ -17,7 +17,7 @@ cmake_minimum_required(VERSION 3.15...3.25)
 #    └─ test.c
 
 project(gemstone
-    VERSION 0.1.0
+    VERSION 0.2.6
     DESCRIPTION "programming language compiler"
     LANGUAGES C)
 

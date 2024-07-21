@@ -14,6 +14,10 @@ include "def.gsc"
 #       which can lead to errors and undefined behavior
 type ptr: handle
 
+# NULL handle representing an invalid handle on
+# all platforms
+handle: nullHandle = 0 as handle
+
 # Returns a handle to this processes standard input I/O handle
 # -- Implementation note
 # On Linux this will return 0 as is it convention under UNIX (see: https://www.man7.org/linux/man-pages/man3/stdin.3.html)

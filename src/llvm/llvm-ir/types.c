@@ -42,7 +42,7 @@ static BackendError get_const_composite_value(CompositeType composite,
 
 BackendError impl_reference_const(LLVMBackendCompileUnit* unit, TypeValue* value, LLVMValueRef* llvm_value) {
     BackendError err = SUCCESS;
-    if (value->type->kind == TypeKindReference && compareTypes(value->type, (Type*) &StringLiteralType)) {
+    if (compareTypes(value->type, (Type*) &StringLiteralType)) {
         // is string literal
         LLVMValueRef string_value = LLVMConstString(value->value, strlen(value->value), false);
 

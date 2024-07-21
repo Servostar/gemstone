@@ -8,17 +8,17 @@
 
 #define HEAP_API_GLOBAL_FLAGS HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS
 
-void heap_alloc(u32 len, u8** ptr) {
+void heapAlloc(u32 len, u8** ptr) {
     HANDLE heap = GetProcessHeap();
     *ptr = HeapAlloc(heap, HEAP_API_GLOBAL_FLAGS, len);
 }
 
-void heap_realloc(u32 len, u8** ptr) {
+void heapRealloc(u32 len, u8** ptr) {
     HANDLE heap = GetProcessHeap();
     *ptr = HeapReAlloc(heap, HEAP_API_GLOBAL_FLAGS, *ptr, len);
 }
 
-void heap_free(u8* ptr) {
+void heapFree(u8* ptr) {
     HANDLE heap = GetProcessHeap();
     HeapFree(heap, ptr);
 }
@@ -27,15 +27,15 @@ void heap_free(u8* ptr) {
 
 #include <malloc.h>
 
-void heap_alloc(u32 len, u8** ptr) {
+void heapAlloc(u32 len, u8** ptr) {
     *ptr = malloc(len);
 }
 
-void heap_realloc(u32 len, u8** ptr) {
+void heapRealloc(u32 len, u8** ptr) {
     *ptr = realloc(*ptr, len);
 }
 
-void heap_free(u8* ptr) {
+void heapFree(u8* ptr) {
     free(ptr);
 }
 
