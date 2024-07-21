@@ -23,6 +23,5 @@ fun printcstr(in cstr: msg) {
 }
 
 fun main() {
-    cstr: msg = "Hello, world!\n"
-    printcstr(msg)
+    printcstr("Hello, world!\n")
 }

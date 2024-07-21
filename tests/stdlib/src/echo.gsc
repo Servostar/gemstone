@@ -3,7 +3,7 @@ import "std"
 
 cstr: EOL = "\n"
 
-fun main(out u32: e) {
+fun main() {
 
     handle: stdin = nullHandle
     getStdinHandle(stdin)
@@ -22,6 +22,4 @@ fun main(out u32: e) {
     writeBytes(stdout, EOL, 1)(bytesWritten)
 
     heapFree(buffer)
-
-    e = 0 as u32
 }

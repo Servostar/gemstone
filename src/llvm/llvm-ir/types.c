@@ -55,7 +55,11 @@ BackendError impl_reference_const(LLVMBackendCompileUnit* unit, TypeValue* value
         LLVMSetUnnamedAddress(string_global, LLVMGlobalUnnamedAddr);
         LLVMSetAlignment(string_global, 1);
 
-        *llvm_value = string_global;
+        // Cast the global variable to a pointer type if needed
+        LLVMTypeRef i8_ptr_type = LLVMPointerType(LLVMInt8TypeInContext(unit->context), 0);
+        LLVMValueRef global_str_ptr = LLVMConstBitCast(string_global, i8_ptr_type);
+
+        *llvm_value = global_str_ptr;
     } else {
         err = new_backend_impl_error(Implementation, value->nodePtr, "reference initializer can only be string literals");
     }
