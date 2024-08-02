@@ -81,6 +81,7 @@ enum AST_SyntaxElement_t {
     AST_Reference,
     AST_Include,
     AST_Char,
+    AST_Return,
     AST_ELEMENT_COUNT
 };
 

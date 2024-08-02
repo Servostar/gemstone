@@ -90,6 +90,7 @@
 "funname" {DEBUG("\"%s\" tokenized with \'FunFunname\'", yytext); return(FunFunname);};
 "lineno" {DEBUG("\"%s\" tokenized with \'FunLineno\'", yytext); return(FunLineno);};
 "extsupport" {DEBUG("\"%s\" tokenized with \'FunExtsupport\'", yytext); return(FunExtsupport);};
+"ret" {DEBUG("\"%s\" tokenized with \'Return\'", yytext); return(KeyReturn);};
 
 [0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValInt); };
 [0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValFloat);};

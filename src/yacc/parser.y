@@ -72,6 +72,7 @@
 %type <node_ptr> reinterpretcast
 %type <node_ptr> program
 %type <node_ptr> storage_expr
+%type <node_ptr> return
 
 
 %token KeyInt
@@ -122,6 +123,7 @@
 %token FunLineno
 %token FunExtsupport
 %token Invalid
+%token KeyReturn
 
 /* Operator associativity */
 /* Operators at lower line number have lower precedence */
@@ -192,11 +194,20 @@ argumentlist: argumentlist '(' exprlist ')' {AST_push_node($1, $3);
               $$ = list;};
 
 
+// TODO: add ast node for definition and declaration
 fundef: KeyFun Ident paramlist '{' statementlist'}' {AST_NODE_PTR fun = AST_new_node(new_loc(), AST_Fun, NULL);
                                                      AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $2);
                                                      AST_push_node(fun, ident);
                                                      AST_push_node(fun, $3);
                                                      AST_push_node(fun, $5);
+                                                     $$ = fun;
+                                                            DEBUG("Function");}
+        | KeyFun Ident paramlist ':' type '{' statementlist'}' {AST_NODE_PTR fun = AST_new_node(new_loc(), AST_Fun, NULL);
+                                                     AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $2);
+                                                     AST_push_node(fun, ident);
+                                                     AST_push_node(fun, $3);
+                                                     AST_push_node(fun, $5);
+                                                     AST_push_node(fun, $7);
                                                      $$ = fun;
                                                             DEBUG("Function");};
 
@@ -205,7 +216,13 @@ fundecl: KeyFun Ident paramlist {AST_NODE_PTR fun = AST_new_node(new_loc(), AST_
                                  AST_push_node(fun, ident);
                                  AST_push_node(fun, $3);
                                  $$ = fun;
-                                        DEBUG("Function");};
+                                        DEBUG("Function");}
+        | KeyFun Ident paramlist ':' type {AST_NODE_PTR fun = AST_new_node(new_loc(), AST_Fun, NULL);
+                                           AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $2);
+                                           AST_push_node(fun, ident);
+                                           AST_push_node(fun, $3);
+                                           $$ = fun;
+                                                  DEBUG("Function");};
 
 paramlist: paramlist '(' params ')' {AST_push_node($1, $3);
                                      $$ = $1;}
@@ -348,8 +365,12 @@ statement: assign {$$ = $1;}
         | definition {$$ = $1;}
         | while {$$ = $1;}
         | branchfull {$$ = $1;}
+        | return {$$ = $1;}
         | funcall {$$ = $1;}
         | boxcall{$$ = $1;};
+
+return: KeyReturn expr { AST_NODE_PTR return_stmt = AST_new_node(new_loc(), AST_Return, NULL);
+                         AST_push_node(return_stmt, $2); };
 
 branchif: KeyIf expr '{' statementlist '}' { AST_NODE_PTR branch = AST_new_node(new_loc(), AST_If, NULL);
                                             AST_push_node(branch, $2);

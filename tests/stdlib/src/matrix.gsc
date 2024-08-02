@@ -92,7 +92,10 @@ fun test_matrix()
     heapFree(matrix as ref u8)
 }
 
-fun main()
+fun main(): u32
 {
     test_matrix()
+    exit_code = 0
+
+    ret 0
 }
