@@ -16,7 +16,9 @@ typedef enum PrimitiveType_t {
     // 4 byte signed integer in two's complement
     Int =0,
     // 4 byte IEEE-754 single precision
-    Float =1
+    Float =1,
+    // 4 byte encoded UTF-8 codepoint
+    Char = 2,
 } PrimitiveType;
 
 /**
@@ -235,6 +237,8 @@ typedef struct Function_t {
     AST_NODE_PTR nodePtr;
     const char * name;
 } Function;
+
+Parameter get_param_from_func(Function* func, size_t index);
 
 // .------------------------------------------------.
 // |                 Variables                      |

@@ -13,3 +13,21 @@ mode = "application"
 output = "bin"
 archive = "archive"
 print_ir = true
+
+[target.letters]
+link-paths = [ "../../bin/std" ]
+import-paths = [ "../../lib/src" ]
+root = "src/letters.gsc"
+mode = "application"
+output = "bin"
+archive = "archive"
+print_ir = true
+
+[target.matrix]
+link-paths = [ "../../bin/std" ]
+import-paths = [ "../../lib/src" ]
+root = "src/matrix.gsc"
+mode = "application"
+output = "bin"
+archive = "archive"
+print_ir = true

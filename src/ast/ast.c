@@ -96,6 +96,7 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
 
     switch(node->kind) {
         case AST_Int:
+        case AST_Char:
         case AST_Float:
         case AST_String:
         case AST_Ident:

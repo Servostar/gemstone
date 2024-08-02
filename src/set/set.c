@@ -302,7 +302,7 @@ int set_get_type_impl(AST_NODE_PTR currentNode, Type **type) {
         }
 
         print_diagnostic(&AST_get_last_node(currentNode)->location, Error,
-                         "Expected either primitive or composite type");
+                         "Expected either primitive or composite type: `%s`", AST_get_last_node(currentNode)->value);
         return SEMANTIC_ERROR;
     }
 
@@ -332,14 +332,14 @@ int addVarToScope(Variable *variable);
 int createRef(AST_NODE_PTR currentNode, Type **reftype) {
     assert(currentNode != NULL);
     assert(currentNode->children->len == 1);
-    assert(AST_get_node(currentNode, 0)->kind == AST_Type);
 
     Type *type = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     Type *referenceType = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     referenceType->kind = TypeKindReference;
     referenceType->nodePtr = currentNode;
 
-    int signal = set_get_type_impl(AST_get_node(currentNode, 0), &type);
+    AST_NODE_PTR ast_type = AST_get_node(currentNode, 0);
+    int signal = set_get_type_impl(ast_type, &type);
     if (signal) {
         return SEMANTIC_ERROR;
     }
@@ -496,8 +496,10 @@ char *type_to_string(Type *type) {
         case TypeKindPrimitive:
             if (type->impl.primitive == Int) {
                 string = mem_strdup(MemoryNamespaceSet, "int");
-            } else {
+            } else if (type->impl.primitive == Float){
                 string = mem_strdup(MemoryNamespaceSet, "float");
+            } else if (type->impl.primitive == Char){
+                string = mem_strdup(MemoryNamespaceSet, "codepoint");
             }
             break;
         case TypeKindComposite: {
@@ -636,6 +638,14 @@ TypeValue createTypeValue(AST_NODE_PTR currentNode) {
             break;
         case AST_Float:
             type->impl.primitive = Float;
+            break;
+        case AST_Char:
+            // validate we have a single UTF-8 codepoint
+            if (g_utf8_strlen(currentNode->value, 4) != 1) {
+                print_diagnostic(&currentNode->location, Error, "Character must be UTF-8 codepoint");
+            }
+
+            type->impl.primitive = Char;
             break;
         default:
             PANIC("Node is not an expression but from kind: %i", currentNode->kind);
@@ -1331,13 +1341,13 @@ int createTypeCast(Expression *ParentExpression, AST_NODE_PTR currentNode) {
         && ParentExpression->impl.typecast.operand->result->kind != TypeKindPrimitive
         && ParentExpression->impl.typecast.operand->result->kind != TypeKindReference) {
 
+        print_diagnostic(&currentNode->location, Error, "cannot cast type: `%s`", type_to_string(ParentExpression->impl.typecast.operand->result));
         return SEMANTIC_ERROR;
     }
 
     Type *target = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     int status = set_get_type_impl(AST_get_node(currentNode, 1), &target);
     if (status) {
-        print_diagnostic(&AST_get_node(currentNode, 1)->location, Error, "Unknown type");
         return SEMANTIC_ERROR;
     }
     ParentExpression->impl.typecast.targetType = target;
@@ -1461,6 +1471,7 @@ Expression *createExpression(AST_NODE_PTR currentNode) {
     switch (currentNode->kind) {
         case AST_Int:
         case AST_Float:
+        case AST_Char:
             expression->kind = ExpressionKindConstant;
             expression->impl.constant = createTypeValue(currentNode);
             expression->result = expression->impl.constant.type;
@@ -1595,35 +1606,48 @@ Expression *createExpression(AST_NODE_PTR currentNode) {
 }
 
 bool compareTypes(Type *leftType, Type *rightType) {
-    if (leftType->kind != rightType->kind) {
-        return FALSE;
-    }
-    if (leftType->kind == TypeKindPrimitive) {
+    if (leftType->kind == TypeKindPrimitive && rightType->kind == TypeKindPrimitive) {
         return leftType->impl.primitive == rightType->impl.primitive;
     }
+
     if (leftType->kind == TypeKindComposite) {
-        CompositeType leftComposite = leftType->impl.composite;
-        CompositeType rightComposite = leftType->impl.composite;
-        if (leftComposite.primitive != rightComposite.primitive) {
+        if (rightType->kind == TypeKindPrimitive) {
+            CompositeType leftComposite = leftType->impl.composite;
+
+            if (leftComposite.scale == 1 && leftComposite.sign == Signed) {
+                return leftComposite.primitive == rightType->impl.primitive;
+            }
+
             return FALSE;
+
+        } else if (rightType->kind == TypeKindComposite) {
+            // Compare composites
+
+            CompositeType leftComposite = leftType->impl.composite;
+            CompositeType rightComposite = rightType->impl.composite;
+            if (leftComposite.primitive != rightComposite.primitive) {
+                return FALSE;
+            }
+            if (leftComposite.sign != rightComposite.sign) {
+                return FALSE;
+            }
+            if (leftComposite.scale != rightComposite.scale) {
+                return FALSE;
+            }
+            return TRUE;
         }
-        if (leftComposite.sign != rightComposite.sign) {
-            return FALSE;
-        }
-        if (leftComposite.scale != rightComposite.scale) {
-            return FALSE;
-        }
-        return TRUE;
+
+        return FALSE;
     }
 
-    if (leftType->kind == TypeKindBox) {
+    if (leftType->kind == TypeKindBox && rightType->kind == TypeKindBox) {
         if (leftType->impl.box != rightType->impl.box) {
             return FALSE;
         }
         return TRUE;
     }
 
-    if (leftType->kind == TypeKindReference) {
+    if (leftType->kind == TypeKindReference && rightType->kind == TypeKindReference) {
         bool result = compareTypes(leftType->impl.reference, rightType->impl.reference);
         return result;
     }
@@ -1869,6 +1893,14 @@ int createBranch(Statement *ParentStatement, AST_NODE_PTR currentNode) {
 
 int getFunction(const char *name, Function **function);
 
+Parameter get_param_from_func(Function* func, size_t index) {
+    if (func->kind == FunctionDeclarationKind) {
+        return g_array_index(func->impl.declaration.parameter, Parameter, index);
+    } else {
+        return g_array_index(func->impl.definition.parameter, Parameter, index);
+    }
+}
+
 int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
     assert(currentNode != NULL);
     assert(currentNode->children->len == 2);
@@ -1881,7 +1913,7 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
     if (nameNode->kind == AST_Ident) {
         int result = getFunction(nameNode->value, &fun);
         if (result == SEMANTIC_ERROR) {
-            print_diagnostic(&currentNode->location, Error, "Unknown function: `%s`", nameNode);
+            print_diagnostic(&currentNode->location, Error, "Unknown function: `%s`", nameNode->value);
             return SEMANTIC_ERROR;
         }
     }
@@ -1932,6 +1964,16 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
             AST_NODE_PTR expr_node = AST_get_node(currentExprList, j);
             Expression *expr = createExpression(expr_node);
             if (expr == NULL) {
+                return SEMANTIC_ERROR;
+            }
+
+            Parameter param = get_param_from_func(fun, i + currentExprList->children->len - j - 1);
+
+            if (!compareTypes(expr->result, param.impl.declaration.type)) {
+                print_diagnostic(&expr_node->location, Error,
+                                 "parameter and argument `%s` type mismatch, expected `%s` got `%s`",
+                                 param.name, type_to_string(param.impl.declaration.type), type_to_string(expr->result));
+
                 return SEMANTIC_ERROR;
             }
 

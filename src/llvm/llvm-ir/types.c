@@ -6,15 +6,10 @@
 #include <set/types.h>
 #include <sys/log.h>
 #include <set/set.h>
-#include <stdlib.h>
 #include <mem/cache.h>
 
 #define BASE_BYTES 4
 #define BITS_PER_BYTE 8
-
-char* guid() {
-    return "uuid";
-}
 
 static BackendError get_const_primitive_value(PrimitiveType primitive,
                                               LLVMTypeRef llvm_type,
@@ -26,6 +21,10 @@ static BackendError get_const_primitive_value(PrimitiveType primitive,
             break;
         case Float:
             *llvm_value = LLVMConstRealOfString(llvm_type, value);
+            break;
+        case Char:
+            gunichar codepoint = g_utf8_get_char(value);
+            *llvm_value = LLVMConstInt(llvm_type, codepoint, false);
             break;
     }
 
@@ -116,9 +115,12 @@ BackendError impl_primtive_type(LLVMBackendCompileUnit* unit,
             DEBUG("implementing primtive float type...");
             *llvm_type = LLVMFloatTypeInContext(unit->context);
             break;
+        case Char:
+            DEBUG("implementing primitive codepoint type...");
+            *llvm_type = LLVMInt32TypeInContext(unit->context);
+            break;
         default:
             PANIC("invalid primitive type");
-            break;
     }
 
     return SUCCESS;

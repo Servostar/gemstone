@@ -55,7 +55,7 @@ BackendError impl_storage_expr(
         case StorageExprKindDereference:
 
             LLVMValueRef index = NULL;
-            err = impl_expr(unit, scope, builder, expr->impl.dereference.index, false, &index);
+            err = impl_expr(unit, scope, builder, expr->impl.dereference.index, false, 0, &index);
             if (err.kind != Success) {
                 return err;
             }
@@ -73,7 +73,7 @@ BackendError impl_storage_expr(
                 }
             }
 
-            if (expr->impl.dereference.array->kind == StorageExprKindDereference) {
+            if (true) {
                 LLVMTypeRef deref_type = NULL;
                 err = get_type_impl(unit, scope->func_scope->global_scope, expr->impl.dereference.array->target_type, &deref_type);
                 if (err.kind != Success) {
@@ -111,7 +111,7 @@ BackendError impl_assign_stmt(
     DEBUG("implementing assignment for variable: %p", assignment);
 
     LLVMValueRef llvm_value = NULL;
-    err = impl_expr(unit, scope, builder, assignment->value, false, &llvm_value);
+    err = impl_expr(unit, scope, builder, assignment->value, false, 0, &llvm_value);
     if (err.kind != Success) {
         return err;
     }
@@ -182,7 +182,7 @@ BackendError impl_while(LLVMBackendCompileUnit *unit,
     LLVMPositionBuilderAtEnd(builder, while_cond_block);
     // Resolve condition in block to a variable
     LLVMValueRef cond_result = NULL;
-    err = impl_expr(unit, scope, builder, (Expression *) while_stmt->conditon, FALSE, &cond_result);
+    err = impl_expr(unit, scope, builder, (Expression *) while_stmt->conditon, FALSE, 0, &cond_result);
     if (err.kind != Success) {
         return err;
     }
@@ -232,37 +232,43 @@ BackendError impl_func_call(LLVMBackendCompileUnit *unit,
     DEBUG("implementing function call...");
     BackendError err = SUCCESS;
 
-    LLVMValueRef* arguments = mem_alloc(MemoryNamespaceLlvm, sizeof(LLVMValueRef) * call->expressions->len);
+    LLVMValueRef* arguments = NULL;
 
-    for (size_t i = 0; i < call->expressions->len; i++) {
-        Expression *arg = g_array_index(call->expressions, Expression*, i);
+    // prevent memory allocation when number of bytes would be zero
+    // avoid going of assertion in memory cache
+    if (call->expressions->len > 0) {
+        arguments = mem_alloc(MemoryNamespaceLlvm, sizeof(LLVMValueRef) * call->expressions->len);
 
-        GArray* param_list;
-        if (call->function->kind == FunctionDeclarationKind) {
-            param_list = call->function->impl.definition.parameter;
-        } else {
-            param_list = call->function->impl.declaration.parameter;
-        }
+        for (size_t i = 0; i < call->expressions->len; i++) {
+            Expression *arg = g_array_index(call->expressions, Expression*, i);
 
-        Parameter param = g_array_index(param_list, Parameter, i);
-
-        LLVMValueRef llvm_arg = NULL;
-        err = impl_expr(unit, scope, builder, arg, is_parameter_out(&param), &llvm_arg);
-
-        if (err.kind != Success) {
-            break;
-        }
-
-        if (is_parameter_out(&param)) {
-            if ((arg->kind == ExpressionKindParameter && !is_parameter_out(arg->impl.parameter)) || arg->kind != ExpressionKindParameter) {
-                LLVMValueRef index = LLVMConstInt(LLVMInt32Type(), 0, false);
-                LLVMTypeRef llvm_type = NULL;
-                get_type_impl(unit, scope->func_scope->global_scope, param.impl.declaration.type, &llvm_type);
-                llvm_arg = LLVMBuildGEP2(builder, llvm_type, llvm_arg, &index, 1, "");
+            GArray* param_list;
+            if (call->function->kind == FunctionDeclarationKind) {
+                param_list = call->function->impl.definition.parameter;
+            } else {
+                param_list = call->function->impl.declaration.parameter;
             }
-        }
 
-        arguments[i] = llvm_arg;
+            Parameter param = g_array_index(param_list, Parameter, i);
+
+            LLVMValueRef llvm_arg = NULL;
+            err = impl_expr(unit, scope, builder, arg, is_parameter_out(&param), 0, &llvm_arg);
+
+            if (err.kind != Success) {
+                break;
+            }
+
+            if (is_parameter_out(&param)) {
+                if ((arg->kind == ExpressionKindParameter && !is_parameter_out(arg->impl.parameter)) || arg->kind != ExpressionKindParameter) {
+                    LLVMValueRef index = LLVMConstInt(LLVMInt32Type(), 0, false);
+                    LLVMTypeRef llvm_type = NULL;
+                    get_type_impl(unit, scope->func_scope->global_scope, param.impl.declaration.type, &llvm_type);
+                    llvm_arg = LLVMBuildGEP2(builder, llvm_type, llvm_arg, &index, 1, "");
+                }
+            }
+
+            arguments[i] = llvm_arg;
+        }
     }
 
     if (err.kind == Success) {
@@ -291,7 +297,7 @@ impl_cond_block(LLVMBackendCompileUnit *unit, LLVMBuilderRef builder, LLVMLocalS
                                                 "stmt.branch.cond");
     LLVMPositionBuilderAtEnd(builder, *cond_block);
     // Resolve condition in block to a variable
-    err = impl_expr(unit, scope, builder, cond, FALSE, llvm_cond);
+    err = impl_expr(unit, scope, builder, cond, FALSE, 0, llvm_cond);
     if (err.kind == Success) {
         // build body of loop
         err = impl_basic_block(unit, builder, scope, block, start_body_block, end_body_block);
@@ -441,7 +447,7 @@ BackendError impl_def(LLVMBackendCompileUnit *unit,
     }
 
     LLVMValueRef initial_value = NULL;
-    err = impl_expr(unit, scope, builder, def->initializer, FALSE, &initial_value);
+    err = impl_expr(unit, scope, builder, def->initializer, FALSE, 0, &initial_value);
     if (err.kind != Success) {
         return err;
     }

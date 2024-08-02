@@ -6,6 +6,7 @@
     #include <ast/ast.h>
     #include <sys/col.h>
     #include <io/files.h>
+    #include <glib.h>
     extern int yylineno;
     extern ModuleFile* current_file;
 
@@ -82,6 +83,7 @@
 %token <string> Ident
 %token <string> ValFloat 
 %token <string> ValStr
+%token <string> ValChar
 %token <string> ValMultistr
 %token KeyShort
 %token KeyLong
@@ -156,6 +158,7 @@ programbody: moduleimport {$$ = $1;}
 
 expr: ValFloat {$$ = AST_new_node(new_loc(), AST_Float, $1);}
     | ValInt    {$$ = AST_new_node(new_loc(), AST_Int, $1);}
+    | ValChar   {$$ = AST_new_node(new_loc(), AST_Char, $1);}
     | ValMultistr   {$$ = AST_new_node(new_loc(), AST_String, $1);}
     | ValStr    {$$ = AST_new_node(new_loc(), AST_String, $1);}
     | Ident     {$$ = AST_new_node(new_loc(), AST_Ident, $1);}
