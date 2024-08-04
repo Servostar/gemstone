@@ -213,6 +213,7 @@ typedef struct FunctionDefinition_t {
     // hashtable of parameters
     // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
     GArray* parameter; // Parameter
+    Type* return_value;
     AST_NODE_PTR nodePtr;
     // body of function
     Block *body;
@@ -225,6 +226,7 @@ typedef struct FunctionDeclaration_t {
     // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
     GArray* parameter; // Parameter
     AST_NODE_PTR nodePtr;
+    Type* return_value;
     const char* name;
 } FunctionDeclaration;
 
@@ -439,7 +441,10 @@ typedef enum ExpressionKind_t {
     ExpressionKindParameter,
     ExpressionKindDereference,
     ExpressionKindAddressOf,
+    ExpressionKindFunctionCall,
 } ExpressionKind;
+
+typedef struct FunctionCall_t FunctionCall;
 
 typedef struct Expression_t {
     ExpressionKind kind;
@@ -454,6 +459,7 @@ typedef struct Expression_t {
         Parameter* parameter;
         Dereference dereference;
         AddressOf addressOf;
+        FunctionCall* call;
     } impl;
     AST_NODE_PTR nodePtr;
 } Expression;
@@ -554,6 +560,11 @@ typedef struct Assignment_t {
     AST_NODE_PTR nodePtr;
 } Assignment;
 
+typedef struct Return_t {
+    Expression* value;
+    AST_NODE_PTR nodePtr;
+} Return;
+
 typedef enum StatementKind_t {
     StatementKindFunctionCall,
     StatementKindFunctionBoxCall,
@@ -561,7 +572,8 @@ typedef enum StatementKind_t {
     StatementKindBranch,
     StatementKindAssignment,
     StatementKindDeclaration,
-    StatementKindDefinition
+    StatementKindDefinition,
+    StatementKindReturn
 } StatementKind;
 
 typedef struct Statement_t {
@@ -573,6 +585,7 @@ typedef struct Statement_t {
         Branch branch;
         Assignment assignment;
         Variable *variable;
+        Return returnStmt;
     } impl;
     AST_NODE_PTR nodePtr;
 } Statement;
@@ -591,6 +604,11 @@ typedef struct Module_t {
     GArray* includes;
 } Module;
 
+// .------------------------------------------------.
+// |                   Utility                      |
+// '------------------------------------------------'
+
+Type* SET_function_get_return_type(Function* function);
 
 // .------------------------------------------------.
 // |                 Cleanup Code                   |

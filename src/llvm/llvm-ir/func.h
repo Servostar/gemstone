@@ -40,4 +40,9 @@ BackendError impl_functions(LLVMBackendCompileUnit* unit,
                                    LLVMGlobalScope* scope,
                                    GHashTable* variables);
 
+BackendError impl_func_call(LLVMBackendCompileUnit *unit,
+                            LLVMBuilderRef builder, LLVMLocalScope *scope,
+                            const FunctionCall *call,
+                            LLVMValueRef* return_value);
+
 #endif // LLVM_BACKEND_FUNC_H_

@@ -1,7 +1,7 @@
 
 import "std"
 
-fun ulog10(in u32: num, out u32: log)
+fun u32:ulog10(in u32: num)
 {
     u32: base = 1 as u32
     u32: count = 0 as u32
@@ -16,13 +16,12 @@ fun ulog10(in u32: num, out u32: log)
         count = 1 as u32
     }
 
-    log = count
+    ret count
 }
 
 fun u32ToCstr(in u32: number)(out cstr: result, out u32: len)
 {
-    u32: bytes = 0 as u32
-    ulog10(number, bytes)
+    u32: bytes = ulog10(number)
 
     cstr: buf = 0 as cstr
     heapAlloc(bytes)(buf as ref u8)
@@ -92,10 +91,8 @@ fun test_matrix()
     heapFree(matrix as ref u8)
 }
 
-fun main(): u32
+fun i32:main()
 {
     test_matrix()
-    exit_code = 0
-
     ret 0
 }

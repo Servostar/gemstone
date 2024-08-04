@@ -10,6 +10,7 @@
 #include <set/types.h>
 #include <sys/log.h>
 #include <mem/cache.h>
+#include <llvm/llvm-ir/expr.h>
 
 LLVMLocalScope* new_local_scope(LLVMLocalScope* parent) {
     LLVMLocalScope* scope = malloc(sizeof(LLVMLocalScope));
@@ -127,8 +128,19 @@ BackendError impl_func_type(LLVMBackendCompileUnit* unit,
 
     DEBUG("implemented %ld parameter", llvm_params->len);
 
+    LLVMTypeRef llvm_return_type = LLVMVoidTypeInContext(unit->context);
+    if (func->kind == FunctionDeclarationKind) {
+        if (func->impl.declaration.return_value != NULL) {
+            err = get_type_impl(unit, scope, func->impl.declaration.return_value, &llvm_return_type);
+        }
+    } else {
+        if (func->impl.definition.return_value != NULL) {
+            err = get_type_impl(unit, scope, func->impl.definition.return_value, &llvm_return_type);
+        }
+    }
+
     LLVMTypeRef llvm_fun_type =
-        LLVMFunctionType(LLVMVoidTypeInContext(unit->context),
+        LLVMFunctionType(llvm_return_type,
                          (LLVMTypeRef*)llvm_params->data, llvm_params->len, 0);
 
     *llvm_fun = LLVMAddFunction(unit->module, func->name, llvm_fun_type);
@@ -180,14 +192,39 @@ BackendError impl_func_def(LLVMBackendCompileUnit* unit,
             LLVMPositionBuilderAtEnd(builder, entry);
             LLVMBuildBr(builder, llvm_start_body_block);
 
-            // insert returning end block
-            LLVMBasicBlockRef end_block =
-                    LLVMAppendBasicBlockInContext(unit->context, llvm_func, "func.end");
-            LLVMPositionBuilderAtEnd(builder, end_block);
-            LLVMBuildRetVoid(builder);
+            LLVMValueRef terminator = LLVMGetBasicBlockTerminator(llvm_end_body_block);
+            if (terminator == NULL) {
+                // insert returning end block
+                LLVMBasicBlockRef end_block =
+                        LLVMAppendBasicBlockInContext(unit->context, llvm_func, "func.end");
+                LLVMPositionBuilderAtEnd(builder, end_block);
 
-            LLVMPositionBuilderAtEnd(builder, llvm_end_body_block);
-            LLVMBuildBr(builder, end_block);
+                LLVMValueRef llvm_return = NULL;
+                if (func->kind == FunctionDeclarationKind) {
+                    if (func->impl.declaration.return_value != NULL) {
+                        err = get_type_default_value(unit, global_scope, func->impl.declaration.return_value, &llvm_return);
+                        if (err.kind != Success) {
+                            return err;
+                        }
+                        LLVMBuildRet(builder, llvm_return);
+                    }else {
+                        LLVMBuildRetVoid(builder);
+                    }
+                } else {
+                    if (func->impl.definition.return_value != NULL) {
+                        err = get_type_default_value(unit, global_scope, func->impl.definition.return_value, &llvm_return);
+                        if (err.kind != Success) {
+                            return err;
+                        }
+                        LLVMBuildRet(builder, llvm_return);
+                    } else {
+                        LLVMBuildRetVoid(builder);
+                    }
+                }
+
+                LLVMPositionBuilderAtEnd(builder, llvm_end_body_block);
+                LLVMBuildBr(builder, end_block);
+            }
 
             LLVMDisposeBuilder(builder);
         }
@@ -247,3 +284,83 @@ BackendError impl_functions(LLVMBackendCompileUnit* unit,
 
     return err;
 }
+
+gboolean is_parameter_out(Parameter *param) {
+    gboolean is_out = FALSE;
+
+    if (param->kind == ParameterDeclarationKind) {
+        is_out = param->impl.declaration.qualifier == Out || param->impl.declaration.qualifier == InOut;
+    } else {
+        is_out = param->impl.definiton.declaration.qualifier == Out ||
+                 param->impl.definiton.declaration.qualifier == InOut;
+    }
+
+    return is_out;
+}
+
+BackendError impl_func_call(LLVMBackendCompileUnit *unit,
+                            LLVMBuilderRef builder, LLVMLocalScope *scope,
+                            const FunctionCall *call,
+                            LLVMValueRef* return_value) {
+    DEBUG("implementing function call...");
+    BackendError err = SUCCESS;
+
+    LLVMValueRef* arguments = NULL;
+
+    // prevent memory allocation when number of bytes would be zero
+    // avoid going of assertion in memory cache
+    if (call->expressions->len > 0) {
+        arguments = mem_alloc(MemoryNamespaceLlvm, sizeof(LLVMValueRef) * call->expressions->len);
+
+        for (size_t i = 0; i < call->expressions->len; i++) {
+            Expression *arg = g_array_index(call->expressions, Expression*, i);
+
+            GArray* param_list;
+            if (call->function->kind == FunctionDeclarationKind) {
+                param_list = call->function->impl.definition.parameter;
+            } else {
+                param_list = call->function->impl.declaration.parameter;
+            }
+
+            Parameter param = g_array_index(param_list, Parameter, i);
+
+            LLVMValueRef llvm_arg = NULL;
+            err = impl_expr(unit, scope, builder, arg, is_parameter_out(&param), 0, &llvm_arg);
+
+            if (err.kind != Success) {
+                break;
+            }
+
+            if (is_parameter_out(&param)) {
+                if ((arg->kind == ExpressionKindParameter && !is_parameter_out(arg->impl.parameter)) || arg->kind != ExpressionKindParameter) {
+                    LLVMValueRef index = LLVMConstInt(LLVMInt32Type(), 0, false);
+                    LLVMTypeRef llvm_type = NULL;
+                    get_type_impl(unit, scope->func_scope->global_scope, param.impl.declaration.type, &llvm_type);
+                    llvm_arg = LLVMBuildGEP2(builder, llvm_type, llvm_arg, &index, 1, "");
+                }
+            }
+
+            arguments[i] = llvm_arg;
+        }
+    }
+
+    if (err.kind == Success) {
+        LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, call->function->name);
+
+        if (llvm_func == NULL) {
+            return new_backend_impl_error(Implementation, NULL, "no declared function");
+        }
+
+        LLVMTypeRef llvm_func_type = g_hash_table_lookup(scope->func_scope->global_scope->functions, call->function->name);
+
+        LLVMValueRef value = LLVMBuildCall2(builder, llvm_func_type, llvm_func, arguments, call->expressions->len,
+                   "");
+
+        if (NULL != return_value) {
+            *return_value = value;
+        }
+    }
+
+    return err;
+}
+

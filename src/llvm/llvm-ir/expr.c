@@ -524,6 +524,9 @@ BackendError impl_expr(LLVMBackendCompileUnit *unit, LLVMLocalScope *scope,
                              deref_depth,
                              llvm_result);
             break;
+        case ExpressionKindFunctionCall:
+            err = impl_func_call(unit, builder, scope, expr->impl.call, llvm_result);
+            break;
         default:
             err = new_backend_impl_error(Implementation, NULL, "unknown expression");
             break;

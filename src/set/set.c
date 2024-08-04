@@ -1463,6 +1463,8 @@ IO_Qualifier getParameterQualifier(Parameter *parameter) {
     }
 }
 
+int createfuncall(FunctionCall* funcall, AST_NODE_PTR currentNode);
+
 Expression *createExpression(AST_NODE_PTR currentNode) {
     DEBUG("create Expression");
     Expression *expression = mem_alloc(MemoryNamespaceSet, sizeof(Expression));
@@ -1594,6 +1596,14 @@ Expression *createExpression(AST_NODE_PTR currentNode) {
             if (createAddressOf(expression, currentNode)) {
                 return NULL;
             }
+            break;
+        case AST_Call:
+            expression->kind = ExpressionKindFunctionCall;
+            expression->impl.call = mem_alloc(MemoryNamespaceSet, sizeof(FunctionCall));
+            if (createfuncall(expression->impl.call, currentNode) == SEMANTIC_ERROR) {
+                return NULL;
+            }
+            expression->result = SET_function_get_return_type(expression->impl.call->function);
             break;
         default:
             PANIC("Node is not an expression but from kind: %i", currentNode->kind);
@@ -1901,14 +1911,13 @@ Parameter get_param_from_func(Function* func, size_t index) {
     }
 }
 
-int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
+int createfuncall(FunctionCall* funcall, AST_NODE_PTR currentNode) {
     assert(currentNode != NULL);
     assert(currentNode->children->len == 2);
 
     AST_NODE_PTR argsListNode = AST_get_node(currentNode, 1);
     AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
 
-    FunctionCall funcall;
     Function *fun = NULL;
     if (nameNode->kind == AST_Ident) {
         int result = getFunction(nameNode->value, &fun);
@@ -1934,8 +1943,8 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
         }
     }
 
-    funcall.function = fun;
-    funcall.nodePtr = currentNode;
+    funcall->function = fun;
+    funcall->nodePtr = currentNode;
 
     size_t paramCount = 0;
     if (fun->kind == FunctionDeclarationKind) {
@@ -1980,10 +1989,7 @@ int createfuncall(Statement *parentStatement, AST_NODE_PTR currentNode) {
             g_array_append_val(expressions, expr);
         }
     }
-    funcall.expressions = expressions;
-
-    parentStatement->kind = StatementKindFunctionCall;
-    parentStatement->impl.call = funcall;
+    funcall->expressions = expressions;
     return SEMANTIC_OK;
 }
 
@@ -2059,18 +2065,37 @@ int createStatement(Block *Parentblock, AST_NODE_PTR currentNode) {
             g_array_append_val(Parentblock->statemnts, statement);
         }
             break;
-        case AST_Call:
+        case AST_Call: {
             Statement *statement = mem_alloc(MemoryNamespaceSet, sizeof(Statement));
             statement->nodePtr = currentNode;
             statement->kind = StatementKindFunctionCall;
-            int result = createfuncall(statement, currentNode);
+            int result = createfuncall(&statement->impl.call, currentNode);
             if (result == SEMANTIC_ERROR) {
                 return SEMANTIC_ERROR;
             }
             g_array_append_val(Parentblock->statemnts, statement);
             break;
+        }
+        case AST_Return: {
+            Statement *statement = mem_alloc(MemoryNamespaceSet, sizeof(Statement));
+            statement->nodePtr = currentNode;
+            statement->kind = StatementKindReturn;
+
+            AST_NODE_PTR expr_node = AST_get_node(currentNode, 0);
+            statement->impl.returnStmt.value = createExpression(expr_node);
+            statement->impl.returnStmt.nodePtr = currentNode;
+
+            if (statement->impl.returnStmt.value == NULL) {
+                return SEMANTIC_ERROR;
+            }
+
+            // TODO: compare result and function return type
+
+            g_array_append_val(Parentblock->statemnts, statement);
+            break;
+        }
         default:
-            PANIC("Node is not a statement");
+            PANIC("Node is not a statement: %s", AST_node_to_string(currentNode));
             break;
     }
 
@@ -2129,8 +2154,9 @@ int createParam(GArray *Paramlist, AST_NODE_PTR currentNode) {
 int createFunDef(Function *Parentfunction, AST_NODE_PTR currentNode) {
     DEBUG("start fundef");
     AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
-    AST_NODE_PTR paramlistlist = AST_get_node(currentNode, 1);
-    AST_NODE_PTR statementlist = AST_get_node(currentNode, 2);
+    AST_NODE_PTR return_value_node = AST_get_node(currentNode, 1);
+    AST_NODE_PTR paramlistlist = AST_get_node(currentNode, 2);
+    AST_NODE_PTR statementlist = AST_get_node(currentNode, 3);
 
     FunctionDefinition fundef;
 
@@ -2138,6 +2164,12 @@ int createFunDef(Function *Parentfunction, AST_NODE_PTR currentNode) {
     fundef.name = nameNode->value;
     fundef.body = mem_alloc(MemoryNamespaceSet, sizeof(Block));
     fundef.parameter = mem_new_g_array(MemoryNamespaceSet, sizeof(Parameter));
+    fundef.return_value = NULL;
+
+    if (set_get_type_impl(return_value_node, &fundef.return_value) == SEMANTIC_ERROR) {
+        print_diagnostic(&return_value_node->location, Error, "Unknown return value type");
+        return SEMANTIC_ERROR;
+    }
 
     DEBUG("paramlistlist child count: %i", paramlistlist->children->len);
     for (size_t i = 0; i < paramlistlist->children->len; i++) {
@@ -2237,7 +2269,49 @@ int getFunction(const char *name, Function **function) {
     return SEMANTIC_ERROR;
 }
 
-int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
+int createProcDef(Function *Parentfunction, AST_NODE_PTR currentNode) {
+    DEBUG("start fundef");
+    AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
+    AST_NODE_PTR paramlistlist = AST_get_node(currentNode, 1);
+    AST_NODE_PTR statementlist = AST_get_node(currentNode, 2);
+
+    FunctionDefinition fundef;
+
+    fundef.nodePtr = currentNode;
+    fundef.name = nameNode->value;
+    fundef.body = mem_alloc(MemoryNamespaceSet, sizeof(Block));
+    fundef.parameter = mem_new_g_array(MemoryNamespaceSet, sizeof(Parameter));
+    fundef.return_value = NULL;
+
+    DEBUG("paramlistlist child count: %i", paramlistlist->children->len);
+    for (size_t i = 0; i < paramlistlist->children->len; i++) {
+
+        //all parameterlists
+        AST_NODE_PTR paramlist = AST_get_node(paramlistlist, i);
+        DEBUG("paramlist child count: %i", paramlist->children->len);
+        for (int j = ((int) paramlist->children->len) - 1; j >= 0; j--) {
+
+            DEBUG("param child count: %i", AST_get_node(paramlist, j)->children->len);
+
+            if (createParam(fundef.parameter, AST_get_node(paramlist, j))) {
+                return SEMANTIC_ERROR;
+            }
+        }
+        DEBUG("End of Paramlist");
+    }
+
+    if (fillBlock(fundef.body, statementlist)) {
+        return SEMANTIC_ERROR;
+    }
+
+    Parentfunction->nodePtr = currentNode;
+    Parentfunction->kind = FunctionDefinitionKind;
+    Parentfunction->impl.definition = fundef;
+    Parentfunction->name = fundef.name;
+    return SEMANTIC_OK;
+}
+
+int createProcDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
     DEBUG("start fundecl");
     AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
     AST_NODE_PTR paramlistlist = AST_get_node(currentNode, 1);
@@ -2247,6 +2321,46 @@ int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
     fundecl.nodePtr = currentNode;
     fundecl.name = nameNode->value;
     fundecl.parameter = mem_new_g_array(MemoryNamespaceSet, sizeof(Parameter));
+    fundecl.return_value = NULL;
+
+    for (size_t i = 0; i < paramlistlist->children->len; i++) {
+
+        //all parameter lists
+        AST_NODE_PTR paramlist = AST_get_node(paramlistlist, i);
+
+        for (int j = ((int) paramlist->children->len) - 1; j >= 0; j--) {
+            AST_NODE_PTR param = AST_get_node(paramlist, j);
+            if (createParam(fundecl.parameter, param)) {
+                return SEMANTIC_ERROR;
+            }
+        }
+    }
+
+    Parentfunction->nodePtr = currentNode;
+    Parentfunction->kind = FunctionDeclarationKind;
+    Parentfunction->impl.declaration = fundecl;
+    Parentfunction->name = fundecl.name;
+
+    return SEMANTIC_OK;
+}
+
+int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
+    DEBUG("start fundecl");
+    AST_NODE_PTR nameNode = AST_get_node(currentNode, 0);
+    AST_NODE_PTR return_value_node = AST_get_node(currentNode, 1);
+    AST_NODE_PTR paramlistlist = AST_get_node(currentNode, 2);
+
+    FunctionDeclaration fundecl;
+
+    fundecl.nodePtr = currentNode;
+    fundecl.name = nameNode->value;
+    fundecl.parameter = mem_new_g_array(MemoryNamespaceSet, sizeof(Parameter));
+    fundecl.return_value = NULL;
+
+    if (set_get_type_impl(return_value_node, &fundecl.return_value) == SEMANTIC_ERROR) {
+        print_diagnostic(&return_value_node->location, Error, "Unknown return value type");
+        return SEMANTIC_ERROR;
+    }
 
     for (size_t i = 0; i < paramlistlist->children->len; i++) {
 
@@ -2270,21 +2384,32 @@ int createFunDecl(Function *Parentfunction, AST_NODE_PTR currentNode) {
 }
 
 int createFunction(Function *function, AST_NODE_PTR currentNode) {
-    assert(currentNode->kind == AST_Fun);
     functionParameter = mem_new_g_hash_table(MemoryNamespaceSet, g_str_hash, g_str_equal);
 
-    if (currentNode->children->len == 2) {
-        int signal = createFunDecl(function, currentNode);
-        if (signal) {
+    switch (currentNode->kind) {
+        case AST_FunDecl:
+            if (createFunDecl(function, currentNode)) {
+                return SEMANTIC_ERROR;
+            }
+            break;
+        case AST_FunDef:
+            if (createFunDef(function, currentNode)) {
+                return SEMANTIC_ERROR;
+            }
+            break;
+        case AST_ProcDecl:
+            if (createProcDecl(function, currentNode)) {
+                return SEMANTIC_ERROR;
+            }
+            break;
+        case AST_ProcDef:
+            if (createProcDef(function, currentNode)) {
+                return SEMANTIC_ERROR;
+            }
+            break;
+        default:
+            ERROR("invalid AST node type: %s", AST_node_to_string(currentNode));
             return SEMANTIC_ERROR;
-        }
-    } else if (currentNode->children->len == 3) {
-        int signal = createFunDef(function, currentNode);
-        if (signal) {
-            return SEMANTIC_ERROR;
-        }
-    } else {
-        PANIC("function should have 2 or 3 children");
     }
 
     mem_free(functionParameter);
@@ -2400,7 +2525,7 @@ int createBox(GHashTable *boxes, AST_NODE_PTR currentNode) {
                     return SEMANTIC_ERROR;
                 }
                 break;
-            case AST_Fun: {
+            case AST_FunDef: {
                 int result = createBoxFunction(boxName, boxType, AST_get_node(boxMemberList, i));
                 if (result == SEMANTIC_ERROR) {
                     return SEMANTIC_ERROR;
@@ -2523,7 +2648,10 @@ Module *create_set(AST_NODE_PTR currentNode) {
                 DEBUG("created Box successfully");
                 break;
             }
-            case AST_Fun: {
+            case AST_FunDef:
+            case AST_FunDecl:
+            case AST_ProcDef:
+            case AST_ProcDecl: {
                 DEBUG("start function");
                 Function *function = mem_alloc(MemoryNamespaceSet, sizeof(Function));
 

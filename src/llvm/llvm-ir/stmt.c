@@ -141,6 +141,8 @@ BackendError impl_basic_block(LLVMBackendCompileUnit *unit,
 
     LLVMBasicBlockRef end_previous_block = *llvm_start_block;
 
+    bool terminated = false;
+
     for (size_t i = 0; i < block->statemnts->len; i++) {
         DEBUG("building block statement %d of %d", i, block->statemnts->len);
         Statement* stmt = g_array_index(block->statemnts, Statement*, i);
@@ -152,11 +154,19 @@ BackendError impl_basic_block(LLVMBackendCompileUnit *unit,
             return err;
         }
 
-        if (llvm_next_end_block != NULL) {
+        terminated = LLVMGetBasicBlockTerminator(end_previous_block);
+        if (llvm_next_end_block != NULL && !terminated) {
             LLVMPositionBuilderAtEnd(builder, end_previous_block);
             LLVMBuildBr(builder, llvm_next_start_block);
+
             LLVMPositionBuilderAtEnd(builder, llvm_next_end_block);
             end_previous_block = llvm_next_end_block;
+        }
+
+        if (terminated) {
+            end_previous_block = LLVMAppendBasicBlockInContext(unit->context, scope->func_scope->llvm_func,
+                                                "ret.after");
+            LLVMPositionBuilderAtEnd(builder, end_previous_block);
         }
     }
 
@@ -209,80 +219,6 @@ BackendError impl_while(LLVMBackendCompileUnit *unit,
     LLVMPositionBuilderAtEnd(builder, while_after_block);
 
     *llvm_end_block = while_after_block;
-
-    return err;
-}
-
-gboolean is_parameter_out(Parameter *param) {
-    gboolean is_out = FALSE;
-
-    if (param->kind == ParameterDeclarationKind) {
-        is_out = param->impl.declaration.qualifier == Out || param->impl.declaration.qualifier == InOut;
-    } else {
-        is_out = param->impl.definiton.declaration.qualifier == Out ||
-                 param->impl.definiton.declaration.qualifier == InOut;
-    }
-
-    return is_out;
-}
-
-BackendError impl_func_call(LLVMBackendCompileUnit *unit,
-                            LLVMBuilderRef builder, LLVMLocalScope *scope,
-                            const FunctionCall *call) {
-    DEBUG("implementing function call...");
-    BackendError err = SUCCESS;
-
-    LLVMValueRef* arguments = NULL;
-
-    // prevent memory allocation when number of bytes would be zero
-    // avoid going of assertion in memory cache
-    if (call->expressions->len > 0) {
-        arguments = mem_alloc(MemoryNamespaceLlvm, sizeof(LLVMValueRef) * call->expressions->len);
-
-        for (size_t i = 0; i < call->expressions->len; i++) {
-            Expression *arg = g_array_index(call->expressions, Expression*, i);
-
-            GArray* param_list;
-            if (call->function->kind == FunctionDeclarationKind) {
-                param_list = call->function->impl.definition.parameter;
-            } else {
-                param_list = call->function->impl.declaration.parameter;
-            }
-
-            Parameter param = g_array_index(param_list, Parameter, i);
-
-            LLVMValueRef llvm_arg = NULL;
-            err = impl_expr(unit, scope, builder, arg, is_parameter_out(&param), 0, &llvm_arg);
-
-            if (err.kind != Success) {
-                break;
-            }
-
-            if (is_parameter_out(&param)) {
-                if ((arg->kind == ExpressionKindParameter && !is_parameter_out(arg->impl.parameter)) || arg->kind != ExpressionKindParameter) {
-                    LLVMValueRef index = LLVMConstInt(LLVMInt32Type(), 0, false);
-                    LLVMTypeRef llvm_type = NULL;
-                    get_type_impl(unit, scope->func_scope->global_scope, param.impl.declaration.type, &llvm_type);
-                    llvm_arg = LLVMBuildGEP2(builder, llvm_type, llvm_arg, &index, 1, "");
-                }
-            }
-
-            arguments[i] = llvm_arg;
-        }
-    }
-
-    if (err.kind == Success) {
-        LLVMValueRef llvm_func = LLVMGetNamedFunction(unit->module, call->function->name);
-
-        if (llvm_func == NULL) {
-            return new_backend_impl_error(Implementation, NULL, "no declared function");
-        }
-
-        LLVMTypeRef llvm_func_type = g_hash_table_lookup(scope->func_scope->global_scope->functions, call->function->name);
-
-        LLVMBuildCall2(builder, llvm_func_type, llvm_func, arguments, call->expressions->len,
-                       "");
-    }
 
     return err;
 }
@@ -432,6 +368,23 @@ BackendError impl_decl(LLVMBackendCompileUnit *unit,
     return err;
 }
 
+BackendError impl_return(LLVMBackendCompileUnit *unit,
+                       LLVMBuilderRef builder,
+                       LLVMLocalScope *scope,
+                       Return *returnStmt) {
+    BackendError err = SUCCESS;
+
+    LLVMValueRef expr = NULL;
+    err = impl_expr(unit, scope, builder, returnStmt->value, false, 0, &expr);
+    if (err.kind != Success) {
+        return err;
+    }
+
+    LLVMBuildRet(builder, expr);
+
+    return err;
+}
+
 BackendError impl_def(LLVMBackendCompileUnit *unit,
                       LLVMBuilderRef builder,
                       LLVMLocalScope *scope,
@@ -502,7 +455,10 @@ BackendError impl_stmt(LLVMBackendCompileUnit *unit, LLVMBuilderRef builder, LLV
             err = impl_while(unit, builder, scope, llvm_start_block, llvm_end_block, &stmt->impl.whileLoop);
             break;
         case StatementKindFunctionCall:
-            err = impl_func_call(unit, builder, scope, &stmt->impl.call);
+            err = impl_func_call(unit, builder, scope, &stmt->impl.call, NULL);
+            break;
+        case StatementKindReturn:
+            err = impl_return(unit, builder, scope, &stmt->impl.returnStmt);
             break;
         default:
             err = new_backend_impl_error(Implementation, NULL, "Unexpected statement kind");

@@ -67,7 +67,10 @@ void AST_init() {
 
     lookup_table[AST_Typedef] = "typedef";
     lookup_table[AST_Box] = "box";
-    lookup_table[AST_Fun] = "fun";
+    lookup_table[AST_FunDecl] = "fun";
+    lookup_table[AST_FunDef] = "fun";
+    lookup_table[AST_ProcDecl] = "fun";
+    lookup_table[AST_ProcDef] = "fun";
 
     lookup_table[AST_Call] = "funcall";
     lookup_table[AST_Typecast] = "typecast";
