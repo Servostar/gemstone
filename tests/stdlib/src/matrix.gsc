@@ -50,15 +50,13 @@ fun printU32(in u32: val)
 
     u32ToCstr(val)(str, len)
 
-    handle: stdout = nullHandle
-    getStdoutHandle(stdout)
+    handle: stdout = getStdoutHandle()
 
-    u32: written = 0 as u32
-    writeBytes(stdout, str, len, written)
+    writeBytes(stdout, str, len)
 
     heapFree(str)
 
-    writeBytes(stdout, " ", 1 as u32, written)
+    writeBytes(stdout, " ", 1 as u32)
 }
 
 fun test_matrix()
@@ -67,8 +65,7 @@ fun test_matrix()
     heapAlloc((8 * 4) as u32)(matrix as ref u8)
 
     u32: written = 0 as u32
-    handle: stdout = nullHandle
-    getStdoutHandle(stdout)
+    handle: stdout = getStdoutHandle()
 
     u32: idx = 0 as u32
     while idx < 4 {
@@ -82,7 +79,7 @@ fun test_matrix()
 
             idy = idy + 1 as u32
         }
-        writeBytes(stdout, "\n", 1 as u32, written)
+        writeBytes(stdout, "\n", 1 as u32)
 
         heapFree(matrix[idx] as ref u8)
         idx = idx + 1 as u32
