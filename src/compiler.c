@@ -2,42 +2,41 @@
 // Created by servostar on 6/2/24.
 //
 
-#include <compiler.h>
-#include <ast/ast.h>
-#include <stdlib.h>
-#include <sys/log.h>
-#include <yacc/parser.tab.h>
-#include <lex/util.h>
-#include <io/files.h>
 #include <assert.h>
+#include <ast/ast.h>
 #include <cfg/opt.h>
 #include <codegen/backend.h>
+#include <compiler.h>
+#include <io/files.h>
+#include <lex/util.h>
 #include <llvm/backend.h>
 #include <mem/cache.h>
 #include <set/set.h>
+#include <stdlib.h>
+#include <sys/log.h>
+#include <yacc/parser.tab.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
 
-extern void yyrestart(FILE *);
+extern void yyrestart(FILE*);
 
 // Module AST node used by the parser for AST construction.
-[[maybe_unused]]
-AST_NODE_PTR root;
+[[maybe_unused]] AST_NODE_PTR root;
 // Current file which gets compiled the parser.
 // NOTE: due to global state no concurrent compilation is possible
 //       on parser level.
-[[maybe_unused]]
-ModuleFile *current_file;
+[[maybe_unused]] ModuleFile* current_file;
 
 /**
  * @brief Compile the specified file into AST
  * @param ast Initialized AST module node to build program rules
  * @param file The file to be processed
- * @return EXIT_SUCCESS in case the parsing was success full anything lese if not
+ * @return EXIT_SUCCESS in case the parsing was success full anything lese if
+ * not
  */
-[[nodiscard("AST may be in invalid state")]]
-[[gnu::nonnull(1), gnu::nonnull(1)]]
-static int compile_file_to_ast(AST_NODE_PTR ast, ModuleFile *file) {
+[[nodiscard("AST may be in invalid state")]] [[gnu::nonnull(1),
+                                               gnu::nonnull(1)]]
+static int compile_file_to_ast(AST_NODE_PTR ast, ModuleFile* file) {
     assert(file->path != NULL);
     assert(ast != NULL);
 
@@ -45,15 +44,16 @@ static int compile_file_to_ast(AST_NODE_PTR ast, ModuleFile *file) {
 
     if (file->handle == NULL) {
         INFO("unable to open file: %s", file->path);
-        print_message(Error, "Cannot open file %s: %s", file->path, strerror(errno));
+        print_message(Error, "Cannot open file %s: %s", file->path,
+                      strerror(errno));
         return EXIT_FAILURE;
     }
 
     DEBUG("parsing file: %s", file->path);
     // setup global state
-    root = ast;
+    root         = ast;
     current_file = file;
-    yyin = file->handle;
+    yyin         = file->handle;
     yyrestart(yyin);
     lex_reset();
 
@@ -72,7 +72,7 @@ static int compile_file_to_ast(AST_NODE_PTR ast, ModuleFile *file) {
  * @param target
  * @return EXIT_SUCCESS if successful EXIT_FAILURE otherwise
  */
-static int setup_target_environment(const TargetConfig *target) {
+static int setup_target_environment(const TargetConfig* target) {
     DEBUG("setting up environment for target: %s", target->name);
 
     assert(target->output_directory != NULL);
@@ -80,21 +80,23 @@ static int setup_target_environment(const TargetConfig *target) {
 
     int result = create_directory(target->archive_directory);
     if (result != 0 && errno != EEXIST) {
-        const char *message = get_last_error();
+        const char* message = get_last_error();
         assert(message != NULL);
 
-        print_message(Error, "Unable to create directory: %s: %s", target->archive_directory, message);
-        free((void *) message);
+        print_message(Error, "Unable to create directory: %s: %s",
+                      target->archive_directory, message);
+        free((void*) message);
         return EXIT_FAILURE;
     }
 
     result = create_directory(target->output_directory);
     if (result != 0 && errno != EEXIST) {
-        const char *message = get_last_error();
+        const char* message = get_last_error();
         assert(message != NULL);
 
-        print_message(Error, "Unable to create directory: %s: %s", target->output_directory, message);
-        free((void *) message);
+        print_message(Error, "Unable to create directory: %s: %s",
+                      target->output_directory, message);
+        free((void*) message);
         return EXIT_FAILURE;
     }
 
@@ -104,11 +106,12 @@ static int setup_target_environment(const TargetConfig *target) {
 }
 
 /**
- * @brief Print the supplied AST of the specified target to a graphviz ".gv" file
+ * @brief Print the supplied AST of the specified target to a graphviz ".gv"
+ * file
  * @param ast
  * @param target
  */
-static void print_ast_to_file(AST_NODE_PTR ast, const TargetConfig *target) {
+static void print_ast_to_file(AST_NODE_PTR ast, const TargetConfig* target) {
     assert(ast != NULL);
     assert(target != NULL);
     DEBUG("printing AST to file: %s", target->name);
@@ -120,16 +123,18 @@ static void print_ast_to_file(AST_NODE_PTR ast, const TargetConfig *target) {
 
     // create file path to write graphviz to
     // basename of ile
-    char* filename = g_strjoin(".", target->name, GRAPHVIZ_FILE_EXTENSION, NULL);
+    char* filename =
+      g_strjoin(".", target->name, GRAPHVIZ_FILE_EXTENSION, NULL);
     // relative path to file
-    char *path = g_build_filename(target->archive_directory, filename, NULL);
+    char* path = g_build_filename(target->archive_directory, filename, NULL);
 
     DEBUG("Opening file to graph: %s", path);
 
-    FILE *output = fopen(path, "w");
+    FILE* output = fopen(path, "w");
     if (output == NULL) {
-        char *message = (char*) get_last_error();
-        print_message(Error, "Unable to open file for syntax tree at: %s: %s", path, message);
+        char* message = (char*) get_last_error();
+        print_message(Error, "Unable to open file for syntax tree at: %s: %s",
+                      path, message);
         free(message);
     } else {
         DEBUG("writing graph to file...");
@@ -145,7 +150,8 @@ static void print_ast_to_file(AST_NODE_PTR ast, const TargetConfig *target) {
     g_free(path);
 }
 
-static int run_backend_codegen(const Module* module, const TargetConfig* target) {
+static int run_backend_codegen(const Module* module,
+                               const TargetConfig* target) {
     DEBUG("initializing LLVM codegen backend...");
     llvm_backend_init();
 
@@ -173,20 +179,23 @@ static int run_backend_codegen(const Module* module, const TargetConfig* target)
     return EXIT_SUCCESS;
 }
 
-const char* get_absolute_import_path(const TargetConfig* config, const char* import_target_name) {
+const char* get_absolute_import_path(const TargetConfig* config,
+                                     const char* import_target_name) {
     INFO("resolving absolute path for import target: %s", import_target_name);
 
     if (!g_str_has_suffix(import_target_name, ".gsc")) {
         char* full_filename = g_strjoin("", import_target_name, ".gsc", NULL);
-        import_target_name = mem_strdup(MemoryNamespaceLld, full_filename);
+        import_target_name  = mem_strdup(MemoryNamespaceLld, full_filename);
         g_free(full_filename);
     }
 
     for (guint i = 0; i < config->import_paths->len; i++) {
-        const char* import_directory_path = g_array_index(config->import_paths, char*, i);
+        const char* import_directory_path =
+          g_array_index(config->import_paths, char*, i);
 
-        char* path = g_build_filename(import_directory_path, import_target_name, NULL);
-        char* cwd = g_get_current_dir();
+        char* path =
+          g_build_filename(import_directory_path, import_target_name, NULL);
+        char* cwd       = g_get_current_dir();
         char* canonical = g_canonicalize_filename(path, cwd);
 
         const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
@@ -208,9 +217,13 @@ const char* get_absolute_import_path(const TargetConfig* config, const char* imp
     return NULL;
 }
 
-static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* file, const TargetConfig *target, AST_NODE_PTR root_module) {
+static int compile_module_with_dependencies(ModuleFileStack* unit,
+                                            ModuleFile* file,
+                                            const TargetConfig* target,
+                                            AST_NODE_PTR root_module) {
 
-    GHashTable* imports = mem_new_g_hash_table(MemoryNamespaceAst, g_str_hash, g_str_equal);
+    GHashTable* imports =
+      mem_new_g_hash_table(MemoryNamespaceAst, g_str_hash, g_str_equal);
 
     if (compile_file_to_ast(root_module, file) == EXIT_SUCCESS) {
 
@@ -219,9 +232,11 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
 
             if (child->kind == AST_Import || child->kind == AST_Include) {
 
-                const char* path = get_absolute_import_path(target, child->value);
+                const char* path =
+                  get_absolute_import_path(target, child->value);
                 if (path == NULL) {
-                    print_message(Error, "Cannot resolve path for import: `%s`", child->value);
+                    print_message(Error, "Cannot resolve path for import: `%s`",
+                                  child->value);
                     return EXIT_FAILURE;
                 }
 
@@ -229,10 +244,12 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
                     continue;
                 }
 
-                ModuleFile *imported_file = push_file(unit, path);
-                AST_NODE_PTR imported_module = AST_new_node(empty_location(imported_file), AST_Module, NULL);
+                ModuleFile* imported_file = push_file(unit, path);
+                AST_NODE_PTR imported_module =
+                  AST_new_node(empty_location(imported_file), AST_Module, NULL);
 
-                if (compile_file_to_ast(imported_module, imported_file) == EXIT_SUCCESS) {
+                if (compile_file_to_ast(imported_module, imported_file)
+                    == EXIT_SUCCESS) {
                     AST_merge_modules(root_module, i + 1, imported_module);
                 } else {
                     return EXIT_FAILURE;
@@ -241,7 +258,8 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
                 g_hash_table_insert(imports, (gpointer) path, NULL);
 
                 gchar* directory = g_path_get_dirname(path);
-                gchar* cached_directory = mem_strdup(MemoryNamespaceLld, directory);
+                gchar* cached_directory =
+                  mem_strdup(MemoryNamespaceLld, directory);
                 g_free(directory);
                 g_array_append_val(target->import_paths, cached_directory);
             }
@@ -258,13 +276,14 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
  * @param unit
  * @param target
  */
-static int build_target(ModuleFileStack *unit, const TargetConfig *target) {
+static int build_target(ModuleFileStack* unit, const TargetConfig* target) {
     int err = EXIT_SUCCESS;
 
     print_message(Info, "Building target: %s", target->name);
 
-    ModuleFile *file = push_file(unit, target->root_module);
-    AST_NODE_PTR root_module = AST_new_node(empty_location(file), AST_Module, NULL);
+    ModuleFile* file = push_file(unit, target->root_module);
+    AST_NODE_PTR root_module =
+      AST_new_node(empty_location(file), AST_Module, NULL);
 
     err = compile_module_with_dependencies(unit, file, target, root_module);
     if (err == EXIT_SUCCESS) {
@@ -273,7 +292,7 @@ static int build_target(ModuleFileStack *unit, const TargetConfig *target) {
             if (err == 0) {
 
                 print_ast_to_file(root_module, target);
-                Module *module = create_set(root_module);
+                Module* module = create_set(root_module);
 
                 if (module != NULL) {
                     err = run_backend_codegen(module, target);
@@ -300,10 +319,10 @@ static int build_target(ModuleFileStack *unit, const TargetConfig *target) {
  *        Creates a single target by the given command line arguments.
  * @param unit
  */
-static int compile_file(ModuleFileStack *unit) {
+static int compile_file(ModuleFileStack* unit) {
     INFO("compiling basic files...");
 
-    TargetConfig *target = default_target_config_from_args();
+    TargetConfig* target = default_target_config_from_args();
 
     if (target->root_module == NULL) {
         print_message(Error, "No input file specified.");
@@ -323,7 +342,8 @@ static int compile_file(ModuleFileStack *unit) {
  * @param unit
  * @param config
  */
-static int build_project_targets(ModuleFileStack *unit, const ProjectConfig *config) {
+static int build_project_targets(ModuleFileStack* unit,
+                                 const ProjectConfig* config) {
     int err = EXIT_SUCCESS;
 
     if (is_option_set("all")) {
@@ -332,9 +352,10 @@ static int build_project_targets(ModuleFileStack *unit, const ProjectConfig *con
 
         g_hash_table_iter_init(&iter, config->targets);
 
-        char *key;
-        TargetConfig *val;
-        while (g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &val)) {
+        char* key;
+        TargetConfig* val;
+        while (
+          g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &val)) {
             err = build_target(unit, val);
         }
         return err;
@@ -345,10 +366,11 @@ static int build_project_targets(ModuleFileStack *unit, const ProjectConfig *con
 
     if (targets != NULL) {
         for (guint i = 0; i < targets->len; i++) {
-            const char *target_name = g_array_index(targets, const char*, i);
+            const char* target_name = g_array_index(targets, const char*, i);
 
             if (g_hash_table_contains(config->targets, target_name)) {
-                err = build_target(unit, g_hash_table_lookup(config->targets, target_name));
+                err = build_target(
+                  unit, g_hash_table_lookup(config->targets, target_name));
             } else {
                 print_message(Error, "Unknown target: %s", target_name);
             }
@@ -363,12 +385,13 @@ static int build_project_targets(ModuleFileStack *unit, const ProjectConfig *con
 }
 
 /**
- * @brief Build targets from project. Configuration is provided by command line arguments.
+ * @brief Build targets from project. Configuration is provided by command line
+ * arguments.
  * @param unit File storage
  */
-static int build_project(ModuleFileStack *unit) {
-    ProjectConfig *config = default_project_config();
-    int err = load_project_config(config);
+static int build_project(ModuleFileStack* unit) {
+    ProjectConfig* config = default_project_config();
+    int err               = load_project_config(config);
 
     if (err == PROJECT_OK) {
         err = build_project_targets(unit, config);

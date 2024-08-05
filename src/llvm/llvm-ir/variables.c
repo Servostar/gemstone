@@ -1,4 +1,6 @@
 
+#include "expr.h"
+
 #include <codegen/backend.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Types.h>
@@ -7,16 +9,14 @@
 #include <set/types.h>
 #include <sys/log.h>
 
-#include "expr.h"
-
 BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
                                      LLVMGlobalScope* scope,
                                      VariableDeclaration* decl,
                                      const char* name) {
     DEBUG("implementing global declaration: %s", name);
-    BackendError err = SUCCESS;
+    BackendError err      = SUCCESS;
     LLVMTypeRef llvm_type = NULL;
-    err = get_type_impl(unit, scope, decl->type, &llvm_type);
+    err                   = get_type_impl(unit, scope, decl->type, &llvm_type);
 
     if (err.kind != Success) {
         return err;
@@ -31,7 +31,7 @@ BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
     if (err.kind == Success) {
         DEBUG("setting default value...");
         LLVMSetInitializer(global, initial_value);
-        g_hash_table_insert(scope->variables, (gpointer)name, global);
+        g_hash_table_insert(scope->variables, (gpointer) name, global);
     } else {
         ERROR("unable to initialize global variable: %s", err.impl.message);
     }
@@ -43,7 +43,7 @@ BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
                                    LLVMGlobalScope* scope,
                                    VariableDefiniton* def, const char* name) {
     DEBUG("implementing global definition: %s", name);
-    BackendError err = SUCCESS;
+    BackendError err      = SUCCESS;
     LLVMTypeRef llvm_type = NULL;
     err = get_type_impl(unit, scope, def->declaration.type, &llvm_type);
 
@@ -56,12 +56,13 @@ BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
 
     // FIXME: resolve initializer expression!
     LLVMValueRef initial_value = NULL;
-    err = get_const_type_value(unit, scope, &def->initializer->impl.constant, &initial_value);
+    err = get_const_type_value(unit, scope, &def->initializer->impl.constant,
+                               &initial_value);
 
     if (err.kind == Success) {
         DEBUG("setting default value");
         LLVMSetInitializer(global, initial_value);
-        g_hash_table_insert(scope->variables, (gpointer)name, global);
+        g_hash_table_insert(scope->variables, (gpointer) name, global);
     }
 
     return err;
@@ -76,7 +77,7 @@ BackendError impl_global_variable(LLVMBackendCompileUnit* unit,
     switch (gemstone_var->kind) {
         case VariableKindDeclaration:
             err = impl_global_declaration(
-                unit, scope, &gemstone_var->impl.declaration, alias);
+              unit, scope, &gemstone_var->impl.declaration, alias);
             break;
         case VariableKindDefinition:
             err = impl_global_definiton(unit, scope,
@@ -108,7 +109,7 @@ BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
     size_t variable_count = 0;
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
         err =
-            impl_global_variable(unit, (Variable*)val, (const char*)key, scope);
+          impl_global_variable(unit, (Variable*) val, (const char*) key, scope);
 
         if (err.kind != Success) {
             break;

@@ -15,4 +15,4 @@ bool link_run(TargetLinkConfig*);
 
 void link_print_available_driver();
 
-#endif //GEMSTONE_LIB_H
+#endif // GEMSTONE_LIB_H

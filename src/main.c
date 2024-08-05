@@ -1,25 +1,27 @@
 #include <ast/ast.h>
-#include <stdlib.h>
-#include <sys/log.h>
-#include <sys/col.h>
-#include <lex/util.h>
 #include <cfg/opt.h>
 #include <compiler.h>
+#include <lex/util.h>
+#include <link/lib.h>
 #include <llvm/parser.h>
 #include <mem/cache.h>
-#include <link/lib.h>
+#include <stdlib.h>
+#include <sys/col.h>
+#include <sys/log.h>
 
 /**
  * @brief Log a debug message to inform about beginning exit procedures
  *
  */
-void notify_exit(void) { DEBUG("Exiting gemstone..."); }
+void notify_exit(void) {
+    DEBUG("Exiting gemstone...");
+}
 
 /**
  * @brief Run compiler setup here
  *
  */
-void setup(int argc, char *argv[]) {
+void setup(int argc, char* argv[]) {
     mem_init();
 
     // setup preample
@@ -46,7 +48,7 @@ void setup(int argc, char *argv[]) {
     DEBUG("finished starting up gemstone...");
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     if (argc <= 1) {
         print_help();
         exit(1);

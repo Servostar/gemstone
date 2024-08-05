@@ -5,8 +5,8 @@
 #ifndef GEMSTONE_FILES_H
 #define GEMSTONE_FILES_H
 
-#include <stdio.h>
 #include <glib.h>
+#include <stdio.h>
 
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR "\\"
@@ -21,20 +21,16 @@ typedef struct FileDiagnosticStatistics_t {
 } FileDiagnosticStatistics;
 
 typedef struct ModuleFile_t {
-    const char *path;
-    FILE *handle;
+    const char* path;
+    FILE* handle;
     FileDiagnosticStatistics statistics;
 } ModuleFile;
 
 typedef struct ModuleFileStack_t {
-    GArray *files;
+    GArray* files;
 } ModuleFileStack;
 
-typedef enum Message_t {
-    Info,
-    Warning,
-    Error
-} Message;
+typedef enum Message_t { Info, Warning, Error } Message;
 
 typedef struct TokenLocation_t {
     unsigned long int line_start;
@@ -58,14 +54,14 @@ ModuleFileStack new_file_stack();
  * @return A new file module
  */
 [[gnu::nonnull(1), gnu::nonnull(2)]]
-ModuleFile *push_file(ModuleFileStack *stack, const char *path);
+ModuleFile* push_file(ModuleFileStack* stack, const char* path);
 
 /**
  * @brief Delete all files in the stack and the stack itself
  * @param stack
  */
 [[gnu::nonnull(1)]]
-void delete_files(ModuleFileStack *stack);
+void delete_files(ModuleFileStack* stack);
 
 /**
  * Create a new token location
@@ -75,7 +71,9 @@ void delete_files(ModuleFileStack *stack);
  * @param col_end
  * @return
  */
-TokenLocation new_location(unsigned long int line_start, unsigned long int col_start, unsigned long int line_end,
+TokenLocation new_location(unsigned long int line_start,
+                           unsigned long int col_start,
+                           unsigned long int line_end,
                            unsigned long int col_end, ModuleFile* file);
 
 /**
@@ -92,7 +90,8 @@ TokenLocation empty_location(ModuleFile* file);
  * @param message
  */
 [[gnu::nonnull(1)]]
-void print_diagnostic(TokenLocation *location, Message kind, const char *message, ...);
+void print_diagnostic(TokenLocation* location, Message kind,
+                      const char* message, ...);
 
 [[gnu::nonnull(2)]]
 /**
@@ -101,25 +100,27 @@ void print_diagnostic(TokenLocation *location, Message kind, const char *message
  * @param fmt
  * @param ...
  */
-void print_message(Message kind, const char *fmt, ...);
+void print_message(Message kind, const char* fmt, ...);
 
 /**
  * @brief Print statistics about a specific file.
- *        Will print the amount of infos, warning and errors emitted during compilation.
+ *        Will print the amount of infos, warning and errors emitted during
+ * compilation.
  * @param file
  */
 [[gnu::nonnull(1)]]
-void print_file_statistics(ModuleFile *file);
+void print_file_statistics(ModuleFile* file);
 
 /**
  * @brief Print statistics of all files in the module stack.
  * @param file_stack
  */
 [[gnu::nonnull(1)]]
-void print_unit_statistics(ModuleFileStack *file_stack);
+void print_unit_statistics(ModuleFileStack* file_stack);
 
 /**
- * @brief Create a new directory. Will return EEXISTS in case the directory already exists.
+ * @brief Create a new directory. Will return EEXISTS in case the directory
+ * already exists.
  * @param path
  * @return 0 if successful, anything else otherwise
  */
@@ -138,8 +139,7 @@ const char* get_last_error();
  * @param path
  * @return
  */
-[[gnu::nonnull(1)]]
-[[nodiscard("pointer must be freed")]]
+[[gnu::nonnull(1)]] [[nodiscard("pointer must be freed")]]
 const char* get_absolute_path(const char* path);
 
-#endif //GEMSTONE_FILES_H
+#endif // GEMSTONE_FILES_H

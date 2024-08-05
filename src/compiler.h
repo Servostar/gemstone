@@ -11,4 +11,4 @@
  */
 int run_compiler();
 
-#endif //GEMSTONE_COMPILER_H
+#endif // GEMSTONE_COMPILER_H

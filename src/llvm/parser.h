@@ -2,10 +2,10 @@
 #ifndef LLVM_BACKEND_PARSE_H_
 #define LLVM_BACKEND_PARSE_H_
 
-#include <set/types.h>
 #include <codegen/backend.h>
-#include <llvm-c/Types.h>
 #include <llvm-c/Core.h>
+#include <llvm-c/Types.h>
+#include <set/types.h>
 
 typedef struct LLVMBackendCompileUnit_t {
     LLVMContextRef context;

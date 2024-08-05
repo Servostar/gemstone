@@ -5,21 +5,21 @@
 #ifndef GEMSTONE_CACHE_H
 #define GEMSTONE_CACHE_H
 
+#include <glib.h>
 #include <mem/cache.h>
 #include <stddef.h>
-#include <glib.h>
 
 typedef char* MemoryNamespaceName;
 
-#define MemoryNamespaceAst "AST"
-#define MemoryNamespaceLex "Lexer"
-#define MemoryNamespaceLog "Logging"
-#define MemoryNamespaceOpt "Options"
-#define MemoryNamespaceTOML "TOML"
-#define MemoryNamespaceSet "SET"
-#define MemoryNamespaceLlvm "LLVM"
-#define MemoryNamespaceLld "LLD"
-#define MemoryNamespaceIo "I/O"
+#define MemoryNamespaceAst    "AST"
+#define MemoryNamespaceLex    "Lexer"
+#define MemoryNamespaceLog    "Logging"
+#define MemoryNamespaceOpt    "Options"
+#define MemoryNamespaceTOML   "TOML"
+#define MemoryNamespaceSet    "SET"
+#define MemoryNamespaceLlvm   "LLVM"
+#define MemoryNamespaceLld    "LLD"
+#define MemoryNamespaceIo     "I/O"
 #define MemoryNamespaceStatic "Static"
 
 /**
@@ -44,7 +44,7 @@ void* mem_alloc(MemoryNamespaceName name, size_t size);
  * @param size
  * @return pointer to the block
  */
-void* mem_realloc(MemoryNamespaceName name, void *ptr, size_t size);
+void* mem_realloc(MemoryNamespaceName name, void* ptr, size_t size);
 
 /**
  * @brief Free a block of memory from a specified namespace.
@@ -57,8 +57,8 @@ void mem_free_from(MemoryNamespaceName name, void* memory);
 /**
  * @brief Free a block of memory.
  *        Invoking multiple times on the same pointer will do nothing.
- * @attention In case the namespace of the block is known, consider using mem_free_from()
- *            to avoid unnecessary overhead.
+ * @attention In case the namespace of the block is known, consider using
+ * mem_free_from() to avoid unnecessary overhead.
  * @param name
  * @param memory
  */
@@ -91,6 +91,7 @@ void print_memory_statistics();
 
 GArray* mem_new_g_array(MemoryNamespaceName name, guint element_size);
 
-GHashTable* mem_new_g_hash_table(MemoryNamespaceName name, GHashFunc hash_func, GEqualFunc key_equal_func);
+GHashTable* mem_new_g_hash_table(MemoryNamespaceName name, GHashFunc hash_func,
+                                 GEqualFunc key_equal_func);
 
-#endif //GEMSTONE_CACHE_H
+#endif // GEMSTONE_CACHE_H

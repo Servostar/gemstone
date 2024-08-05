@@ -1,15 +1,18 @@
 
+#include <assert.h>
 #include <ast/ast.h>
+#include <mem/cache.h>
 #include <stdio.h>
 #include <sys/log.h>
-#include <assert.h>
-#include <mem/cache.h>
 
-struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t kind, const char* value) {
+struct AST_Node_t* AST_new_node(TokenLocation location,
+                                enum AST_SyntaxElement_t kind,
+                                const char* value) {
     DEBUG("creating new AST node: %d \"%s\"", kind, value);
     assert(kind < AST_ELEMENT_COUNT);
 
-    struct AST_Node_t *node = mem_alloc(MemoryNamespaceAst, sizeof(struct AST_Node_t));
+    struct AST_Node_t* node =
+      mem_alloc(MemoryNamespaceAst, sizeof(struct AST_Node_t));
 
     if (node == NULL) {
         PANIC("failed to allocate AST node");
@@ -18,24 +21,24 @@ struct AST_Node_t *AST_new_node(TokenLocation location, enum AST_SyntaxElement_t
     assert(node != NULL);
 
     // init to discrete state
-    node->parent = NULL;
+    node->parent   = NULL;
     node->children = mem_new_g_array(MemoryNamespaceAst, sizeof(AST_NODE_PTR));
-    node->kind = kind;
-    node->value = value;
+    node->kind     = kind;
+    node->value    = value;
     node->location = location;
 
     return node;
 }
 
-static const char* lookup_table[AST_ELEMENT_COUNT] = { "__UNINIT__" };
+static const char* lookup_table[AST_ELEMENT_COUNT] = {"__UNINIT__"};
 
 void AST_init() {
     DEBUG("initializing global syntax tree...");
 
     INFO("filling lookup table...");
-    lookup_table[AST_Stmt] = "stmt";
+    lookup_table[AST_Stmt]   = "stmt";
     lookup_table[AST_Module] = "module";
-    lookup_table[AST_Expr] = "expr";
+    lookup_table[AST_Expr]   = "expr";
 
     lookup_table[AST_Add] = "+";
     lookup_table[AST_Sub] = "-";
@@ -43,53 +46,53 @@ void AST_init() {
     lookup_table[AST_Div] = "/";
 
     lookup_table[AST_BitAnd] = "&";
-    lookup_table[AST_BitOr] = "|";
+    lookup_table[AST_BitOr]  = "|";
     lookup_table[AST_BitXor] = "^";
     lookup_table[AST_BitNot] = "!";
 
-    lookup_table[AST_Eq] = "==";
-    lookup_table[AST_Less] = "<";
+    lookup_table[AST_Eq]      = "==";
+    lookup_table[AST_Less]    = "<";
     lookup_table[AST_Greater] = ">";
 
     lookup_table[AST_BoolAnd] = "&&";
-    lookup_table[AST_BoolOr] = "||";
+    lookup_table[AST_BoolOr]  = "||";
     lookup_table[AST_BoolXor] = "^^";
     lookup_table[AST_BoolNot] = "!!";
 
-    lookup_table[AST_While] = "while";
-    lookup_table[AST_If] = "if";
+    lookup_table[AST_While]  = "while";
+    lookup_table[AST_If]     = "if";
     lookup_table[AST_IfElse] = "else if";
-    lookup_table[AST_Else] = "else";
+    lookup_table[AST_Else]   = "else";
 
-    lookup_table[AST_Decl] = "decl";
+    lookup_table[AST_Decl]   = "decl";
     lookup_table[AST_Assign] = "assign";
-    lookup_table[AST_Def] = "def";
+    lookup_table[AST_Def]    = "def";
 
-    lookup_table[AST_Typedef] = "typedef";
-    lookup_table[AST_Box] = "box";
-    lookup_table[AST_FunDecl] = "fun";
-    lookup_table[AST_FunDef] = "fun";
+    lookup_table[AST_Typedef]  = "typedef";
+    lookup_table[AST_Box]      = "box";
+    lookup_table[AST_FunDecl]  = "fun";
+    lookup_table[AST_FunDef]   = "fun";
     lookup_table[AST_ProcDecl] = "fun";
-    lookup_table[AST_ProcDef] = "fun";
+    lookup_table[AST_ProcDef]  = "fun";
 
-    lookup_table[AST_Call] = "funcall";
-    lookup_table[AST_Typecast] = "typecast";
-    lookup_table[AST_Transmute] = "transmute";
-    lookup_table[AST_Condition] = "condition";
-    lookup_table[AST_List] = "list";
-    lookup_table[AST_ExprList] = "expr list";
-    lookup_table[AST_ArgList] = "arg list";
-    lookup_table[AST_ParamList] = "param list";
-    lookup_table[AST_StmtList] = "stmt list";
-    lookup_table[AST_IdentList] = "ident list";
-    lookup_table[AST_Type] = "type";
-    lookup_table[AST_Negate] = "-";
-    lookup_table[AST_Parameter] = "parameter";
-    lookup_table[AST_ParamDecl] = "parameter-declaration";
-    lookup_table[AST_AddressOf] = "address of";
+    lookup_table[AST_Call]        = "funcall";
+    lookup_table[AST_Typecast]    = "typecast";
+    lookup_table[AST_Transmute]   = "transmute";
+    lookup_table[AST_Condition]   = "condition";
+    lookup_table[AST_List]        = "list";
+    lookup_table[AST_ExprList]    = "expr list";
+    lookup_table[AST_ArgList]     = "arg list";
+    lookup_table[AST_ParamList]   = "param list";
+    lookup_table[AST_StmtList]    = "stmt list";
+    lookup_table[AST_IdentList]   = "ident list";
+    lookup_table[AST_Type]        = "type";
+    lookup_table[AST_Negate]      = "-";
+    lookup_table[AST_Parameter]   = "parameter";
+    lookup_table[AST_ParamDecl]   = "parameter-declaration";
+    lookup_table[AST_AddressOf]   = "address of";
     lookup_table[AST_Dereference] = "deref";
-    lookup_table[AST_Reference] = "ref";
-    lookup_table[AST_Return] = "ret";
+    lookup_table[AST_Reference]   = "ref";
+    lookup_table[AST_Return]      = "ret";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {
@@ -98,7 +101,7 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
 
     const char* string;
 
-    switch(node->kind) {
+    switch (node->kind) {
         case AST_Int:
         case AST_Char:
         case AST_Float:
@@ -131,7 +134,7 @@ static inline unsigned long int max(unsigned long int a, unsigned long int b) {
     return a > b ? a : b;
 }
 
-void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
+void AST_push_node(struct AST_Node_t* owner, struct AST_Node_t* child) {
     DEBUG("Adding new node %p to %p", child, owner);
     assert(owner != NULL);
     assert(child != NULL);
@@ -140,11 +143,15 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
         PANIC("failed to allocate children array of AST node");
     }
 
-    owner->location.col_end = max(owner->location.col_end, child->location.col_end);
-    owner->location.line_end = max(owner->location.line_end, child->location.line_end);
+    owner->location.col_end =
+      max(owner->location.col_end, child->location.col_end);
+    owner->location.line_end =
+      max(owner->location.line_end, child->location.line_end);
 
-    owner->location.col_start = min(owner->location.col_start, child->location.col_start);
-    owner->location.line_start = min(owner->location.line_start, child->location.line_start);
+    owner->location.col_start =
+      min(owner->location.col_start, child->location.col_start);
+    owner->location.line_start =
+      min(owner->location.line_start, child->location.line_start);
 
     if (owner->location.file == NULL) {
         owner->location.file = child->location.file;
@@ -155,7 +162,7 @@ void AST_push_node(struct AST_Node_t *owner, struct AST_Node_t *child) {
     g_array_append_val(owner->children, child);
 }
 
-struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, const size_t idx) {
+struct AST_Node_t* AST_get_node(struct AST_Node_t* owner, const size_t idx) {
     DEBUG("retrvieng node %d from %p", idx, owner);
     assert(owner != NULL);
     assert(owner->children != NULL);
@@ -174,7 +181,8 @@ struct AST_Node_t *AST_get_node(struct AST_Node_t *owner, const size_t idx) {
     return child;
 }
 
-struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, const size_t idx) {
+struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner,
+                                    const size_t idx) {
     assert(owner != NULL);
     assert(owner->children != NULL);
     assert(idx < owner->children->len);
@@ -187,7 +195,8 @@ struct AST_Node_t* AST_remove_child(struct AST_Node_t* owner, const size_t idx) 
     return child;
 }
 
-struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_Node_t* child) {
+struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner,
+                                    const struct AST_Node_t* child) {
     assert(owner != NULL);
     assert(child != NULL);
     assert(owner->children != NULL);
@@ -201,14 +210,14 @@ struct AST_Node_t* AST_detach_child(struct AST_Node_t* owner, const struct AST_N
     PANIC("Child to detach not a child of parent");
 }
 
-void AST_delete_node(struct AST_Node_t *node) {
+void AST_delete_node(struct AST_Node_t* node) {
     assert(node != NULL);
 
     DEBUG("Deleting AST node: %p", node);
 
     if (node->parent != NULL) {
-        [[maybe_unused]]
-        const struct AST_Node_t* child = AST_detach_child(node->parent, node);
+        [[maybe_unused]] const struct AST_Node_t* child =
+          AST_detach_child(node->parent, node);
         assert(child == node);
     }
 
@@ -224,8 +233,8 @@ void AST_delete_node(struct AST_Node_t *node) {
     mem_free(node);
 }
 
-static void AST_visit_nodes_recurse2(struct AST_Node_t *root,
-                                     void (*for_each)(struct AST_Node_t *node,
+static void AST_visit_nodes_recurse2(struct AST_Node_t* root,
+                                     void (*for_each)(struct AST_Node_t* node,
                                                       size_t depth),
                                      const size_t depth) {
     DEBUG("Recursive visit of %p at %d with %p", root, depth, for_each);
@@ -235,12 +244,13 @@ static void AST_visit_nodes_recurse2(struct AST_Node_t *root,
     (for_each)(root, depth);
 
     for (size_t i = 0; i < root->children->len; i++) {
-        AST_visit_nodes_recurse2(g_array_index(root->children, AST_NODE_PTR, i), for_each, depth + 1);
+        AST_visit_nodes_recurse2(g_array_index(root->children, AST_NODE_PTR, i),
+                                 for_each, depth + 1);
     }
 }
 
-void AST_visit_nodes_recurse(struct AST_Node_t *root,
-                             void (*for_each)(struct AST_Node_t *node,
+void AST_visit_nodes_recurse(struct AST_Node_t* root,
+                             void (*for_each)(struct AST_Node_t* node,
                                               size_t depth)) {
     DEBUG("Starting recursive visit of %p with %p", root, for_each);
 
@@ -250,24 +260,28 @@ void AST_visit_nodes_recurse(struct AST_Node_t *root,
     AST_visit_nodes_recurse2(root, for_each, 0);
 }
 
-static void AST_fprint_graphviz_node_definition(FILE* stream, const struct AST_Node_t* node) {
+static void AST_fprint_graphviz_node_definition(FILE* stream,
+                                                const struct AST_Node_t* node) {
     DEBUG("Printing graphviz definition of %p", node);
 
     assert(stream != NULL);
     assert(node != NULL);
 
-    fprintf(stream, "\tnode%p [label=\"%s\"]\n", (void*) node, AST_node_to_string(node));
+    fprintf(stream, "\tnode%p [label=\"%s\"]\n", (void*) node,
+            AST_node_to_string(node));
 
     if (node->children == NULL) {
         return;
     }
 
     for (size_t i = 0; i < node->children->len; i++) {
-        AST_fprint_graphviz_node_definition(stream, g_array_index(node->children, AST_NODE_PTR, i));
+        AST_fprint_graphviz_node_definition(
+          stream, g_array_index(node->children, AST_NODE_PTR, i));
     }
 }
 
-static void AST_fprint_graphviz_node_connection(FILE* stream, const struct AST_Node_t* node) {
+static void AST_fprint_graphviz_node_connection(FILE* stream,
+                                                const struct AST_Node_t* node) {
     DEBUG("Printing graphviz connection of %p", node);
 
     assert(stream != NULL);
@@ -298,16 +312,17 @@ void AST_fprint_graphviz(FILE* stream, const struct AST_Node_t* root) {
     fprintf(stream, "}\n");
 }
 
-AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner, enum AST_SyntaxElement_t kind) {
-  for (size_t i = 0; i < owner->children->len; i++) {
-    AST_NODE_PTR child = AST_get_node(owner, i);
+AST_NODE_PTR AST_get_node_by_kind(AST_NODE_PTR owner,
+                                  enum AST_SyntaxElement_t kind) {
+    for (size_t i = 0; i < owner->children->len; i++) {
+        AST_NODE_PTR child = AST_get_node(owner, i);
 
-    if (child->kind == kind) {
-      return child;
+        if (child->kind == kind) {
+            return child;
+        }
     }
-  }
 
-  return NULL;
+    return NULL;
 }
 
 void AST_merge_modules(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {

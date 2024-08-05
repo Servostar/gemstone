@@ -6,29 +6,29 @@
 #include <llvm-c/TargetMachine.h>
 #include <llvm/backend.h>
 #include <llvm/parser.h>
-#include <sys/log.h>
 #include <mem/cache.h>
+#include <sys/log.h>
 
 Target create_native_target() {
     DEBUG("creating native target...");
     Target target;
 
-    target.name.str = "tmp";
+    target.name.str        = "tmp";
     target.name.allocation = NONE;
 
-    target.triple.str = LLVMGetDefaultTargetTriple();
+    target.triple.str        = LLVMGetDefaultTargetTriple();
     target.triple.allocation = LLVM;
     assert(target.triple.str != NULL);
 
-    target.cpu.str = LLVMGetHostCPUName();
+    target.cpu.str        = LLVMGetHostCPUName();
     target.cpu.allocation = LLVM;
     assert(target.cpu.str != NULL);
 
-    target.features.str = LLVMGetHostCPUFeatures();
+    target.features.str        = LLVMGetHostCPUFeatures();
     target.features.allocation = LLVM;
     assert(target.features.str != NULL);
 
-    target.opt = LLVMCodeGenLevelNone;
+    target.opt   = LLVMCodeGenLevelNone;
     target.reloc = LLVMRelocDefault;
     target.model = LLVMCodeModelDefault;
 
@@ -55,7 +55,7 @@ static char* create_target_output_name(const TargetConfig* config) {
         prefix = "lib";
     }
 
-    char* name = g_strjoin("", prefix, config->name, NULL);
+    char* name        = g_strjoin("", prefix, config->name, NULL);
     char* cached_name = mem_strdup(MemoryNamespaceLlvm, name);
     g_free(name);
 
@@ -67,13 +67,13 @@ Target create_target_from_config(const TargetConfig* config) {
 
     Target target = create_native_target();
 
-    target.name.str = create_target_output_name(config);
-    target.name.allocation = NONE;  // freed later by compiler
+    target.name.str        = create_target_output_name(config);
+    target.name.allocation = NONE; // freed later by compiler
 
     target.opt = llvm_opt_from_int(config->optimization_level);
 
-    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name.str, target.opt,
-         target.triple.str, target.cpu.str, target.features.str);
+    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name.str,
+         target.opt, target.triple.str, target.cpu.str, target.features.str);
 
     return target;
 }
@@ -116,8 +116,8 @@ static BackendError llvm_backend_codegen_deinit(void) {
 
 void llvm_backend_init() {
     BackendError err =
-        set_backend(&llvm_backend_codegen_init, &llvm_backend_codegen_deinit,
-                    &llvm_backend_codegen, "LLVM");
+      set_backend(&llvm_backend_codegen_init, &llvm_backend_codegen_deinit,
+                  &llvm_backend_codegen, "LLVM");
 
     if (err.kind != Success) {
         PANIC("unable to init llvm backend: %ld", err);
