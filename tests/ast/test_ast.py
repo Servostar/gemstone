@@ -65,26 +65,31 @@ def run_check_print_node():
 34 typedef
 35 box
 36 fun
-37 value
-38 list
-39 expr list
-40 arg list
-41 param list
-42 stmt list
-43 ident list
-44 value
-45 type
-46 value
+37 fun
+38 fun
+39 fun
+40 value
+41 list
+42 expr list
+43 arg list
+44 param list
+45 stmt list
+46 ident list
 47 value
-48 value
-49 -
-50 parameter
+48 type
+49 value
+50 value
 51 value
-52 parameter-declaration
-53 address of
-54 deref
-55 ref
-56 value
+52 -
+53 parameter
+54 value
+55 parameter-declaration
+56 address of
+57 deref
+58 ref
+59 value
+60 value
+61 ret
 """ == p.stdout
 
 
@@ -94,7 +99,7 @@ def run_check_print_graphviz():
     info("creating temporary folder...")
 
     if not os.path.exists("tmp"):
-        os.mkdir("tmp")
+        os.makedirs("tmp", exist_ok=True)
 
     info("cleaning temporary folder...")
 

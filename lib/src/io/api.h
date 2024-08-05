@@ -6,15 +6,15 @@
 
 typedef ptr handle;
 
-void getStdinHandle(handle* stdin);
+handle getStdinHandle();
 
-void getStdoutHandle(handle* stdout);
+handle getStdoutHandle();
 
-void getStderrHandle(handle* stderr);
+handle getStderrHandle();
 
-void writeBytes(handle dev, u8* buf, u32 len, u32* written);
+u32 writeBytes(handle dev, u8* buf, u32 len);
 
-void readBytes(handle dev, u8* buf, u32 len, u32* read);
+u32 readBytes(handle dev, u8* buf, u32 len);
 
 void flush(handle dev);
 

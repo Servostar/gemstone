@@ -67,7 +67,10 @@ void AST_init() {
 
     lookup_table[AST_Typedef] = "typedef";
     lookup_table[AST_Box] = "box";
-    lookup_table[AST_Fun] = "fun";
+    lookup_table[AST_FunDecl] = "fun";
+    lookup_table[AST_FunDef] = "fun";
+    lookup_table[AST_ProcDecl] = "fun";
+    lookup_table[AST_ProcDef] = "fun";
 
     lookup_table[AST_Call] = "funcall";
     lookup_table[AST_Typecast] = "typecast";
@@ -86,6 +89,7 @@ void AST_init() {
     lookup_table[AST_AddressOf] = "address of";
     lookup_table[AST_Dereference] = "deref";
     lookup_table[AST_Reference] = "ref";
+    lookup_table[AST_Return] = "ret";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {
@@ -96,6 +100,7 @@ const char* AST_node_to_string(const struct AST_Node_t* node) {
 
     switch(node->kind) {
         case AST_Int:
+        case AST_Char:
         case AST_Float:
         case AST_String:
         case AST_Ident:

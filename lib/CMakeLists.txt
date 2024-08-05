@@ -24,8 +24,12 @@ add_library(gscmem ${STDLIB_MEM_SOURCE_FILES})
 file(GLOB_RECURSE STDLIB_OS_SOURCE_FILES src/os/*.c)
 add_library(gscos ${STDLIB_OS_SOURCE_FILES})
 
+file(GLOB_RECURSE STDLIB_MATH_SOURCE_FILES src/math/*.c)
+add_library(gscmath ${STDLIB_MATH_SOURCE_FILES})
+
 # Complete standard library
 add_library(gscstd
         ${STDLIB_IO_SOURCE_FILES}
         ${STDLIB_MEM_SOURCE_FILES}
-        ${STDLIB_OS_SOURCE_FILES})
+        ${STDLIB_OS_SOURCE_FILES}
+        ${STDLIB_MATH_SOURCE_FILES})

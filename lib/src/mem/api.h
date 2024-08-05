@@ -4,11 +4,11 @@
 
 #include <def/api.h>
 
-void heap_alloc(u32 len, u8** ptr);
+void heapAlloc(u32 len, u8** ptr);
 
-void heap_realloc(u32 len, u8** ptr);
+void heapRealloc(u32 len, u8** ptr);
 
-void heap_free(u8* ptr);
+void heapFree(u8* ptr);
 
 void copy(u8* dst, u8* src, u32 len);
 

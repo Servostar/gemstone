@@ -14,3 +14,6 @@ include "io.gsc"
 
 # memory management
 include "mem.gsc"
+
+# mathematical utilities
+include "math.gsc"

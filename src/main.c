@@ -74,11 +74,11 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    run_compiler();
+    int status = run_compiler();
 
     if (is_option_set("print-gc-stats")) {
         print_memory_statistics();
     }
 
-    return 0;
+    return status;
 }

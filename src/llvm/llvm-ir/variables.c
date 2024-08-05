@@ -1,11 +1,13 @@
 
 #include <codegen/backend.h>
-#include <set/types.h>
-#include <sys/log.h>
-#include <llvm/llvm-ir/variables.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Types.h>
 #include <llvm/llvm-ir/types.h>
+#include <llvm/llvm-ir/variables.h>
+#include <set/types.h>
+#include <sys/log.h>
+
+#include "expr.h"
 
 BackendError impl_global_declaration(LLVMBackendCompileUnit* unit,
                                      LLVMGlobalScope* scope,
@@ -54,8 +56,7 @@ BackendError impl_global_definiton(LLVMBackendCompileUnit* unit,
 
     // FIXME: resolve initializer expression!
     LLVMValueRef initial_value = NULL;
-    err = get_type_default_value(unit, scope, def->declaration.type,
-                                 &initial_value);
+    err = get_const_type_value(unit, scope, &def->initializer->impl.constant, &initial_value);
 
     if (err.kind == Success) {
         DEBUG("setting default value");

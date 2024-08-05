@@ -7,7 +7,8 @@
 
 /**
  * @brief Run the gemstone compiler with the provided command arguments.
+ * @return status of compilation
  */
-void run_compiler();
+int run_compiler();
 
 #endif //GEMSTONE_COMPILER_H

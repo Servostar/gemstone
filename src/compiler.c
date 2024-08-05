@@ -145,21 +145,21 @@ static void print_ast_to_file(AST_NODE_PTR ast, const TargetConfig *target) {
     g_free(path);
 }
 
-static void run_backend_codegen(const Module* module, const TargetConfig* target) {
+static int run_backend_codegen(const Module* module, const TargetConfig* target) {
     DEBUG("initializing LLVM codegen backend...");
     llvm_backend_init();
 
     DEBUG("initiializing backend for codegen...");
     BackendError err = init_backend();
     if (err.kind != Success) {
-        return;
+        return EXIT_FAILURE;
     }
 
     DEBUG("generating code...");
     err = generate_code(module, target);
     if (err.kind != Success) {
         print_message(Error, "Backend failed: %s", err.impl.message);
-        return;
+        return EXIT_FAILURE;
     }
 
     print_message(Info, "Compilation finished successfully");
@@ -167,7 +167,10 @@ static void run_backend_codegen(const Module* module, const TargetConfig* target
     err = deinit_backend();
     if (err.kind != Success) {
         ERROR("Unable to deinit backend: %s", err.impl.message);
+        return EXIT_FAILURE;
     }
+
+    return EXIT_SUCCESS;
 }
 
 const char* get_absolute_import_path(const TargetConfig* config, const char* import_target_name) {
@@ -255,21 +258,27 @@ static int compile_module_with_dependencies(ModuleFileStack *unit, ModuleFile* f
  * @param unit
  * @param target
  */
-static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
+static int build_target(ModuleFileStack *unit, const TargetConfig *target) {
+    int err = EXIT_SUCCESS;
+
     print_message(Info, "Building target: %s", target->name);
 
     ModuleFile *file = push_file(unit, target->root_module);
     AST_NODE_PTR root_module = AST_new_node(empty_location(file), AST_Module, NULL);
 
-    if (compile_module_with_dependencies(unit, file, target, root_module) == EXIT_SUCCESS) {
+    err = compile_module_with_dependencies(unit, file, target, root_module);
+    if (err == EXIT_SUCCESS) {
         if (root_module != NULL) {
-            if (setup_target_environment(target) == 0) {
+            err = setup_target_environment(target);
+            if (err == 0) {
 
                 print_ast_to_file(root_module, target);
                 Module *module = create_set(root_module);
 
                 if (module != NULL) {
-                    run_backend_codegen(module, target);
+                    err = run_backend_codegen(module, target);
+                } else {
+                    err = EXIT_FAILURE;
                 }
             }
 
@@ -282,6 +291,8 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
     mem_purge_namespace(MemoryNamespaceSet);
 
     print_file_statistics(file);
+
+    return err;
 }
 
 /**
@@ -289,7 +300,7 @@ static void build_target(ModuleFileStack *unit, const TargetConfig *target) {
  *        Creates a single target by the given command line arguments.
  * @param unit
  */
-static void compile_file(ModuleFileStack *unit) {
+static int compile_file(ModuleFileStack *unit) {
     INFO("compiling basic files...");
 
     TargetConfig *target = default_target_config_from_args();
@@ -297,12 +308,14 @@ static void compile_file(ModuleFileStack *unit) {
     if (target->root_module == NULL) {
         print_message(Error, "No input file specified.");
         delete_target_config(target);
-        return;
+        return EXIT_FAILURE;
     }
 
-    build_target(unit, target);
+    int err = build_target(unit, target);
 
     delete_target_config(target);
+
+    return err;
 }
 
 /**
@@ -310,7 +323,9 @@ static void compile_file(ModuleFileStack *unit) {
  * @param unit
  * @param config
  */
-static void build_project_targets(ModuleFileStack *unit, const ProjectConfig *config) {
+static int build_project_targets(ModuleFileStack *unit, const ProjectConfig *config) {
+    int err = EXIT_SUCCESS;
+
     if (is_option_set("all")) {
         // build all targets in the project
         GHashTableIter iter;
@@ -320,9 +335,9 @@ static void build_project_targets(ModuleFileStack *unit, const ProjectConfig *co
         char *key;
         TargetConfig *val;
         while (g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &val)) {
-            build_target(unit, val);
+            err = build_target(unit, val);
         }
-        return;
+        return err;
     }
 
     // build all targets given in the arguments
@@ -333,7 +348,7 @@ static void build_project_targets(ModuleFileStack *unit, const ProjectConfig *co
             const char *target_name = g_array_index(targets, const char*, i);
 
             if (g_hash_table_contains(config->targets, target_name)) {
-                build_target(unit, g_hash_table_lookup(config->targets, target_name));
+                err = build_target(unit, g_hash_table_lookup(config->targets, target_name));
             } else {
                 print_message(Error, "Unknown target: %s", target_name);
             }
@@ -343,39 +358,46 @@ static void build_project_targets(ModuleFileStack *unit, const ProjectConfig *co
     } else {
         print_message(Error, "No targets specified.");
     }
+
+    return err;
 }
 
 /**
  * @brief Build targets from project. Configuration is provided by command line arguments.
  * @param unit File storage
  */
-static void build_project(ModuleFileStack *unit) {
+static int build_project(ModuleFileStack *unit) {
     ProjectConfig *config = default_project_config();
     int err = load_project_config(config);
 
     if (err == PROJECT_OK) {
-        build_project_targets(unit, config);
+        err = build_project_targets(unit, config);
     }
 
     delete_project_config(config);
+    return err;
 }
 
-void run_compiler() {
+int run_compiler() {
     ModuleFileStack files = new_file_stack();
 
+    int status = EXIT_SUCCESS;
+
     if (is_option_set("build")) {
-        build_project(&files);
+        status = build_project(&files);
     } else if (is_option_set("compile")) {
-        compile_file(&files);
+        status = compile_file(&files);
     } else {
         print_message(Error, "Invalid mode of operation. Rerun with --help.");
     }
 
     if (files.files == NULL) {
         print_message(Error, "No input files, nothing to do.");
-        exit(1);
+    } else {
+        print_unit_statistics(&files);
     }
 
-    print_unit_statistics(&files);
     delete_files(&files);
+
+    return status;
 }

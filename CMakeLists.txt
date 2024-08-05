@@ -17,7 +17,7 @@ cmake_minimum_required(VERSION 3.15...3.25)
 #    └─ test.c
 
 project(gemstone
-    VERSION 0.1.0
+    VERSION 0.2.6
     DESCRIPTION "programming language compiler"
     LANGUAGES C)
 
@@ -44,6 +44,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(LEX_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/lex/lexer.l)
 set(LEX_GENERATED_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/lex/lexer.ll.c)
 
+file(REMOVE ${LEX_GENERATED_SOURCE_FILE})
+
 add_custom_command(OUTPUT ${LEX_GENERATED_SOURCE_FILE}
         COMMAND lex
         ARGS -o  ${LEX_GENERATED_SOURCE_FILE} ${LEX_SOURCE_FILE}
@@ -61,6 +63,8 @@ endif()
 
 set(YACC_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.y)
 set(YACC_GENERATED_SOURCE_FILE ${PROJECT_SOURCE_DIR}/src/yacc/parser.tab.c)
+
+file(REMOVE ${YACC_GENERATED_SOURCE_FILE})
 
 add_custom_command(OUTPUT ${YACC_GENERATED_SOURCE_FILE}
         COMMAND bison

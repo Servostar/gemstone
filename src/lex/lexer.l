@@ -90,11 +90,19 @@
 "funname" {DEBUG("\"%s\" tokenized with \'FunFunname\'", yytext); return(FunFunname);};
 "lineno" {DEBUG("\"%s\" tokenized with \'FunLineno\'", yytext); return(FunLineno);};
 "extsupport" {DEBUG("\"%s\" tokenized with \'FunExtsupport\'", yytext); return(FunExtsupport);};
+"ret" {DEBUG("\"%s\" tokenized with \'Return\'", yytext); return(KeyReturn);};
 
 [0-9]+    {DEBUG("\"%s\" tokenized with \'ValInt\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValInt); };
 [0-9]*\.[0-9]+ {DEBUG("\"%s\" tokenized with \'ValFloat\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(ValFloat);};
 [a-zA-Z_0-9]+ {DEBUG("\"%s\" tokenized with \'Ident\'", yytext); yylval.string = mem_strdup(MemoryNamespaceLex, yytext); return(Ident); };
 
+'.' {
+    DEBUG("\"%s\" tokenized with \'Char\'", yytext);
+    yylval.string = mem_strdup(MemoryNamespaceLex, yytext + 1);
+    long int len = strlen(yytext);
+    yylval.string[len - 2] = '\0';
+    return(ValChar);
+}
 \"([^\"\n])*\" {
     yytext = yytext +1;
     yytext[yyleng - 2] = 0;

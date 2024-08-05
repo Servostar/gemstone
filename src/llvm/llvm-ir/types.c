@@ -6,15 +6,10 @@
 #include <set/types.h>
 #include <sys/log.h>
 #include <set/set.h>
-#include <stdlib.h>
 #include <mem/cache.h>
 
 #define BASE_BYTES 4
 #define BITS_PER_BYTE 8
-
-char* guid() {
-    return "uuid";
-}
 
 static BackendError get_const_primitive_value(PrimitiveType primitive,
                                               LLVMTypeRef llvm_type,
@@ -26,6 +21,10 @@ static BackendError get_const_primitive_value(PrimitiveType primitive,
             break;
         case Float:
             *llvm_value = LLVMConstRealOfString(llvm_type, value);
+            break;
+        case Char:
+            gunichar codepoint = g_utf8_get_char(value);
+            *llvm_value = LLVMConstInt(llvm_type, codepoint, false);
             break;
     }
 
@@ -42,7 +41,7 @@ static BackendError get_const_composite_value(CompositeType composite,
 
 BackendError impl_reference_const(LLVMBackendCompileUnit* unit, TypeValue* value, LLVMValueRef* llvm_value) {
     BackendError err = SUCCESS;
-    if (value->type->kind == TypeKindReference && compareTypes(value->type, (Type*) &StringLiteralType)) {
+    if (compareTypes(value->type, (Type*) &StringLiteralType)) {
         // is string literal
         LLVMValueRef string_value = LLVMConstString(value->value, strlen(value->value), false);
 
@@ -55,7 +54,11 @@ BackendError impl_reference_const(LLVMBackendCompileUnit* unit, TypeValue* value
         LLVMSetUnnamedAddress(string_global, LLVMGlobalUnnamedAddr);
         LLVMSetAlignment(string_global, 1);
 
-        *llvm_value = string_global;
+        // Cast the global variable to a pointer type if needed
+        LLVMTypeRef i8_ptr_type = LLVMPointerType(LLVMInt8TypeInContext(unit->context), 0);
+        LLVMValueRef global_str_ptr = LLVMConstBitCast(string_global, i8_ptr_type);
+
+        *llvm_value = global_str_ptr;
     } else {
         err = new_backend_impl_error(Implementation, value->nodePtr, "reference initializer can only be string literals");
     }
@@ -112,9 +115,12 @@ BackendError impl_primtive_type(LLVMBackendCompileUnit* unit,
             DEBUG("implementing primtive float type...");
             *llvm_type = LLVMFloatTypeInContext(unit->context);
             break;
+        case Char:
+            DEBUG("implementing primitive codepoint type...");
+            *llvm_type = LLVMInt32TypeInContext(unit->context);
+            break;
         default:
             PANIC("invalid primitive type");
-            break;
     }
 
     return SUCCESS;

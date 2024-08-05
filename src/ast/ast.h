@@ -57,7 +57,10 @@ enum AST_SyntaxElement_t {
     // Defintions
     AST_Typedef,
     AST_Box,
-    AST_Fun,
+    AST_FunDecl,
+    AST_FunDef,
+    AST_ProcDecl,
+    AST_ProcDef,
     AST_Import,
     // amount of variants
     // in this enums
@@ -80,6 +83,8 @@ enum AST_SyntaxElement_t {
     AST_Dereference,
     AST_Reference,
     AST_Include,
+    AST_Char,
+    AST_Return,
     AST_ELEMENT_COUNT
 };
 
