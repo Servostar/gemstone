@@ -22,7 +22,7 @@ def check_abort():
 
     logging.basicConfig(level=logging.INFO)
 
-    p = subprocess.run(["./gsc", "compile"], capture_output=True, text=True)
+    p = subprocess.run(["./gsc", "compile", "foo.gsc"], capture_output=True, text=True)
 
     assert p.returncode == 1
 

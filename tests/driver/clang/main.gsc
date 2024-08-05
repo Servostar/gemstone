@@ -1,28 +1,27 @@
 
 import "std"
 
-fun cstrlen(in cstr: str)(out u32: len) {
+fun u32:cstrlen(in cstr: str) {
     u32: idx = 0 as u32
 
     while !(str[idx] == 0) {
         idx = idx + 1 as u32
     }
 
-    len = idx
+    ret idx
 }
 
 fun printcstr(in cstr: msg) {
-    u32: len = 0 as u32
-    cstrlen(msg)(len)
+    u32: len = cstrlen(msg)
 
-    handle: stdout = 0 as u32
-    getStdoutHandle()(stdout)
+    handle: stdout = getStdoutHandle()
 
-    u32: written = 0 as u32
-    writeBytes(stdout, msg, len)(written)
+    writeBytes(stdout, msg, len)
 }
 
-fun main() {
+fun int:main() {
     cstr: msg = "Hello, world!\n"
     printcstr(msg)
+
+    ret 0
 }

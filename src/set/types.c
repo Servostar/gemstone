@@ -9,7 +9,7 @@
 Type* SET_function_get_return_type(Function* function) {
     assert(NULL != function);
 
-    const Type* return_type = NULL;
+    Type* return_type = NULL;
 
     switch (function->kind) {
         case FunctionDeclarationKind:
@@ -25,4 +25,6 @@ Type* SET_function_get_return_type(Function* function) {
     if (NULL == return_type) {
         ERROR("Function return type is nullptr");
     }
+
+    return return_type;
 }
