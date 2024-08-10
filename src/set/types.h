@@ -2,28 +2,28 @@
 #ifndef SET_TYPES_H_
 #define SET_TYPES_H_
 
-#include <glib.h>
 #include <ast/ast.h>
+#include <glib.h>
 
 // with of primitive types (int/float) in bytes
 #define BASE_BYTES 4
 
 /**
  * @brief Primitive types form the basis of all other types.
- * 
+ *
  */
 typedef enum PrimitiveType_t {
     // 4 byte signed integer in two's complement
-    Int =0,
+    Int = 0,
     // 4 byte IEEE-754 single precision
-    Float =1,
+    Float = 1,
     // 4 byte encoded UTF-8 codepoint
     Char = 2,
 } PrimitiveType;
 
 /**
  * @brief Represents the sign of a composite type.
- * 
+ *
  */
 typedef enum Sign_t {
     // type has no sign bit
@@ -36,13 +36,13 @@ typedef enum Sign_t {
  * @brief Represents the scale of composite type which is multiplied
  *        with the base size in order to retrieve the the composites size.
  * @attention Valid value are: { 1/8, 1/4, 1/2, 1, 2, 4, 8 }
- * 
+ *
  */
 typedef double Scale;
 
 /**
  * @brief A composite type is an extended definition of a primitive type.
- * 
+ *
  */
 typedef struct CompositeType_t {
     // sign of composite
@@ -54,7 +54,7 @@ typedef struct CompositeType_t {
 
 /**
  * @brief Specifies the specific type of the generic type struct.
- * 
+ *
  */
 typedef enum TypeKind_t {
     TypeKindPrimitive,
@@ -67,8 +67,9 @@ typedef struct Type_t Type;
 
 /**
  * @brief Reference points to a type.
- * @attention Can be nested. A reference can point to another reference: REF -> REF -> REF -> Primitive
- * 
+ * @attention Can be nested. A reference can point to another reference: REF ->
+ * REF -> REF -> Primitive
+ *
  */
 typedef Type* ReferenceType;
 
@@ -88,12 +89,12 @@ typedef struct BoxMember_t {
 
 /**
  * @brief Essentially a g   lorified struct
- * 
+ *
  */
 typedef struct BoxType_t {
     // hashtable of members.
-    // Associates the memebers name (const char*) with its type (BoxMember) 
-    GHashTable* member; //BoxMember Pointer
+    // Associates the memebers name (const char*) with its type (BoxMember)
+    GHashTable* member; // BoxMember Pointer
     AST_NODE_PTR nodePtr;
 } BoxType;
 
@@ -101,7 +102,8 @@ typedef struct Variable_t Variable;
 
 typedef struct BoxAccess_t {
     // list of recursive box accesses
-    // contains a list of BoxMembers (each specifying their own type, name and box type)
+    // contains a list of BoxMembers (each specifying their own type, name and
+    // box type)
     GArray* member;
     // box variable to access
     Variable* variable;
@@ -124,19 +126,18 @@ typedef struct Type_t {
 
 typedef struct Typedefine_t {
     const char* name;
-    Type *type;
+    Type* type;
     AST_NODE_PTR nodePtr;
 } Typedefine;
 
-
-
 /**
- * @brief Reprents the value of type. Can be used to definitions, initialization and for expressions contants.
- * 
+ * @brief Reprents the value of type. Can be used to definitions, initialization
+ * and for expressions contants.
+ *
  */
 typedef struct TypeValue_t {
     // the type
-    Type *type;
+    Type* type;
     // UTF-8 representation of the type's value
     const char* value;
     AST_NODE_PTR nodePtr;
@@ -148,7 +149,7 @@ typedef struct TypeValue_t {
 
 /**
  * @brief Specifies a parameters I/O properties
- * 
+ *
  */
 typedef enum IO_Qualifier_t {
     // Can be read from but not written to.
@@ -164,23 +165,23 @@ typedef enum IO_Qualifier_t {
 
 /**
  * @brief A functions parameter declaration.
- * 
+ *
  */
 typedef struct ParameterDeclaration_t {
-    Type *type;
+    Type* type;
     IO_Qualifier qualifier;
     AST_NODE_PTR nodePtr;
 } ParameterDeclaration;
 
 /**
  * @brief A functions parameter.
- * 
+ *
  */
 typedef struct ParameterDefinition_t {
     ParameterDeclaration declaration;
     // value to initalize the declaration with
     // NOTE: type of initializer and declaration MUST be equal
-    Expression *initializer;
+    Expression* initializer;
     AST_NODE_PTR nodePtr;
 } ParameterDefinition;
 
@@ -191,18 +192,18 @@ typedef enum ParameterKind_t {
 
 /**
  * @brief A parameter can either be a declaration or a definition
- * 
+ *
  */
 typedef struct Parameter_t {
     const char* name;
-    
+
     ParameterKind kind;
     union ParameterImplementation {
         ParameterDeclaration declaration;
         ParameterDefinition definiton;
     } impl;
     AST_NODE_PTR nodePtr;
-} Parameter;    // fix typo
+} Parameter; // fix typo
 
 typedef enum FunctionKind_t {
     FunctionDeclarationKind,
@@ -211,19 +212,21 @@ typedef enum FunctionKind_t {
 
 typedef struct FunctionDefinition_t {
     // hashtable of parameters
-    // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
+    // associates a parameters name (const char*) with its parameter declaration
+    // (ParameterDeclaration)
     GArray* parameter; // Parameter
     Type* return_value;
     AST_NODE_PTR nodePtr;
     // body of function
-    Block *body;
+    Block* body;
     // name of function
     const char* name;
 } FunctionDefinition;
 
 typedef struct FunctionDeclaration_t {
     // hashtable of parameters
-    // associates a parameters name (const char*) with its parameter declaration (ParameterDeclaration)
+    // associates a parameters name (const char*) with its parameter declaration
+    // (ParameterDeclaration)
     GArray* parameter; // Parameter
     AST_NODE_PTR nodePtr;
     Type* return_value;
@@ -237,7 +240,7 @@ typedef struct Function_t {
         FunctionDeclaration declaration;
     } impl;
     AST_NODE_PTR nodePtr;
-    const char * name;
+    const char* name;
 } Function;
 
 Parameter get_param_from_func(Function* func, size_t index);
@@ -246,27 +249,24 @@ Parameter get_param_from_func(Function* func, size_t index);
 // |                 Variables                      |
 // '------------------------------------------------'
 
-typedef enum StorageQualifier_t {
-    Local,
-    Static,
-    Global
-} StorageQualifier;
+typedef enum StorageQualifier_t { Local, Static, Global } StorageQualifier;
 
 typedef struct VariableDeclaration_t {
     StorageQualifier qualifier;
-    Type *type;
+    Type* type;
     AST_NODE_PTR nodePtr;
 } VariableDeclaration;
 
 /**
  * @brief Definition of a variable
- * 
- * @attention NOTE: The types of the initializer and the declaration must be equal
- * 
+ *
+ * @attention NOTE: The types of the initializer and the declaration must be
+ * equal
+ *
  */
 typedef struct VariableDefiniton_t {
     VariableDeclaration declaration;
-    Expression *initializer;
+    Expression* initializer;
     AST_NODE_PTR nodePtr;
 } VariableDefiniton;
 
@@ -291,7 +291,7 @@ typedef struct Dereference_t {
     Expression* index;
     Expression* variable;
     AST_NODE_PTR nodePtr;
-}Dereference;
+} Dereference;
 
 typedef struct StorageExpr_t StorageExpr;
 
@@ -304,23 +304,24 @@ typedef struct StorageDereference_t {
 typedef struct AddressOf_t {
     Expression* variable;
     AST_NODE_PTR node_ptr;
-}AddressOf;
+} AddressOf;
 
 // .------------------------------------------------.
 // |                 Casts                          |
 // '------------------------------------------------'
 
 /**
- * @brief Perform a type cast, converting a value to different type whilest preserving as much of the original
- *        values information. 
+ * @brief Perform a type cast, converting a value to different type whilest
+ * preserving as much of the original values information.
  *
  * @attention NOTE: Must check wether the given value's type can be parsed into
  *       the target type without loss.
- *       Lossy mean possibly loosing information such when casting a float into an int (no fraction anymore). 
+ *       Lossy mean possibly loosing information such when casting a float into
+ * an int (no fraction anymore).
  *
  */
 typedef struct TypeCast_t {
-    Type *targetType;
+    Type* targetType;
     Expression* operand;
     AST_NODE_PTR nodePtr;
 } TypeCast;
@@ -328,12 +329,12 @@ typedef struct TypeCast_t {
 /**
  * @brief Perform a reinterpret cast.
  *
- * @attention NOTE: The given value's type must have the size in bytes as the target type.
- *                  Transmuting a short int into a float should yield an error.
- * 
+ * @attention NOTE: The given value's type must have the size in bytes as the
+ * target type. Transmuting a short int into a float should yield an error.
+ *
  */
 typedef struct Transmute_t {
-    Type *targetType;
+    Type* targetType;
     Expression* operand;
     AST_NODE_PTR nodePtr;
 } Transmute;
@@ -344,7 +345,7 @@ typedef struct Transmute_t {
 
 /**
  * @brief Represents the arithmetic operator.
- * 
+ *
  */
 typedef enum ArithmeticOperator_t {
     Add,
@@ -360,13 +361,9 @@ typedef enum ArithmeticOperator_t {
 
 /**
  * @brief Represents the relational operator.
- * 
+ *
  */
-typedef enum RelationalOperator_t {
-    Equal,
-    Greater,
-    Less
-} RelationalOperator;
+typedef enum RelationalOperator_t { Equal, Greater, Less } RelationalOperator;
 
 // .------------------------------------------------.
 // |                 Boolean                        |
@@ -420,11 +417,11 @@ typedef struct Operation_t {
     union OperationImplementation {
         ArithmeticOperator arithmetic;
         RelationalOperator relational;
-        BooleanOperator boolean; 
+        BooleanOperator boolean;
         LogicalOperator logical;
         BitwiseOperator bitwise;
     } impl;
-    GArray* operands; //Expression*
+    GArray* operands; // Expression*
     AST_NODE_PTR nodePtr;
 } Operation;
 
@@ -498,7 +495,7 @@ typedef struct Block_t {
 // '------------------------------------------------'
 
 typedef struct While_t {
-    Expression *conditon;
+    Expression* conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } While;
@@ -508,13 +505,13 @@ typedef struct While_t {
 // '------------------------------------------------'
 
 typedef struct If_t {
-    Expression *conditon;
+    Expression* conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } If;
 
 typedef struct ElseIf_t {
-    Expression *conditon;
+    Expression* conditon;
     Block block;
     AST_NODE_PTR nodePtr;
 } ElseIf;
@@ -584,7 +581,7 @@ typedef struct Statement_t {
         While whileLoop;
         Branch branch;
         Assignment assignment;
-        Variable *variable;
+        Variable* variable;
         Return returnStmt;
     } impl;
     AST_NODE_PTR nodePtr;
@@ -595,7 +592,7 @@ typedef struct Statement_t {
 // '------------------------------------------------'
 
 typedef struct Module_t {
-    GHashTable* boxes; //BoxType
+    GHashTable* boxes; // BoxType
     GHashTable* types; //
     GHashTable* functions;
     GHashTable* variables;
@@ -638,7 +635,7 @@ void delete_typecast(TypeCast* cast);
 
 void delete_box_member(BoxMember* member);
 
-void delete_box_type(BoxType *box_type);
+void delete_box_type(BoxType* box_type);
 
 void delete_composite([[maybe_unused]] CompositeType* composite);
 

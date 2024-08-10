@@ -8,10 +8,10 @@
 #include <glib.h>
 
 #define MAX_TARGETS_PER_PROJECT 100
-#define PROJECT_CONFIG_FILE "build.toml"
+#define PROJECT_CONFIG_FILE     "build.toml"
 
-#define PROJECT_OK 0
-#define PROJECT_TOML_ERR 1
+#define PROJECT_OK           0
+#define PROJECT_TOML_ERR     1
 #define PROJECT_SEMANTIC_ERR 2
 
 #define TOML_ERROR_MSG_BUF 256
@@ -49,7 +49,8 @@ typedef struct TargetConfig_t {
     char* root_module;
     // output directory for binaries
     char* output_directory;
-    // output directory for intermediate representations (LLVM-IR, Assembly, ...)
+    // output directory for intermediate representations (LLVM-IR, Assembly,
+    // ...)
     char* archive_directory;
     // binary driver for executable generation
     char* driver;
@@ -130,7 +131,7 @@ TargetConfig* default_target_config_from_args();
  * @return
  */
 [[gnu::nonnull(1)]]
-int load_project_config(ProjectConfig *config);
+int load_project_config(ProjectConfig* config);
 
 /**
  * @brief Print a help dialog to stdout.
@@ -182,10 +183,9 @@ const Option* get_option(const char* option);
  * @param command
  * @return an array of options that followed command.
  */
-[[gnu::nonnull(1)]]
-[[nodiscard("must be freed")]]
+[[gnu::nonnull(1)]] [[nodiscard("must be freed")]]
 GArray* get_non_options_after(const char* command);
 
 void init_toml();
 
-#endif //GEMSTONE_OPT_H
+#endif // GEMSTONE_OPT_H

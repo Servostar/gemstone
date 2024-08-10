@@ -1,21 +1,21 @@
 
 #include <codegen/backend.h>
+#include <llvm-c/Analysis.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
 #include <llvm-c/Types.h>
-#include <llvm-c/Analysis.h>
 #include <llvm/backend.h>
-#include <llvm/parser.h>
+#include <llvm/link/lld.h>
+#include <llvm/llvm-ir/func.h>
 #include <llvm/llvm-ir/types.h>
 #include <llvm/llvm-ir/variables.h>
-#include <llvm/llvm-ir/func.h>
+#include <llvm/parser.h>
 #include <set/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/log.h>
-#include <llvm/link/lld.h>
 
 BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
                        const TargetConfig* config) {
@@ -28,7 +28,8 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
 
     char* basename = g_strjoin(".", target->name.str, "ll", NULL);
     // construct file name
-    const char* filename = g_build_filename(config->archive_directory, basename, NULL);
+    const char* filename =
+      g_build_filename(config->archive_directory, basename, NULL);
 
     INFO("Writing LLVM-IR to %s", filename);
 
@@ -51,7 +52,7 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
 
     INFO("%ld bytes written to %s", bytes, filename);
 
-    g_free((char*)filename);
+    g_free((char*) filename);
     g_free(basename);
 
     // clean up LLVM-IR string
@@ -72,11 +73,13 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
     switch (file_type) {
         case LLVMAssemblyFile:
             basename = g_strjoin(".", config->name, "s", NULL);
-            filename = g_build_filename(config->archive_directory, basename, NULL);
+            filename =
+              g_build_filename(config->archive_directory, basename, NULL);
             break;
         case LLVMObjectFile:
             basename = g_strjoin(".", config->name, "o", NULL);
-            filename = g_build_filename(config->archive_directory, basename, NULL);
+            filename =
+              g_build_filename(config->archive_directory, basename, NULL);
             break;
         default:
             return new_backend_impl_error(Implementation, NULL,
@@ -86,10 +89,11 @@ BackendError emit_module_to_file(LLVMBackendCompileUnit* unit,
     INFO("export to file: %s", filename);
 
     if (LLVMTargetMachineEmitToFile(target_machine, unit->module, filename,
-                                    file_type, &error) != 0) {
+                                    file_type, &error)
+        != 0) {
         ERROR("failed to emit code: %s", error);
         err =
-            new_backend_impl_error(Implementation, NULL, "failed to emit code");
+          new_backend_impl_error(Implementation, NULL, "failed to emit code");
 
     } else {
         print_message(Info, "Generated code was written to: %s", filename);
@@ -110,7 +114,7 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
          target->triple.str, target->features.str);
 
     LLVMTargetRef llvm_target = NULL;
-    char* error = NULL;
+    char* error               = NULL;
 
     LLVMInitializeAllTargets();
     LLVMInitializeAllTargetInfos();
@@ -120,8 +124,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
     LLVMInitializeAllAsmPrinters();
 
     DEBUG("creating target...");
-    if (LLVMGetTargetFromTriple(target->triple.str, &llvm_target, &error) !=
-        0) {
+    if (LLVMGetTargetFromTriple(target->triple.str, &llvm_target, &error)
+        != 0) {
         ERROR("failed to create target machine: %s", error);
         err = new_backend_impl_error(Implementation, NULL,
                                      "unable to create target machine");
@@ -131,8 +135,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
 
     DEBUG("Creating target machine...");
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(
-        llvm_target, target->triple.str, target->cpu.str, target->features.str,
-        target->opt, target->reloc, target->model);
+      llvm_target, target->triple.str, target->cpu.str, target->features.str,
+      target->opt, target->reloc, target->model);
 
     print_message(Info, "Generating code for: %s", target->triple.str);
 
@@ -145,8 +149,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
         return err;
     }
 
-    err = emit_module_to_file(unit, target_machine, LLVMObjectFile, error,
-                              config);
+    err =
+      emit_module_to_file(unit, target_machine, LLVMObjectFile, error, config);
 
     LLVMDisposeTargetMachine(target_machine);
 
@@ -226,7 +230,8 @@ static BackendError build_module(LLVMBackendCompileUnit* unit,
     char* error = NULL;
     if (LLVMVerifyModule(unit->module, LLVMReturnStatusAction, &error)) {
         print_message(Error, "Unable to compile due to: %s", error);
-        err = new_backend_impl_error(Implementation, NULL, "LLVM backend verification error, see stdout");
+        err = new_backend_impl_error(
+          Implementation, NULL, "LLVM backend verification error, see stdout");
     }
     LLVMDisposeMessage(error);
 
@@ -246,7 +251,7 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
     DEBUG("creating LLVM context and module");
     unit->context = LLVMContextCreate();
     unit->module =
-        LLVMModuleCreateWithNameInContext(config->root_module, unit->context);
+      LLVMModuleCreateWithNameInContext(config->root_module, unit->context);
 
     LLVMGlobalScope* global_scope = new_global_scope(module);
 
@@ -260,14 +265,16 @@ BackendError parse_module(const Module* module, const TargetConfig* config) {
         err = export_module(unit, &target, config);
         if (err.kind == Success) {
             if (config->mode == Application) {
-                TargetLinkConfig* link_config = lld_create_link_config(&target, config, module);
+                TargetLinkConfig* link_config =
+                  lld_create_link_config(&target, config, module);
 
                 if (link_config != NULL) {
                     err = lld_link_target(link_config);
 
                     lld_delete_link_config(link_config);
                 } else {
-                    err = new_backend_impl_error(Implementation, NULL, "libclang error");
+                    err = new_backend_impl_error(Implementation, NULL,
+                                                 "libclang error");
                 }
             }
         }
@@ -289,10 +296,10 @@ LLVMGlobalScope* new_global_scope(const Module* module) {
     DEBUG("creating global scope...");
     LLVMGlobalScope* scope = malloc(sizeof(LLVMGlobalScope));
 
-    scope->module = (Module*) module;
+    scope->module    = (Module*) module;
     scope->functions = g_hash_table_new(g_str_hash, g_str_equal);
     scope->variables = g_hash_table_new(g_str_hash, g_str_equal);
-    scope->types = g_hash_table_new(g_str_hash, g_str_equal);
+    scope->types     = g_hash_table_new(g_str_hash, g_str_equal);
 
     return scope;
 }

@@ -2,12 +2,12 @@
 // Created by servostar on 6/5/24.
 //
 
-#include <mem/cache.h>
-#include <sys/log.h>
-#include <glib.h>
-#include <string.h>
 #include <assert.h>
 #include <cfg/opt.h>
+#include <glib.h>
+#include <mem/cache.h>
+#include <string.h>
+#include <sys/log.h>
 
 static GHashTable* namespaces = NULL;
 
@@ -39,16 +39,25 @@ typedef struct MemoryNamespace_t {
 
 typedef MemoryNamespace* MemoryNamespaceRef;
 
-static void namespace_statistics_print(MemoryNamespaceStatistic* memoryNamespaceStatistic, char* name) {
+static void
+  namespace_statistics_print(MemoryNamespaceStatistic* memoryNamespaceStatistic,
+                             char* name) {
     printf("Memory namespace statistics: `%s`\n", name);
     printf("------------------------------\n");
-    printf("  allocated bytes:      %ld\n", memoryNamespaceStatistic->bytes_allocated);
-    printf("  allocations:          %ld\n", memoryNamespaceStatistic->allocation_count);
-    printf("  reallocations:        %ld\n", memoryNamespaceStatistic->reallocation_count);
-    printf("  frees:                %ld\n", memoryNamespaceStatistic->manual_free_count);
-    printf("  faulty allocations:   %ld\n", memoryNamespaceStatistic->faulty_allocations);
-    printf("  faulty reallocations: %ld\n", memoryNamespaceStatistic->faulty_reallocations);
-    printf("  purged allocations:   %ld\n", memoryNamespaceStatistic->purged_free_count);
+    printf("  allocated bytes:      %ld\n",
+           memoryNamespaceStatistic->bytes_allocated);
+    printf("  allocations:          %ld\n",
+           memoryNamespaceStatistic->allocation_count);
+    printf("  reallocations:        %ld\n",
+           memoryNamespaceStatistic->reallocation_count);
+    printf("  frees:                %ld\n",
+           memoryNamespaceStatistic->manual_free_count);
+    printf("  faulty allocations:   %ld\n",
+           memoryNamespaceStatistic->faulty_allocations);
+    printf("  faulty reallocations: %ld\n",
+           memoryNamespaceStatistic->faulty_reallocations);
+    printf("  purged allocations:   %ld\n",
+           memoryNamespaceStatistic->purged_free_count);
     printf("\n");
 }
 
@@ -58,14 +67,14 @@ static void* namespace_malloc(MemoryNamespaceRef memoryNamespace, size_t size) {
 
     MemoryBlock block;
     block.block_ptr = malloc(size);
-    block.kind = GenericBlock;
+    block.kind      = GenericBlock;
 
     if (block.block_ptr == NULL) {
-        memoryNamespace->statistic.faulty_allocations ++;
+        memoryNamespace->statistic.faulty_allocations++;
     } else {
         g_array_append_val(memoryNamespace->blocks, block);
 
-        memoryNamespace->statistic.allocation_count ++;
+        memoryNamespace->statistic.allocation_count++;
         memoryNamespace->statistic.bytes_allocated += size;
     }
 
@@ -86,9 +95,11 @@ static void namespace_free_block(MemoryBlock block) {
     }
 }
 
-static gboolean namespace_free(MemoryNamespaceRef memoryNamespace, void* block) {
+static gboolean namespace_free(MemoryNamespaceRef memoryNamespace,
+                               void* block) {
     for (guint i = 0; i < memoryNamespace->blocks->len; i++) {
-        MemoryBlock current_block = g_array_index(memoryNamespace->blocks, MemoryBlock, i);
+        MemoryBlock current_block =
+          g_array_index(memoryNamespace->blocks, MemoryBlock, i);
 
         if (current_block.block_ptr == block) {
             assert(block != NULL);
@@ -105,19 +116,22 @@ static gboolean namespace_free(MemoryNamespaceRef memoryNamespace, void* block) 
     return FALSE;
 }
 
-static void* namespace_realloc(MemoryNamespaceRef memoryNamespace, void* block, size_t size) {
+static void* namespace_realloc(MemoryNamespaceRef memoryNamespace, void* block,
+                               size_t size) {
     void* reallocated_block = NULL;
 
     for (guint i = 0; i < memoryNamespace->blocks->len; i++) {
-        MemoryBlock current_block = g_array_index(memoryNamespace->blocks, MemoryBlock, i);
+        MemoryBlock current_block =
+          g_array_index(memoryNamespace->blocks, MemoryBlock, i);
 
         if (current_block.block_ptr == block) {
             reallocated_block = realloc(current_block.block_ptr, size);
 
             if (reallocated_block != NULL) {
-                g_array_index(memoryNamespace->blocks, MemoryBlock, i).block_ptr = reallocated_block;
+                g_array_index(memoryNamespace->blocks, MemoryBlock, i)
+                  .block_ptr = reallocated_block;
                 memoryNamespace->statistic.bytes_allocated += size;
-                memoryNamespace->statistic.reallocation_count ++;
+                memoryNamespace->statistic.reallocation_count++;
             } else {
                 memoryNamespace->statistic.faulty_reallocations++;
             }
@@ -137,51 +151,55 @@ static void namespace_delete(MemoryNamespaceRef memoryNamespace) {
 static void namespace_purge(MemoryNamespaceRef memoryNamespace) {
 
     for (guint i = 0; i < memoryNamespace->blocks->len; i++) {
-        MemoryBlock current_block = g_array_index(memoryNamespace->blocks, MemoryBlock, i);
+        MemoryBlock current_block =
+          g_array_index(memoryNamespace->blocks, MemoryBlock, i);
 
         namespace_free_block(current_block);
 
-        memoryNamespace->statistic.purged_free_count ++;
+        memoryNamespace->statistic.purged_free_count++;
     }
 
-    g_array_remove_range(memoryNamespace->blocks, 0, memoryNamespace->blocks->len);
+    g_array_remove_range(memoryNamespace->blocks, 0,
+                         memoryNamespace->blocks->len);
 }
 
 static MemoryNamespaceRef namespace_new() {
     MemoryNamespaceRef memoryNamespace = malloc(sizeof(MemoryNamespace));
 
     memoryNamespace->blocks = g_array_new(FALSE, FALSE, sizeof(MemoryBlock));
-    memoryNamespace->statistic.bytes_allocated = 0;
-    memoryNamespace->statistic.allocation_count = 0;
-    memoryNamespace->statistic.manual_free_count = 0;
+    memoryNamespace->statistic.bytes_allocated      = 0;
+    memoryNamespace->statistic.allocation_count     = 0;
+    memoryNamespace->statistic.manual_free_count    = 0;
     memoryNamespace->statistic.faulty_reallocations = 0;
-    memoryNamespace->statistic.faulty_allocations = 0;
-    memoryNamespace->statistic.purged_free_count = 0;
-    memoryNamespace->statistic.reallocation_count = 0;
+    memoryNamespace->statistic.faulty_allocations   = 0;
+    memoryNamespace->statistic.purged_free_count    = 0;
+    memoryNamespace->statistic.reallocation_count   = 0;
 
     return memoryNamespace;
 }
 
-GArray *namespace_new_g_array(MemoryNamespaceRef namespace, guint size) {
+GArray* namespace_new_g_array(MemoryNamespaceRef namespace, guint size) {
     MemoryBlock block;
     block.block_ptr = g_array_new(FALSE, FALSE, size);
-    block.kind = GLIB_Array;
+    block.kind      = GLIB_Array;
 
     g_array_append_val(namespace->blocks, block);
     namespace->statistic.bytes_allocated += sizeof(GArray*);
-    namespace->statistic.allocation_count ++;
+    namespace->statistic.allocation_count++;
 
     return block.block_ptr;
 }
 
-GHashTable *namespace_new_g_hash_table(MemoryNamespaceRef namespace, GHashFunc hash_func, GEqualFunc key_equal_func) {
+GHashTable* namespace_new_g_hash_table(MemoryNamespaceRef namespace,
+                                       GHashFunc hash_func,
+                                       GEqualFunc key_equal_func) {
     MemoryBlock block;
     block.block_ptr = g_hash_table_new(hash_func, key_equal_func);
-    block.kind = GLIB_HashTable;
+    block.kind      = GLIB_HashTable;
 
     g_array_append_val(namespace->blocks, block);
     namespace->statistic.bytes_allocated += sizeof(GHashTable*);
-    namespace->statistic.allocation_count ++;
+    namespace->statistic.allocation_count++;
 
     return block.block_ptr;
 }
@@ -193,12 +211,13 @@ static void cleanup() {
     }
 
     GHashTableIter iter;
-    char* name = NULL;
+    char* name                         = NULL;
     MemoryNamespaceRef memoryNamespace = NULL;
 
     g_hash_table_iter_init(&iter, namespaces);
 
-    while (g_hash_table_iter_next(&iter, (gpointer) &name, (gpointer) &memoryNamespace)) {
+    while (g_hash_table_iter_next(&iter, (gpointer) &name,
+                                  (gpointer) &memoryNamespace)) {
         assert(name != NULL);
         assert(memoryNamespace != NULL);
 
@@ -229,7 +248,7 @@ static MemoryNamespaceRef check_namespace(MemoryNamespaceName name) {
     }
 }
 
-void *mem_alloc(MemoryNamespaceName name, size_t size) {
+void* mem_alloc(MemoryNamespaceName name, size_t size) {
     MemoryNamespaceRef cache = check_namespace(name);
 
     if (cache == NULL) {
@@ -239,7 +258,7 @@ void *mem_alloc(MemoryNamespaceName name, size_t size) {
     return namespace_malloc(cache, size);
 }
 
-void *mem_realloc(MemoryNamespaceName name, void *ptr, size_t size) {
+void* mem_realloc(MemoryNamespaceName name, void* ptr, size_t size) {
     MemoryNamespaceRef cache = check_namespace(name);
 
     if (cache == NULL) {
@@ -249,7 +268,7 @@ void *mem_realloc(MemoryNamespaceName name, void *ptr, size_t size) {
     return namespace_realloc(cache, ptr, size);
 }
 
-void mem_free_from(MemoryNamespaceName name, void *memory) {
+void mem_free_from(MemoryNamespaceName name, void* memory) {
     MemoryNamespaceRef cache = check_namespace(name);
 
     namespace_free(cache, memory);
@@ -261,7 +280,8 @@ void mem_free(void* memory) {
     MemoryNamespaceRef memoryNamespace;
 
     g_hash_table_iter_init(&iter, namespaces);
-    while (g_hash_table_iter_next(&iter, (gpointer) &name, (gpointer) &memoryNamespace)) {
+    while (g_hash_table_iter_next(&iter, (gpointer) &name,
+                                  (gpointer) &memoryNamespace)) {
 
         if (namespace_free(memoryNamespace, memory)) {
             break;
@@ -284,7 +304,7 @@ char* mem_strdup(MemoryNamespaceName name, char* string) {
 }
 
 void* mem_clone(MemoryNamespaceName name, void* data, size_t size) {
-    void *clone = mem_alloc(name, size);
+    void* clone = mem_alloc(name, size);
 
     memcpy(clone, data, size);
 
@@ -297,31 +317,36 @@ void print_memory_statistics() {
     MemoryNamespaceRef memoryNamespace;
 
     MemoryNamespaceStatistic total;
-    total.bytes_allocated = 0;
+    total.bytes_allocated      = 0;
     total.faulty_reallocations = 0;
-    total.faulty_allocations = 0;
-    total.manual_free_count = 0;
-    total.allocation_count = 0;
-    total.purged_free_count = 0;
-    total.reallocation_count = 0;
+    total.faulty_allocations   = 0;
+    total.manual_free_count    = 0;
+    total.allocation_count     = 0;
+    total.purged_free_count    = 0;
+    total.reallocation_count   = 0;
 
     g_hash_table_iter_init(&iter, namespaces);
-    while (g_hash_table_iter_next(&iter, (gpointer) &name, (gpointer) &memoryNamespace)) {
+    while (g_hash_table_iter_next(&iter, (gpointer) &name,
+                                  (gpointer) &memoryNamespace)) {
 
         namespace_statistics_print(&memoryNamespace->statistic, name);
 
         total.bytes_allocated += memoryNamespace->statistic.bytes_allocated;
-        total.faulty_reallocations += memoryNamespace->statistic.faulty_reallocations;
-        total.faulty_allocations += memoryNamespace->statistic.faulty_allocations;
+        total.faulty_reallocations +=
+          memoryNamespace->statistic.faulty_reallocations;
+        total.faulty_allocations +=
+          memoryNamespace->statistic.faulty_allocations;
         total.manual_free_count += memoryNamespace->statistic.manual_free_count;
         total.allocation_count += memoryNamespace->statistic.allocation_count;
         total.purged_free_count += memoryNamespace->statistic.purged_free_count;
-        total.reallocation_count += memoryNamespace->statistic.reallocation_count;
+        total.reallocation_count +=
+          memoryNamespace->statistic.reallocation_count;
     }
 
     namespace_statistics_print(&total, "summary");
 
-    printf("Note: untracked are memory allocations from external libraries and non-gc managed components.\n");
+    printf("Note: untracked are memory allocations from external libraries and "
+           "non-gc managed components.\n");
 }
 
 GArray* mem_new_g_array(MemoryNamespaceName name, guint element_size) {
@@ -334,7 +359,8 @@ GArray* mem_new_g_array(MemoryNamespaceName name, guint element_size) {
     return namespace_new_g_array(cache, element_size);
 }
 
-GHashTable* mem_new_g_hash_table(MemoryNamespaceName name, GHashFunc hash_func, GEqualFunc key_equal_func) {
+GHashTable* mem_new_g_hash_table(MemoryNamespaceName name, GHashFunc hash_func,
+                                 GEqualFunc key_equal_func) {
     MemoryNamespaceRef cache = check_namespace(name);
 
     if (cache == NULL) {

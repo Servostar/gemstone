@@ -17,4 +17,4 @@ typedef struct BinaryDriver_t {
     driver_link link_func;
 } BinaryDriver;
 
-#endif //GEMSTONE_DRIVER_H
+#endif // GEMSTONE_DRIVER_H

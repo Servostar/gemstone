@@ -4,11 +4,7 @@
 
 #include <llvm-c/TargetMachine.h>
 
-enum StringAllocation_t {
-    LLVM,
-    LIBC,
-    NONE
-};
+enum StringAllocation_t { LLVM, LIBC, NONE };
 
 typedef struct String_t {
     enum StringAllocation_t allocation;

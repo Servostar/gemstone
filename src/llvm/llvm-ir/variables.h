@@ -14,4 +14,4 @@ BackendError impl_global_variables(LLVMBackendCompileUnit* unit,
 
 LLVMValueRef get_global_variable(LLVMGlobalScope* scope, char* name);
 
-#endif  // LLVM_BACKEND_VARIABLES_H_
+#endif // LLVM_BACKEND_VARIABLES_H_

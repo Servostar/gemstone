@@ -23,4 +23,4 @@ BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
                                   TypeValue* gemstone_value,
                                   LLVMValueRef* llvm_value);
 
-#endif  // LLVM_BACKEND_TYPES_H_
+#endif // LLVM_BACKEND_TYPES_H_

@@ -2,23 +2,26 @@
 // Created by servostar on 6/4/24.
 //
 
+#include <link/lib.h>
 #include <llvm/link/lld.h>
-#include <sys/log.h>
 #include <mem/cache.h>
 #include <sys/col.h>
-#include <link/lib.h>
+#include <sys/log.h>
 
-const char* get_absolute_link_path(const TargetConfig* config, const char* link_target_name) {
+const char* get_absolute_link_path(const TargetConfig* config,
+                                   const char* link_target_name) {
     INFO("resolving absolute path for link target: %s", link_target_name);
 
     for (guint i = 0; i < config->link_search_paths->len; i++) {
-        const char* link_directory_path = g_array_index(config->link_search_paths, char*, i);
+        const char* link_directory_path =
+          g_array_index(config->link_search_paths, char*, i);
 
         INFO("searching at: %s", link_directory_path);
 
-        char* path = g_build_filename(link_directory_path, link_target_name, NULL);
-        char* cwd = g_get_current_dir();
-        char* canonical = g_canonicalize_filename(path, cwd);
+        char* path =
+          g_build_filename(link_directory_path, link_target_name, NULL);
+        char* cwd              = g_get_current_dir();
+        char* canonical        = g_canonicalize_filename(path, cwd);
         char* cached_canonical = mem_strdup(MemoryNamespaceLld, canonical);
 
         const gboolean exists = g_file_test(canonical, G_FILE_TEST_EXISTS);
@@ -38,21 +41,28 @@ const char* get_absolute_link_path(const TargetConfig* config, const char* link_
     return NULL;
 }
 
-TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* target, const TargetConfig* target_config, const Module* module) {
+TargetLinkConfig* lld_create_link_config(__attribute__((unused))
+                                         const Target* target,
+                                         const TargetConfig* target_config,
+                                         const Module* module) {
     DEBUG("generating link configuration");
 
-    TargetLinkConfig* config = mem_alloc(MemoryNamespaceLld, sizeof(TargetLinkConfig));
+    TargetLinkConfig* config =
+      mem_alloc(MemoryNamespaceLld, sizeof(TargetLinkConfig));
 
     config->fatal_warnings = target_config->lld_fatal_warnings;
-    config->object_file_names = mem_new_g_array(MemoryNamespaceLld, sizeof(char*));
+    config->object_file_names =
+      mem_new_g_array(MemoryNamespaceLld, sizeof(char*));
     config->colorize = stdout_supports_ansi_esc();
-    config->driver = target_config->driver;
+    config->driver   = target_config->driver;
 
     // append build object file
     char* basename = g_strjoin(".", target_config->name, "o", NULL);
-    char* filename = g_build_filename(target_config->archive_directory, basename, NULL);
+    char* filename =
+      g_build_filename(target_config->archive_directory, basename, NULL);
     g_free(basename);
-    const char* target_object = get_absolute_link_path(target_config, (const char*) filename);
+    const char* target_object =
+      get_absolute_link_path(target_config, (const char*) filename);
     if (target_object == NULL) {
         ERROR("failed to resolve path to target object: %s", filename);
         g_free(filename);
@@ -65,7 +75,8 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
     {
         // output file after linking
         basename = g_strjoin(".", target_config->name, "out", NULL);
-        filename = g_build_filename(target_config->output_directory, basename, NULL);
+        filename =
+          g_build_filename(target_config->output_directory, basename, NULL);
 
         config->output_file = mem_strdup(MemoryNamespaceLld, filename);
 
@@ -83,10 +94,14 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused)) const Target* t
 
         const char* library = g_strjoin("", "libgsc", dependency, ".a", NULL);
 
-        const char* dependency_object = get_absolute_link_path(target_config, library);
+        const char* dependency_object =
+          get_absolute_link_path(target_config, library);
         if (dependency_object == NULL) {
             ERROR("failed to resolve path to dependency object: %s", library);
-            print_message(Warning, "failed to resolve path to dependency object: %s", dependency);            lld_delete_link_config(config);
+            print_message(Warning,
+                          "failed to resolve path to dependency object: %s",
+                          dependency);
+            lld_delete_link_config(config);
             lld_delete_link_config(config);
             g_free((void*) library);
             return NULL;

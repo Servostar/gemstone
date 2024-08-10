@@ -3,12 +3,12 @@
 #include <llvm-c/Types.h>
 #include <llvm/llvm-ir/types.h>
 #include <llvm/parser.h>
+#include <mem/cache.h>
+#include <set/set.h>
 #include <set/types.h>
 #include <sys/log.h>
-#include <set/set.h>
-#include <mem/cache.h>
 
-#define BASE_BYTES 4
+#define BASE_BYTES    4
 #define BITS_PER_BYTE 8
 
 static BackendError get_const_primitive_value(PrimitiveType primitive,
@@ -24,7 +24,7 @@ static BackendError get_const_primitive_value(PrimitiveType primitive,
             break;
         case Char:
             gunichar codepoint = g_utf8_get_char(value);
-            *llvm_value = LLVMConstInt(llvm_type, codepoint, false);
+            *llvm_value        = LLVMConstInt(llvm_type, codepoint, false);
             break;
     }
 
@@ -39,28 +39,35 @@ static BackendError get_const_composite_value(CompositeType composite,
                                      llvm_value);
 }
 
-BackendError impl_reference_const(LLVMBackendCompileUnit* unit, TypeValue* value, LLVMValueRef* llvm_value) {
+BackendError impl_reference_const(LLVMBackendCompileUnit* unit,
+                                  TypeValue* value, LLVMValueRef* llvm_value) {
     BackendError err = SUCCESS;
     if (compareTypes(value->type, (Type*) &StringLiteralType)) {
         // is string literal
-        LLVMValueRef string_value = LLVMConstString(value->value, strlen(value->value), false);
+        LLVMValueRef string_value =
+          LLVMConstString(value->value, strlen(value->value), false);
 
         char uuid[9];
         sprintf(uuid, "%08x", g_str_hash(value->value));
 
-        LLVMValueRef string_global = LLVMAddGlobal(unit->module, LLVMTypeOf(string_value), uuid);
+        LLVMValueRef string_global =
+          LLVMAddGlobal(unit->module, LLVMTypeOf(string_value), uuid);
         LLVMSetInitializer(string_global, string_value);
         LLVMSetGlobalConstant(string_global, true);
         LLVMSetUnnamedAddress(string_global, LLVMGlobalUnnamedAddr);
         LLVMSetAlignment(string_global, 1);
 
         // Cast the global variable to a pointer type if needed
-        LLVMTypeRef i8_ptr_type = LLVMPointerType(LLVMInt8TypeInContext(unit->context), 0);
-        LLVMValueRef global_str_ptr = LLVMConstBitCast(string_global, i8_ptr_type);
+        LLVMTypeRef i8_ptr_type =
+          LLVMPointerType(LLVMInt8TypeInContext(unit->context), 0);
+        LLVMValueRef global_str_ptr =
+          LLVMConstBitCast(string_global, i8_ptr_type);
 
         *llvm_value = global_str_ptr;
     } else {
-        err = new_backend_impl_error(Implementation, value->nodePtr, "reference initializer can only be string literals");
+        err = new_backend_impl_error(
+          Implementation, value->nodePtr,
+          "reference initializer can only be string literals");
     }
     return err;
 }
@@ -79,22 +86,22 @@ BackendError get_const_type_value(LLVMBackendCompileUnit* unit,
 
     switch (gemstone_value->type->kind) {
         case TypeKindPrimitive:
-            err = get_const_primitive_value(gemstone_value->type->impl.primitive,
-                                            llvm_type, gemstone_value->value,
-                                            llvm_value);
+            err = get_const_primitive_value(
+              gemstone_value->type->impl.primitive, llvm_type,
+              gemstone_value->value, llvm_value);
             break;
         case TypeKindComposite:
-            err = get_const_composite_value(gemstone_value->type->impl.composite,
-                                            llvm_type, gemstone_value->value,
-                                            llvm_value);
+            err = get_const_composite_value(
+              gemstone_value->type->impl.composite, llvm_type,
+              gemstone_value->value, llvm_value);
             break;
         case TypeKindReference:
             err = impl_reference_const(unit, gemstone_value, llvm_value);
             break;
         case TypeKindBox:
             err =
-                new_backend_impl_error(Implementation, gemstone_value->nodePtr,
-                                       "boxes cannot be constant value");
+              new_backend_impl_error(Implementation, gemstone_value->nodePtr,
+                                     "boxes cannot be constant value");
             break;
         default:
             PANIC("invalid value kind: %ld", gemstone_value->type->kind);
@@ -128,7 +135,7 @@ BackendError impl_primtive_type(LLVMBackendCompileUnit* unit,
 
 BackendError impl_integral_type(LLVMBackendCompileUnit* unit, Scale scale,
                                 LLVMTypeRef* llvm_type) {
-    size_t bits = (int)(BASE_BYTES * scale) * BITS_PER_BYTE;
+    size_t bits = (int) (BASE_BYTES * scale) * BITS_PER_BYTE;
     DEBUG("implementing integral type of size: %ld", bits);
     LLVMTypeRef integral_type = LLVMIntTypeInContext(unit->context, bits);
 
@@ -142,7 +149,7 @@ BackendError impl_float_type(LLVMBackendCompileUnit* unit, Scale scale,
     DEBUG("implementing floating point...");
     LLVMTypeRef float_type = NULL;
 
-    size_t bytes = (int)(scale * BASE_BYTES);
+    size_t bytes = (int) (scale * BASE_BYTES);
     DEBUG("requested float of bytes: %ld", bytes);
     switch (bytes) {
         case 2:
@@ -188,8 +195,8 @@ BackendError impl_composite_type(LLVMBackendCompileUnit* unit,
             } else {
                 ERROR("unsigned floating point not supported");
                 err = new_backend_impl_error(
-                    Implementation, composite->nodePtr,
-                    "unsigned floating-point not supported");
+                  Implementation, composite->nodePtr,
+                  "unsigned floating-point not supported");
             }
             break;
         default:
@@ -228,7 +235,7 @@ BackendError get_type_impl(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
             break;
         case TypeKindBox:
             err =
-                impl_box_type(unit, scope, gemstone_type->impl.box, llvm_type);
+              impl_box_type(unit, scope, gemstone_type->impl.box, llvm_type);
             break;
         default:
             PANIC("invalid type kind: %ld", gemstone_type->kind);
@@ -252,9 +259,9 @@ BackendError impl_box_type(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
 
     DEBUG("implementing box members...");
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
-        Type* member_type = ((BoxMember*)val)->type;
+        Type* member_type = ((BoxMember*) val)->type;
 
-        DEBUG("implementing member: %s ", ((BoxMember*)val)->name);
+        DEBUG("implementing member: %s ", ((BoxMember*) val)->name);
 
         LLVMTypeRef llvm_local_type = NULL;
         err = get_type_impl(unit, scope, member_type, &llvm_local_type);
@@ -269,7 +276,7 @@ BackendError impl_box_type(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
 
     if (err.kind == Success) {
         *llvm_type =
-            LLVMStructType((LLVMTypeRef*)members->data, members->len, 0);
+          LLVMStructType((LLVMTypeRef*) members->data, members->len, 0);
     }
 
     g_array_free(members, FALSE);
@@ -284,7 +291,7 @@ BackendError impl_reference_type(LLVMBackendCompileUnit* unit,
     DEBUG("implementing reference type...");
     BackendError err = SUCCESS;
     LLVMTypeRef type = NULL;
-    err = get_type_impl(unit, scope, reference, &type);
+    err              = get_type_impl(unit, scope, reference, &type);
 
     if (err.kind == Success) {
         *llvm_type = LLVMPointerType(type, 0);
@@ -302,16 +309,18 @@ BackendError impl_type(LLVMBackendCompileUnit* unit, Type* gemstone_type,
     err = get_type_impl(unit, scope, gemstone_type, &llvm_type);
 
     if (err.kind == Success) {
-        g_hash_table_insert(scope->types, (gpointer)alias, llvm_type);
+        g_hash_table_insert(scope->types, (gpointer) alias, llvm_type);
     }
 
     return err;
 }
 
-BackendError impl_type_define(LLVMBackendCompileUnit* unit, Typedefine* gemstone_type,
-                       const char* alias, LLVMGlobalScope* scope) {
+BackendError impl_type_define(LLVMBackendCompileUnit* unit,
+                              Typedefine* gemstone_type, const char* alias,
+                              LLVMGlobalScope* scope) {
     BackendError err = SUCCESS;
-    DEBUG("implementing type of kind: %ld as %s", gemstone_type->type->kind, alias);
+    DEBUG("implementing type of kind: %ld as %s", gemstone_type->type->kind,
+          alias);
 
     err = impl_type(unit, gemstone_type->type, alias, scope);
 
@@ -330,7 +339,8 @@ BackendError impl_types(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
     BackendError err = SUCCESS;
 
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
-        err = impl_type_define(unit, (Typedefine*) val, (const char*)key, scope);
+        err =
+          impl_type_define(unit, (Typedefine*) val, (const char*) key, scope);
 
         if (err.kind != Success) {
             break;
@@ -375,8 +385,8 @@ BackendError get_composite_default_value(CompositeType* composite,
                 err = get_primitive_default_value(Float, llvm_type, llvm_value);
             } else {
                 err = new_backend_impl_error(
-                    Implementation, composite->nodePtr,
-                    "unsigned floating-point not supported");
+                  Implementation, composite->nodePtr,
+                  "unsigned floating-point not supported");
             }
             break;
         default:
@@ -411,7 +421,7 @@ BackendError get_box_default_value(LLVMBackendCompileUnit* unit,
     GArray* constants = g_array_new(FALSE, FALSE, sizeof(LLVMValueRef));
 
     while (g_hash_table_iter_next(&iterator, &key, &val) != FALSE) {
-        Type* member_type = ((BoxMember*)val)->type;
+        Type* member_type = ((BoxMember*) val)->type;
 
         LLVMValueRef constant = NULL;
         err = get_type_default_value(unit, scope, member_type, &constant);
@@ -424,7 +434,7 @@ BackendError get_box_default_value(LLVMBackendCompileUnit* unit,
     DEBUG("build %ld member default values", constants->len);
 
     *llvm_value = LLVMConstNamedStruct(
-        llvm_type, (LLVMValueRef*)constants->data, constants->len);
+      llvm_type, (LLVMValueRef*) constants->data, constants->len);
 
     g_array_free(constants, FALSE);
 
