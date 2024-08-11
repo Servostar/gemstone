@@ -1,16 +1,13 @@
 [project]
-name = "gemstone standard library"
+name = "gscstd"
 version = "0.1.0"
-description = "Cross platform standard library for thr gemstone programming language."
+description = "glibc build of the gemstone standard library"
 license = "GPL-2.0"
 authors = [ "Sven Vogel <sven.vogel123@web.de>" ]
 
-[target.release]
-root = "src/std.gem"
+[target.gscstd]
+import-paths = [ "glibc" ]
+root = "glibc/std.gsc"
 mode = "library"
 output = "bin"
 archive = "archive"
-print_ast = false
-print_asm = false
-print_ir = false
-opt = 3

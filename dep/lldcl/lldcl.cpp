@@ -44,7 +44,7 @@ int lld_main(int Argc, const char **Argv, const char **outstr) {
 
     *outstr = strdup(stderr.append(stdout).c_str());
 
-    return result.retCode;
+    return !result.retCode && result.canRunAgain;
 }
 
 } // extern "C"

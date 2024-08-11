@@ -92,7 +92,7 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused))
     for (guint i = 0; i < module->imports->len; i++) {
         const char* dependency = g_array_index(module->imports, const char*, i);
 
-        const char* library = g_strjoin("", "libgsc", dependency, ".a", NULL);
+        const char* library = g_strjoin("", "libgsc", dependency, ".o", NULL);
 
         const char* dependency_object =
           get_absolute_link_path(target_config, library);

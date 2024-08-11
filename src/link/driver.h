@@ -7,7 +7,7 @@
 
 #include <cfg/opt.h>
 
-#define DEFAULT_DRIVER "clang"
+#define DEFAULT_DRIVER "ld.lld"
 
 //! @brief Function a binary driver used to link files
 typedef bool (*driver_link)(TargetLinkConfig*);
