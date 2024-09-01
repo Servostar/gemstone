@@ -10,6 +10,10 @@
 
 extern int lld_main(int Argc, const char **Argv, const char **outstr);
 
+const char* FLAGS[] = {
+    ""
+};
+
 bool lldc_link(TargetLinkConfig* config) {
 
     GArray* arguments = mem_new_g_array(MemoryNamespaceLld, sizeof(char*));
@@ -21,6 +25,13 @@ bool lldc_link(TargetLinkConfig* config) {
         char* obj = g_array_index(config->object_file_names, char*, i);
         g_array_append_val(arguments, obj);
     }
+
+    for (int i = 0; i < sizeof(FLAGS)/sizeof(char*); i++) {
+        char* flag = (char*) FLAGS[i];
+
+        g_array_append_val(arguments, flag);
+    }
+
     char* output_flag = "-o";
     g_array_append_val(arguments, output_flag);
     g_array_append_val(arguments, config->output_file);
@@ -33,10 +44,9 @@ bool lldc_link(TargetLinkConfig* config) {
     const char* message = NULL;
     const bool code = lld_main(arguments->len, (const char**) arguments->data, &message);
 
-    free((void*) message);
-
     if (!code) {
         print_message(Error, message);
+        free((void*) message);
     }
 
     return code;

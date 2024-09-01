@@ -336,6 +336,29 @@ void AST_merge_modules(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
     AST_delete_node(src);
 }
 
+void AST_import_module(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
+    assert(dst != NULL);
+    assert(src != NULL);
+
+    size_t elements = src->children->len;
+    for (size_t i = 0; i < elements; i++) {
+        AST_NODE_PTR node = AST_remove_child(src, 0);
+
+        if (node->kind == AST_FunDef) {
+            AST_NODE_PTR decl = AST_new_node(node->location, AST_FunDecl, NULL);
+
+            for (int u = 0; u < node->children->len - 1; u++) {
+                AST_push_node(decl, AST_get_node(node, u));
+            }
+
+            node = decl;
+        }
+
+        AST_insert_node(dst, k + i, node);
+    }
+    AST_delete_node(src);
+}
+
 void AST_insert_node(AST_NODE_PTR owner, size_t idx, AST_NODE_PTR child) {
     assert(owner != NULL);
     assert(child != NULL);

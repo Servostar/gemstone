@@ -89,26 +89,18 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused))
 
     // resolve absolute paths to dependent library object files
     DEBUG("resolving target dependencies...");
-    for (guint i = 0; i < module->imports->len; i++) {
-        const char* dependency = g_array_index(module->imports, const char*, i);
+    GHashTableIter iter;
 
-        const char* library = g_strjoin("", "libgsc", dependency, ".o", NULL);
+    g_hash_table_iter_init(&iter, target_config->dependencies);
+    char* key;
+    Dependency* dep;
+    while (g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &dep)) {
 
-        const char* dependency_object =
-          get_absolute_link_path(target_config, library);
-        if (dependency_object == NULL) {
-            ERROR("failed to resolve path to dependency object: %s", library);
-            print_message(Warning,
-                          "failed to resolve path to dependency object: %s",
-                          dependency);
-            lld_delete_link_config(config);
-            lld_delete_link_config(config);
-            g_free((void*) library);
-            return NULL;
+        for (guint k = 0; k < dep->libraries->len; k++) {
+            char* lib = g_array_index(dep->libraries, char*, k);
+
+            g_array_append_val(config->object_file_names, lib);
         }
-        g_free((void*) library);
-        g_array_append_val(config->object_file_names, dependency_object);
-        INFO("resolved path of target object: %s", dependency_object);
     }
 
     INFO("resolved %d dependencies", config->object_file_names->len);

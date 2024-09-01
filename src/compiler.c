@@ -7,6 +7,7 @@
 #include <cfg/opt.h>
 #include <codegen/backend.h>
 #include <compiler.h>
+#include <glib.h>
 #include <io/files.h>
 #include <lex/util.h>
 #include <llvm/backend.h>
@@ -14,6 +15,7 @@
 #include <set/set.h>
 #include <stdlib.h>
 #include <sys/log.h>
+#include <unistd.h>
 #include <yacc/parser.tab.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
@@ -21,11 +23,18 @@
 extern void yyrestart(FILE*);
 
 // Module AST node used by the parser for AST construction.
-[[maybe_unused]] AST_NODE_PTR root;
+[[maybe_unused]]
+AST_NODE_PTR root;
 // Current file which gets compiled the parser.
 // NOTE: due to global state no concurrent compilation is possible
 //       on parser level.
-[[maybe_unused]] ModuleFile* current_file;
+[[maybe_unused]]
+ModuleFile* current_file;
+
+static int build_project_targets(ModuleFileStack* unit,
+                                 const ProjectConfig* config);
+
+static int build_target(ModuleFileStack* unit, const TargetConfig* target);
 
 /**
  * @brief Compile the specified file into AST
@@ -230,12 +239,84 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
         for (size_t i = 0; i < AST_get_child_count(root_module); i++) {
             AST_NODE_PTR child = AST_get_node(root_module, i);
 
-            if (child->kind == AST_Import || child->kind == AST_Include) {
+            if (child->kind == AST_Import) {
+                if (g_hash_table_contains(target->dependencies, child->value)) {
+                    Dependency* dependency =
+                      g_hash_table_lookup(target->dependencies, child->value);
+
+                    gchar* cwd = g_get_current_dir();
+                    chdir(dependency->path);
+
+                    ProjectConfig* new_config = default_project_config();
+                    if (load_project_config(new_config)) {
+                        print_message(Error, "Failed to load project config: `%s`",
+                                    child->value);
+                        return EXIT_FAILURE;
+                    }
+
+                    TargetConfig* dep_target = g_hash_table_lookup(new_config->targets, dependency->target);
+                    if (build_target(unit, dep_target)) {
+                        print_message(Error, "Failed to build project config: `%s`",
+                                    child->value);
+                        return EXIT_FAILURE;
+                    }
+
+                    GPathBuf* buf = g_path_buf_new_from_path(dependency->path);
+                    TargetConfig* dep_conf = g_hash_table_lookup(new_config->targets, dependency->target);
+                    char* root_mod = dep_conf->root_module;
+                    g_path_buf_push(buf, root_mod);
+                    char* rel_path = g_path_buf_to_path(buf);
+
+                    GPathBuf* dep_bin = g_path_buf_new();
+                    g_path_buf_push(dep_bin, dependency->path);
+                    g_path_buf_push(dep_bin, dep_conf->archive_directory);
+                    g_path_buf_push(dep_bin, g_strjoin(".", dep_conf->name, "o", NULL));
+                    char* dep_bin_path = g_path_buf_to_path(dep_bin);
+
+                    g_array_append_val(dependency->libraries, dep_bin_path);
+
+                    const char* path =
+                        get_absolute_import_path(target, rel_path);
+
+                    if (g_hash_table_contains(imports, path)) {
+                        continue;
+                    }
+
+                    ModuleFile* imported_file = push_file(unit, path);
+                    AST_NODE_PTR imported_module =
+                      AST_new_node(empty_location(imported_file), AST_Module, NULL);
+
+                    if (compile_file_to_ast(imported_module, imported_file)
+                        == EXIT_SUCCESS) {
+                        AST_import_module(root_module, i + 1, imported_module);
+                        } else {
+                            return EXIT_FAILURE;
+                        }
+
+                    g_hash_table_insert(imports, (gpointer) path, NULL);
+
+                    g_path_buf_pop(buf);
+                    gchar* directory = g_path_buf_to_path(buf);
+                    gchar* cached_directory =
+                      mem_strdup(MemoryNamespaceLld, directory);
+                    g_free(directory);
+                    g_array_append_val(target->import_paths, cached_directory);
+
+                    chdir(cwd);
+
+                } else {
+                    print_message(Error, "Cannot resolve path for import: `%s`",
+                                  child->value);
+                    return EXIT_FAILURE;
+                }
+
+            } else if (child->kind == AST_Include) {
 
                 const char* path =
                   get_absolute_import_path(target, child->value);
                 if (path == NULL) {
-                    print_message(Error, "Cannot resolve path for import: `%s`",
+                    print_message(Error,
+                                  "Cannot resolve path for include: `%s`",
                                   child->value);
                     return EXIT_FAILURE;
                 }
@@ -304,10 +385,6 @@ static int build_target(ModuleFileStack* unit, const TargetConfig* target) {
             AST_delete_node(root_module);
         }
     }
-
-    mem_purge_namespace(MemoryNamespaceLex);
-    mem_purge_namespace(MemoryNamespaceAst);
-    mem_purge_namespace(MemoryNamespaceSet);
 
     print_file_statistics(file);
 

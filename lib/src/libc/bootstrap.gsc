@@ -2,13 +2,13 @@
 # Bootstrap module for libgscstd-glibc
 # used on GNU/Linux operating systems
 
-import "os"
+include "os"
 
 # main function is to be implemented by the application source
 fun main()
 
 # entrypoint function
-fun start() {
+fun _start() {
     main()
     exit(0 as i32)
 }

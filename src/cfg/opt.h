@@ -34,6 +34,13 @@ typedef enum TargetCompilationMode_t {
     Library
 } TargetCompilationMode;
 
+typedef struct Dependency_t {
+   char* name;
+   char* path;
+   char* target;
+   GArray* libraries;
+} Dependency;
+
 /**
  * @brief A target defines a source file which is to be compiled into a specific
  *        format. Additionally properties such as output folders can be set.
@@ -66,6 +73,7 @@ typedef struct TargetConfig_t {
     // treat parser warnings as errors
     bool gsc_fatal_warnings;
     GArray* import_paths;
+    GHashTable* dependencies;
 } TargetConfig;
 
 /**

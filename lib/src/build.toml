@@ -1,15 +1,15 @@
 [project]
-name = "Stdlib tests"
+name = "gscstd"
 version = "0.1.0"
 description = "Test applications for the GSC standard library."
 license = "GPL-2.0"
 authors = [ "Sven Vogel <sven.vogel123@web.de>" ]
 
 [[targets]]
-name = "prime"
-import-paths = [ "." ]
-root = "main.gsc"
-mode = "application"
+name = "gsc-libc"
+import-paths = [ "libc" ]
+root = "libc/std.gsc"
+mode = "library"
 output = "bin"
 archive = "archive"
 driver = "ld.lld"
@@ -17,5 +17,6 @@ print_asm = true
 print_ir = true
 print_ast = true
 
-[targets.dependencies]
-std = { path = "../../lib/src", target = "gsc-libc" }
+[[targets.dependencies]]
+# link against system default libc shared library
+libc = { shared = true }

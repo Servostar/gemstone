@@ -401,13 +401,24 @@ static int get_mode_from_str(TargetCompilationMode* mode, const char* name) {
     return PROJECT_SEMANTIC_ERR;
 }
 
+static int parse_dependency(Dependency* dependency, toml_table_t* table, char* name) {
+    dependency->name = mem_strdup(MemoryNamespaceOpt, name);
+
+    get_str(&dependency->path, table, "path");
+    get_str(&dependency->target, table, "target");
+
+    dependency->libraries = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
+
+    return PROJECT_OK;
+}
+
 static int parse_target(const ProjectConfig* config,
-                        const toml_table_t* target_table, const char* name) {
+                        const toml_table_t* target_table) {
     DEBUG("parsing target table...");
 
     TargetConfig* target_config = default_target_config();
 
-    target_config->name = (char*) name;
+    get_str(&target_config->name, target_table, "name");
 
     get_bool(&target_config->print_ast, target_table, "print_ast");
     get_bool(&target_config->print_asm, target_table, "print_asm");
@@ -442,13 +453,33 @@ static int parse_target(const ProjectConfig* config,
 
     g_hash_table_insert(config->targets, target_config->name, target_config);
 
+    toml_table_t* dependencies = toml_table_in(target_table, "dependencies");
+    if (dependencies) {
+        target_config->dependencies = mem_new_g_hash_table(MemoryNamespaceOpt, g_str_hash, g_str_equal);
+        for (int i = 0; i < toml_table_ntab(dependencies); i++) {
+            char* key = (char*) toml_key_in(dependencies, i);
+
+            if (key == NULL) {
+                break;
+            }
+
+            toml_table_t* dependency_table = toml_table_in(dependencies, key);
+            Dependency* dependency = mem_alloc(MemoryNamespaceOpt, sizeof(Dependency));
+            if (parse_dependency(dependency, dependency_table, key) == PROJECT_SEMANTIC_ERR) {
+                return PROJECT_SEMANTIC_ERR;
+            }
+
+            g_hash_table_insert(target_config->dependencies, mem_strdup(MemoryNamespaceOpt, key), dependency);
+        }
+    }
+
     return PROJECT_OK;
 }
 
 static int parse_targets(ProjectConfig* config, const toml_table_t* root) {
     DEBUG("parsing targets of project \"%s\"", config->name);
 
-    toml_table_t* targets = toml_table_in(root, "target");
+    toml_array_t* targets = toml_array_in(root, "targets");
     if (targets == NULL) {
         print_message(Warning, "Project has no targets");
         return PROJECT_SEMANTIC_ERR;
@@ -457,16 +488,9 @@ static int parse_targets(ProjectConfig* config, const toml_table_t* root) {
     config->targets =
       mem_new_g_hash_table(MemoryNamespaceOpt, g_str_hash, g_str_equal);
 
-    for (int i = 0; i < toml_table_ntab(targets); i++) {
-        const char* key = toml_key_in(targets, i);
-
-        if (key == NULL) {
-            break;
-        }
-
-        toml_table_t* target = toml_table_in(targets, key);
-        parse_target(config, target,
-                     mem_strdup(MemoryNamespaceOpt, (char*) key));
+    for (int i = 0; i < toml_array_nelem(targets); i++) {
+        toml_table_t* target = toml_table_at(targets, i);
+        parse_target(config, target);
     }
 
     return PROJECT_OK;

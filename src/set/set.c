@@ -2442,7 +2442,7 @@ int addFunction(const char* name, Function* function) {
                              function->name);
             return SEMANTIC_ERROR;
         }
-        g_hash_table_insert(declaredFunctions, (gpointer) name, function);
+        g_hash_table_insert(definedFunctions, (gpointer) name, function);
     } else if (function->kind == FunctionDeclarationKind) {
         if (g_hash_table_contains(declaredFunctions, name)) {
             Function* declaredFunction =
@@ -2893,16 +2893,7 @@ Module* create_set(AST_NODE_PTR currentNode) {
                         return NULL;
                     }
 
-                    if (g_hash_table_contains(functions, function->name)) {
-                        print_diagnostic(
-                          &function->impl.definition.nodePtr->location, Error,
-                          "Multiple definition of function: `%s`",
-                          function->name);
-                        return NULL;
-                    }
-
-                    g_hash_table_insert(functions, (gpointer) function->name,
-                                        function);
+                    g_hash_table_insert(rootModule->functions, function->name, function);
 
                     DEBUG("created function successfully");
                     break;
