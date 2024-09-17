@@ -17,6 +17,6 @@ print_asm = true
 print_ir = true
 print_ast = true
 
-[[targets.dependencies]]
+[targets.dependencies]
 # link against system default libc shared library
-libc = { shared = true }
+libc = { library = "c", shared = true }

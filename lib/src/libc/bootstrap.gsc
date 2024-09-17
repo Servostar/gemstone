@@ -10,5 +10,5 @@ fun main()
 # entrypoint function
 fun _start() {
     main()
-    exit(0 as i32)
+    _exit(0 as i32)
 }

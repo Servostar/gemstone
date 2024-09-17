@@ -70,10 +70,10 @@ void AST_init() {
 
     lookup_table[AST_Typedef]  = "typedef";
     lookup_table[AST_Box]      = "box";
-    lookup_table[AST_FunDecl]  = "fun";
-    lookup_table[AST_FunDef]   = "fun";
-    lookup_table[AST_ProcDecl] = "fun";
-    lookup_table[AST_ProcDef]  = "fun";
+    lookup_table[AST_FunDecl]  = "fundef";
+    lookup_table[AST_FunDef]   = "fundecl";
+    lookup_table[AST_ProcDecl] = "procdef";
+    lookup_table[AST_ProcDef]  = "procdef";
 
     lookup_table[AST_Call]        = "funcall";
     lookup_table[AST_Typecast]    = "typecast";
@@ -340,21 +340,47 @@ void AST_import_module(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
     assert(dst != NULL);
     assert(src != NULL);
 
+    size_t d = 0;
+
     size_t elements = src->children->len;
     for (size_t i = 0; i < elements; i++) {
         AST_NODE_PTR node = AST_remove_child(src, 0);
 
-        if (node->kind == AST_FunDef) {
-            AST_NODE_PTR decl = AST_new_node(node->location, AST_FunDecl, NULL);
+        // TODO: resolve by public symbols
+        switch (node->kind) {
+            case AST_FunDef:
+            {
+                AST_NODE_PTR decl = AST_new_node(node->location, AST_FunDecl, NULL);
 
-            for (int u = 0; u < node->children->len - 1; u++) {
-                AST_push_node(decl, AST_get_node(node, u));
+                for (int u = 0; u < node->children->len - 1; u++) {
+                    AST_push_node(decl, AST_get_node(node, u));
+                }
+
+                node = decl;
+                break;
             }
+            case AST_ProcDef:
+            {
+                AST_NODE_PTR decl = AST_new_node(node->location, AST_ProcDecl, NULL);
 
-            node = decl;
+                for (int u = 0; u < node->children->len - 1; u++) {
+                    AST_push_node(decl, AST_get_node(node, u));
+                }
+
+                node = decl;
+                break;
+            }
+            case AST_Typedef:
+            case AST_Def:
+                break;
+            default:
+                node = NULL;
         }
 
-        AST_insert_node(dst, k + i, node);
+        if (node != NULL)  {
+            AST_insert_node(dst, k + d, node);
+            d++;
+        }
     }
     AST_delete_node(src);
 }

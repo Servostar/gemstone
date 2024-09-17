@@ -8,6 +8,7 @@ authors = [ "Sven Vogel <sven.vogel123@web.de>" ]
 [[targets]]
 name = "prime"
 import-paths = [ "." ]
+link-paths = [ "/usr/lib" ]
 root = "main.gsc"
 mode = "application"
 output = "bin"
@@ -18,4 +19,4 @@ print_ir = true
 print_ast = true
 
 [targets.dependencies]
-std = { path = "../../lib/src", target = "gsc-libc" }
+std = { build-path = "../../lib/src", target = "gsc-libc" }

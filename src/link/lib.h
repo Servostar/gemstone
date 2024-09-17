@@ -15,4 +15,6 @@ bool link_run(TargetLinkConfig*);
 
 void link_print_available_driver();
 
+char* build_platform_library_name(char* basename, bool shared);
+
 #endif // GEMSTONE_LIB_H

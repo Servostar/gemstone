@@ -13,6 +13,8 @@
 
 static GHashTable* args = NULL;
 
+static Dependency *new_dependency();
+
 static void clean(void) {
     GHashTableIter iter;
     gpointer key, value;
@@ -296,7 +298,7 @@ void print_help(void) {
     }
 }
 
-static void get_bool(bool* boolean, const toml_table_t* table,
+static bool get_bool(bool* boolean, const toml_table_t* table,
                      const char* name) {
     DEBUG("retrieving boolean %s", name);
 
@@ -306,9 +308,11 @@ static void get_bool(bool* boolean, const toml_table_t* table,
         *boolean = datum.u.b;
         DEBUG("boolean has value: %d", datum.u.b);
     }
+
+    return (bool) datum.ok;
 }
 
-static void get_str(char** string, const toml_table_t* table,
+static bool get_str(char** string, const toml_table_t* table,
                     const char* name) {
     DEBUG("retrieving string %s", name);
 
@@ -318,9 +322,11 @@ static void get_str(char** string, const toml_table_t* table,
         *string = datum.u.s;
         DEBUG("string has value: %s", datum.u.s);
     }
+
+    return (bool) datum.ok;
 }
 
-static void get_int(int* integer, const toml_table_t* table, const char* name) {
+static bool get_int(int* integer, const toml_table_t* table, const char* name) {
     DEBUG("retrieving integer %s", name);
 
     const toml_datum_t datum = toml_int_in(table, name);
@@ -329,6 +335,8 @@ static void get_int(int* integer, const toml_table_t* table, const char* name) {
         *integer = (int) datum.u.i;
         DEBUG("integer has value: %ld", datum.u.i);
     }
+
+    return (bool) datum.ok;
 }
 
 static void get_array(GArray* array, const toml_table_t* table,
@@ -404,10 +412,27 @@ static int get_mode_from_str(TargetCompilationMode* mode, const char* name) {
 static int parse_dependency(Dependency* dependency, toml_table_t* table, char* name) {
     dependency->name = mem_strdup(MemoryNamespaceOpt, name);
 
-    get_str(&dependency->path, table, "path");
-    get_str(&dependency->target, table, "target");
+    bool is_project = false;
+    is_project |= get_str(&dependency->mode.project.path, table, "build-path");
+    is_project |= get_str(&dependency->mode.project.target, table, "target");
+
+    bool is_library = false;
+    is_library |= get_str(&dependency->mode.library.name, table, "library");
+    is_library |= get_bool(&dependency->mode.library.shared, table, "shared");
 
     dependency->libraries = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
+
+    dependency->kind = is_project ? GemstoneProject : NativeLibrary;
+
+    if (is_library && is_project) {
+        print_message(Error, "Mutually exclusive configs found");
+        return PROJECT_SEMANTIC_ERR;
+    }
+
+    if (!(is_library || is_project)) {
+        print_message(Error, "Missing dependency config");
+        return PROJECT_SEMANTIC_ERR;
+    }
 
     return PROJECT_OK;
 }
@@ -464,7 +489,7 @@ static int parse_target(const ProjectConfig* config,
             }
 
             toml_table_t* dependency_table = toml_table_in(dependencies, key);
-            Dependency* dependency = mem_alloc(MemoryNamespaceOpt, sizeof(Dependency));
+            Dependency* dependency = new_dependency();
             if (parse_dependency(dependency, dependency_table, key) == PROJECT_SEMANTIC_ERR) {
                 return PROJECT_SEMANTIC_ERR;
             }
@@ -474,6 +499,14 @@ static int parse_target(const ProjectConfig* config,
     }
 
     return PROJECT_OK;
+}
+
+static Dependency* new_dependency() {
+    Dependency* dependency = mem_alloc(MemoryNamespaceOpt, sizeof(Dependency));
+
+    memset(dependency, 0, sizeof(Dependency));
+
+    return dependency;
 }
 
 static int parse_targets(ProjectConfig* config, const toml_table_t* root) {

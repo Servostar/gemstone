@@ -72,3 +72,18 @@ void link_print_available_driver() {
         printf(" - %s\n", (char*) key);
     }
 }
+
+static const char* get_library_file_extension(bool shared) {
+    if (shared) {
+        return "so";
+    } else {
+        return "o";
+    }
+}
+
+char* build_platform_library_name(char* basename, bool shared) {
+    char* library_name = g_strjoin("", "lib", basename, ".", get_library_file_extension(shared), NULL);
+    char* cached_library_name = mem_strdup(MemoryNamespaceLld, library_name);
+    g_free(library_name);
+    return cached_library_name;
+}

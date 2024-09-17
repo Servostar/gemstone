@@ -17,6 +17,7 @@
 #include <sys/log.h>
 #include <unistd.h>
 #include <yacc/parser.tab.h>
+#include <link/lib.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
 
@@ -244,65 +245,97 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                     Dependency* dependency =
                       g_hash_table_lookup(target->dependencies, child->value);
 
-                    gchar* cwd = g_get_current_dir();
-                    chdir(dependency->path);
+                    switch (dependency->kind) {
+                        case GemstoneProject:
+                            gchar* cwd = g_get_current_dir();
+                            chdir(dependency->mode.project.path);
 
-                    ProjectConfig* new_config = default_project_config();
-                    if (load_project_config(new_config)) {
-                        print_message(Error, "Failed to load project config: `%s`",
-                                    child->value);
-                        return EXIT_FAILURE;
+                            ProjectConfig* new_config = default_project_config();
+                            if (load_project_config(new_config)) {
+                                print_message(Error, "Failed to load project config: `%s`",
+                                              child->value);
+                                return EXIT_FAILURE;
+                            }
+
+                            TargetConfig* dep_target = g_hash_table_lookup(new_config->targets, dependency->mode.project.target);
+                            if (build_target(unit, dep_target)) {
+                                print_message(Error, "Failed to build project config: `%s`",
+                                              child->value);
+                                return EXIT_FAILURE;
+                            }
+
+                            GPathBuf* buf = g_path_buf_new_from_path(dependency->mode.project.path);
+                            TargetConfig* dep_conf = g_hash_table_lookup(new_config->targets, dependency->mode.project.target);
+                            char* root_mod = dep_conf->root_module;
+                            g_path_buf_push(buf, root_mod);
+                            char* rel_path = g_path_buf_to_path(buf);
+
+                            GPathBuf* dep_bin = g_path_buf_new();
+                            g_path_buf_push(dep_bin, dependency->mode.project.path);
+                            g_path_buf_push(dep_bin, dep_conf->archive_directory);
+                            g_path_buf_push(dep_bin, g_strjoin(".", dep_conf->name, "o", NULL));
+                            char* dep_bin_path = g_path_buf_to_path(dep_bin);
+
+                            g_array_append_val(dependency->libraries, dep_bin_path);
+
+                            const char* path =
+                                    get_absolute_import_path(target, rel_path);
+
+                            if (g_hash_table_contains(imports, path)) {
+                                continue;
+                            }
+
+                            ModuleFile* imported_file = push_file(unit, path);
+                            AST_NODE_PTR imported_module =
+                                    AST_new_node(empty_location(imported_file), AST_Module, NULL);
+
+                            if (compile_module_with_dependencies(unit, imported_file, dep_conf, imported_module)
+                                == EXIT_SUCCESS) {
+                                AST_import_module(root_module, i + 1, imported_module);
+                            } else {
+                                return EXIT_FAILURE;
+                            }
+
+                            g_hash_table_insert(imports, (gpointer) path, NULL);
+
+                            g_path_buf_pop(buf);
+                            gchar* directory = g_path_buf_to_path(buf);
+                            gchar* cached_directory =
+                                    mem_strdup(MemoryNamespaceLld, directory);
+                            g_free(directory);
+                            g_array_append_val(target->import_paths, cached_directory);
+
+                            chdir(cwd);
+
+                            GHashTableIter iter;
+
+                            g_hash_table_iter_init(&iter, dep_target->dependencies);
+                            char* key;
+                            Dependency* dep;
+                            while (g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &dep)) {
+                                if (dep->kind == GemstoneProject) {
+                                    for (guint i = 0; i < dep->libraries->len; i++) {
+                                        char* dep_lib = g_array_index(dep->libraries, char*, i);
+                                        g_array_append_val(dependency->libraries, dep_lib);
+                                    }
+                                } else if (dep->kind == NativeLibrary) {
+                                    char* library_name = build_platform_library_name(dep->mode.library.name, dep->mode.library.shared);
+                                    g_array_append_val(dependency->libraries, library_name);
+                                }
+                            }
+
+                            break;
+                        case NativeLibrary:
+
+                            char* library_name = build_platform_library_name(dependency->mode.library.name, dependency->mode.library.shared);
+                            g_array_append_val(dependency->libraries, library_name);
+
+                            break;
+                        default:
+                            break;
                     }
 
-                    TargetConfig* dep_target = g_hash_table_lookup(new_config->targets, dependency->target);
-                    if (build_target(unit, dep_target)) {
-                        print_message(Error, "Failed to build project config: `%s`",
-                                    child->value);
-                        return EXIT_FAILURE;
-                    }
 
-                    GPathBuf* buf = g_path_buf_new_from_path(dependency->path);
-                    TargetConfig* dep_conf = g_hash_table_lookup(new_config->targets, dependency->target);
-                    char* root_mod = dep_conf->root_module;
-                    g_path_buf_push(buf, root_mod);
-                    char* rel_path = g_path_buf_to_path(buf);
-
-                    GPathBuf* dep_bin = g_path_buf_new();
-                    g_path_buf_push(dep_bin, dependency->path);
-                    g_path_buf_push(dep_bin, dep_conf->archive_directory);
-                    g_path_buf_push(dep_bin, g_strjoin(".", dep_conf->name, "o", NULL));
-                    char* dep_bin_path = g_path_buf_to_path(dep_bin);
-
-                    g_array_append_val(dependency->libraries, dep_bin_path);
-
-                    const char* path =
-                        get_absolute_import_path(target, rel_path);
-
-                    if (g_hash_table_contains(imports, path)) {
-                        continue;
-                    }
-
-                    ModuleFile* imported_file = push_file(unit, path);
-                    AST_NODE_PTR imported_module =
-                      AST_new_node(empty_location(imported_file), AST_Module, NULL);
-
-                    if (compile_file_to_ast(imported_module, imported_file)
-                        == EXIT_SUCCESS) {
-                        AST_import_module(root_module, i + 1, imported_module);
-                        } else {
-                            return EXIT_FAILURE;
-                        }
-
-                    g_hash_table_insert(imports, (gpointer) path, NULL);
-
-                    g_path_buf_pop(buf);
-                    gchar* directory = g_path_buf_to_path(buf);
-                    gchar* cached_directory =
-                      mem_strdup(MemoryNamespaceLld, directory);
-                    g_free(directory);
-                    g_array_append_val(target->import_paths, cached_directory);
-
-                    chdir(cwd);
 
                 } else {
                     print_message(Error, "Cannot resolve path for import: `%s`",

@@ -98,8 +98,21 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused))
 
         for (guint k = 0; k < dep->libraries->len; k++) {
             char* lib = g_array_index(dep->libraries, char*, k);
+            if (lib == NULL)
+                continue;
 
-            g_array_append_val(config->object_file_names, lib);
+            // resolve path to object file
+            if (g_file_test(lib, G_FILE_TEST_EXISTS)) {
+                g_array_append_val(config->object_file_names, lib);
+                continue;
+            }
+
+            char* path = get_absolute_link_path(target_config, lib);
+            if (path == NULL) {
+                print_message(Error, "Unable to resolve dependency: %s", lib);
+            } else {
+                g_array_append_val(config->object_file_names, path);
+            }
         }
     }
 

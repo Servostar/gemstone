@@ -11,7 +11,9 @@
 extern int lld_main(int Argc, const char **Argv, const char **outstr);
 
 const char* FLAGS[] = {
-    ""
+    "--fatal-warnings",
+    "--Bdynamic",
+    "--dynamic-linker=/usr/bin/ld.so"
 };
 
 bool lldc_link(TargetLinkConfig* config) {
@@ -21,15 +23,15 @@ bool lldc_link(TargetLinkConfig* config) {
     char* linker = "ld.lld";
     g_array_append_val(arguments, linker);
 
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        char* obj = g_array_index(config->object_file_names, char*, i);
-        g_array_append_val(arguments, obj);
-    }
-
     for (int i = 0; i < sizeof(FLAGS)/sizeof(char*); i++) {
         char* flag = (char*) FLAGS[i];
 
         g_array_append_val(arguments, flag);
+    }
+
+    for (guint i = 0; i < config->object_file_names->len; i++) {
+        char* obj = g_array_index(config->object_file_names, char*, i);
+        g_array_append_val(arguments, obj);
     }
 
     char* output_flag = "-o";
