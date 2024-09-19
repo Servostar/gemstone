@@ -6,7 +6,7 @@
 #include <link/clang/driver.h>
 #include <mem/cache.h>
 
-bool gcc_link(TargetLinkConfig* config) {
+bool gcc_link(TargetConfig*, TargetLinkConfig* config) {
 
     GString* commandString = g_string_new("");
 

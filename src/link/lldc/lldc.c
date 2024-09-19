@@ -16,12 +16,24 @@ const char* FLAGS[] = {
     "--dynamic-linker=/usr/bin/ld.so"
 };
 
-bool lldc_link(TargetLinkConfig* config) {
+const char* get_optimization_level_string(TargetConfig* config)
+{
+    char* buffer = mem_alloc(MemoryNamespaceLld, 6);
+
+    sprintf(buffer, "-O%d", config->optimization_level);
+
+    return buffer;
+}
+
+bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
 
     GArray* arguments = mem_new_g_array(MemoryNamespaceLld, sizeof(char*));
 
     char* linker = "ld.lld";
     g_array_append_val(arguments, linker);
+
+    const char* optimization_level = get_optimization_level_string(target_config);
+    g_array_append_val(arguments, optimization_level);
 
     for (int i = 0; i < sizeof(FLAGS)/sizeof(char*); i++) {
         char* flag = (char*) FLAGS[i];
@@ -29,19 +41,26 @@ bool lldc_link(TargetLinkConfig* config) {
         g_array_append_val(arguments, flag);
     }
 
-    for (guint i = 0; i < config->object_file_names->len; i++) {
-        char* obj = g_array_index(config->object_file_names, char*, i);
+    for (guint i = 0; i < link_config->object_file_names->len; i++) {
+        char* obj = g_array_index(link_config->object_file_names, char*, i);
         g_array_append_val(arguments, obj);
     }
 
     char* output_flag = "-o";
     g_array_append_val(arguments, output_flag);
-    g_array_append_val(arguments, config->output_file);
+    g_array_append_val(arguments, link_config->output_file);
 
+    size_t chars = 0;
     for (guint i = 0; i < arguments->len; i++) {
-        printf("%s ", g_array_index(arguments, char*, i));
+        chars += strlen(g_array_index(arguments, char*, i));
     }
-    printf("\n");
+
+    char* buffer = mem_alloc(MemoryNamespaceLld, chars + 1);
+    size_t offset = 0;
+    for (guint i = 0; i < arguments->len; i++) {
+        offset += sprintf(buffer + offset, "%s ", g_array_index(arguments, char*, i));
+    }
+    print_message(Info, buffer);
 
     const char* message = NULL;
     const bool code = lld_main(arguments->len, (const char**) arguments->data, &message);

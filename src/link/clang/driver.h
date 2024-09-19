@@ -7,7 +7,7 @@
 
 #include <link/driver.h>
 
-bool clang_link(TargetLinkConfig* config);
+bool clang_link(TargetConfig*, TargetLinkConfig* config);
 
 BinaryDriver* clang_get_driver();
 

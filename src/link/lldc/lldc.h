@@ -7,7 +7,7 @@
 
 #include <link/driver.h>
 
-bool lldc_link(TargetLinkConfig* config);
+bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config);
 
 BinaryDriver* lldc_get_driver();
 

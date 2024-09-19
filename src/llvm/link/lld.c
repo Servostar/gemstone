@@ -121,9 +121,9 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused))
     return config;
 }
 
-BackendError lld_link_target(TargetLinkConfig* config) {
+BackendError lld_link_target(TargetConfig* target_config, TargetLinkConfig* config) {
 
-    if (link_run(config)) {
+    if (link_run(target_config, config)) {
         return SUCCESS;
     }
 

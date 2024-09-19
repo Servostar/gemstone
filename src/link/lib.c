@@ -39,7 +39,7 @@ void link_init() {
     }
 }
 
-bool link_run(TargetLinkConfig* config) {
+bool link_run(TargetConfig* target_config, TargetLinkConfig* config) {
 
     if (g_hash_table_contains(binary_driver, config->driver)) {
         print_message(Info, "Invoking binary driver: %s", config->driver);
@@ -47,7 +47,7 @@ bool link_run(TargetLinkConfig* config) {
         BinaryDriver* driver =
           g_hash_table_lookup(binary_driver, config->driver);
 
-        if (!driver->link_func(config)) {
+        if (!driver->link_func(target_config, config)) {
             print_message(Error, "Driver %s failed", config->driver);
             return false;
         }

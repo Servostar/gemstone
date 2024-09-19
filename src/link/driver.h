@@ -10,7 +10,7 @@
 #define DEFAULT_DRIVER "ld.lld"
 
 //! @brief Function a binary driver used to link files
-typedef bool (*driver_link)(TargetLinkConfig*);
+typedef bool (*driver_link)(TargetConfig*, TargetLinkConfig*);
 
 typedef struct BinaryDriver_t {
     const char* name;

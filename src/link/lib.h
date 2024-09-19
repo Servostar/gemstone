@@ -11,7 +11,7 @@ typedef BinaryDriver* (*driver_init)();
 
 void link_init();
 
-bool link_run(TargetLinkConfig*);
+bool link_run(TargetConfig*, TargetLinkConfig*);
 
 void link_print_available_driver();
 
