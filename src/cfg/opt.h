@@ -78,6 +78,10 @@ typedef struct TargetConfig_t {
     char *archive_directory;
     // binary driver for executable generation
     char *driver;
+    // system to compile code for
+    // LLVM triple, see: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+    // in case this is empty this will be the native platform
+    char* triple;
     // mode of compilation
     TargetCompilationMode mode;
     // number between 1 and 3
@@ -126,33 +130,33 @@ typedef struct Option_t {
     bool is_opt;
 } Option;
 
-const char* ARCH_X86_64 = "x86_64";
-const char* ARCH_I386 = "i386";
-const char* ARCH_ARM = "arm";
-const char* ARCH_THUMB = "thumb";
-const char* ARCH_MIPS = "mips";
+extern const char* ARCH_X86_64;
+extern const char* ARCH_I386;
+extern const char* ARCH_ARM;
+extern const char* ARCH_THUMB;
+extern const char* ARCH_MIPS;
 
-const char* SUB_V5 = "v5";
-const char* SUB_V6M = "v6m";
-const char* SUB_V7A = "v7a";
-const char* SUB_V7M = "v7m";
+extern const char* SUB_V5;
+extern const char* SUB_V6M;
+extern const char* SUB_V7A;
+extern const char* SUB_V7M;
 
-const char* VENDOR_PC      = "pc";
-const char* VENDOR_APPLE   = "apple";
-const char* VENDOR_NVIDIA = "nvidia";
-const char* VENDOR_IBM    = "ibm";
+extern const char* VENDOR_PC;
+extern const char* VENDOR_APPLE;
+extern const char* VENDOR_NVIDIA;
+extern const char* VENDOR_IBM;
 
-const char* SYS_NONE   = "none";
-const char* SYS_LINUX  = "linux";
-const char* SYS_WIN32  = "win32";
-const char* SYS_DARWIN = "darwin";
-const char* SYS_CUDA   = "cuda";
+extern const char* SYS_NONE;
+extern const char* SYS_LINUX;
+extern const char* SYS_WIN32;
+extern const char* SYS_DARWIN;
+extern const char* SYS_CUDA;
 
-const char* ENV_EABI   = "eabi";
-const char* ENV_GNU     = "gnu";
-const char* ENV_ANDROID = "android";
-const char* ENV_MACHO   = "macho";
-const char* ENV_ELF    = "elf";
+extern const char* ENV_EABI;
+extern const char* ENV_GNU;
+extern const char* ENV_ANDROID;
+extern const char* ENV_MACHO;
+extern const char* ENV_ELF;
 
 const char* extract_arch_from_triple(const char* triple);
 
