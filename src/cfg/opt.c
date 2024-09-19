@@ -15,6 +15,85 @@ static GHashTable* args = NULL;
 
 static Dependency *new_dependency();
 
+const char* find_string(const char* haystack, const char** options, size_t size)
+{
+    const static char* found = NULL;
+
+    for (size_t i = 0; i < size/sizeof(const char*); i++)
+    {
+        if (strstr(haystack, options[i]))
+        {
+            found = options[i];
+            break;
+        }
+    }
+
+    return found;
+}
+
+const char* extract_arch_from_triple(const char* triple)
+{
+    const char* known_archs[] = {
+        ARCH_X86_64,
+        ARCH_I386,
+        ARCH_ARM,
+        ARCH_THUMB,
+        ARCH_MIPS
+    };
+
+    return find_string(triple, known_archs, sizeof(known_archs));
+}
+
+const char* extract_sub_from_triple(const char* triple)
+{
+    const char* known_subs[] = {
+        SUB_V5,
+        SUB_V6M,
+        SUB_V7A,
+        SUB_V7M
+    };
+
+    return find_string(triple, known_subs, sizeof(known_subs));
+}
+
+const char* extract_vendor_from_triple(const char* triple)
+{
+    const char* known_subs[] = {
+        VENDOR_PC,
+        VENDOR_APPLE,
+        VENDOR_NVIDIA,
+        VENDOR_IBM
+    };
+
+    return find_string(triple, known_subs, sizeof(known_subs));
+}
+
+const char* extract_sys_from_triple(const char* triple)
+{
+    const char* known_sys[] = {
+        SYS_NONE,
+        SYS_LINUX,
+        SYS_WIN32,
+        SYS_DARWIN,
+        SYS_CUDA
+    };
+
+    return find_string(triple, known_sys, sizeof(known_sys));
+}
+
+const char* extract_env_from_triple(const char* triple)
+{
+    const char* known_envs[] = {
+        ENV_EABI,
+        ENV_GNU,
+        ENV_ANDROID,
+        ENV_MACHO,
+        ENV_ELF
+    };
+
+    return find_string(triple, known_envs, sizeof(known_envs));
+}
+
 static void clean(void) {
     GHashTableIter iter;
     gpointer key, value;

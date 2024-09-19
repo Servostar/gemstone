@@ -126,6 +126,44 @@ typedef struct Option_t {
     bool is_opt;
 } Option;
 
+const char* ARCH_X86_64 = "x86_64";
+const char* ARCH_I386 = "i386";
+const char* ARCH_ARM = "arm";
+const char* ARCH_THUMB = "thumb";
+const char* ARCH_MIPS = "mips";
+
+const char* SUB_V5 = "v5";
+const char* SUB_V6M = "v6m";
+const char* SUB_V7A = "v7a";
+const char* SUB_V7M = "v7m";
+
+const char* VENDOR_PC      = "pc";
+const char* VENDOR_APPLE   = "apple";
+const char* VENDOR_NVIDIA = "nvidia";
+const char* VENDOR_IBM    = "ibm";
+
+const char* SYS_NONE   = "none";
+const char* SYS_LINUX  = "linux";
+const char* SYS_WIN32  = "win32";
+const char* SYS_DARWIN = "darwin";
+const char* SYS_CUDA   = "cuda";
+
+const char* ENV_EABI   = "eabi";
+const char* ENV_GNU     = "gnu";
+const char* ENV_ANDROID = "android";
+const char* ENV_MACHO   = "macho";
+const char* ENV_ELF    = "elf";
+
+const char* extract_arch_from_triple(const char* triple);
+
+const char* extract_sub_from_triple(const char* triple);
+
+const char* extract_vendor_from_triple(const char* triple);
+
+const char* extract_sys_from_triple(const char* triple);
+
+const char* extract_env_from_triple(const char* triple);
+
 /**
  * @brief Create the default configuration for targets.
  * @return A pointer to a new target configuration.
