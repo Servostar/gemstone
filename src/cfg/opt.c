@@ -43,6 +43,33 @@ const char* ENV_ANDROID = "android";
 const char* ENV_MACHO   = "macho";
 const char* ENV_ELF    = "elf";
 
+bool target_has_shared_dependency(TargetLinkConfig* config)
+{
+    bool has_shared = false;
+
+    const char* shared_files[] = {
+        ".so",
+        ".dll"
+    };
+
+    for (guint i = 0; i < config->object_file_names->len; i++)
+    {
+        char* object_file = g_array_index(config->object_file_names, char*, i);
+
+        for (int k = 0; k < sizeof(shared_files)/sizeof(char*); k++)
+        {
+            has_shared = g_str_has_suffix(object_file, shared_files[k]);
+            if (has_shared)
+                break;
+        }
+
+        if (has_shared)
+            break;
+    }
+
+    return has_shared;
+}
+
 const char* find_string(const char* haystack, const char** options, size_t size)
 {
     const static char* found = NULL;
@@ -570,6 +597,8 @@ static int parse_target(const ProjectConfig* config,
              "gsc_fatal_warnings");
 
     get_int(&target_config->optimization_level, target_table, "opt");
+
+    get_str(&target_config->triple, target_table, "triple");
 
     char* mode = NULL;
     get_str(&mode, target_table, "mode");

@@ -168,6 +168,8 @@ const char* extract_sys_from_triple(const char* triple);
 
 const char* extract_env_from_triple(const char* triple);
 
+bool target_has_shared_dependency(TargetLinkConfig*);
+
 /**
  * @brief Create the default configuration for targets.
  * @return A pointer to a new target configuration.

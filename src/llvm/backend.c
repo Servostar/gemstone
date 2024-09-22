@@ -62,10 +62,35 @@ static char* create_target_output_name(const TargetConfig* config) {
     return cached_name;
 }
 
-Target create_target_from_config(const TargetConfig* config) {
+Target create_target_from_triple(char* triple)
+{
+    Target target;
+
+    target.triple.str = mem_strdup(MemoryNamespaceLld, triple);
+    target.triple.allocation = NONE;
+
+    // select default
+    target.cpu.str = "";
+    target.cpu.allocation = NONE;
+
+    // select default
+    target.features.str = "";
+    target.features.allocation = NONE;
+
+    return target;
+}
+
+Target create_target_from_config(TargetConfig* config) {
     DEBUG("Building target from configuration");
 
     Target target = create_native_target();
+    if (config->triple != NULL)
+    {
+        target = create_target_from_triple(config->triple);
+    } else
+    {
+        config->triple = target.triple.str;
+    }
 
     target.name.str        = create_target_output_name(config);
     target.name.allocation = NONE; // freed later by compiler

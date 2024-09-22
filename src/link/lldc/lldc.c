@@ -11,9 +11,7 @@
 extern int lld_main(int Argc, const char **Argv, const char **outstr);
 
 const char* FLAGS[] = {
-    "--fatal-warnings",
-    "--Bdynamic",
-    "--dynamic-linker=/usr/bin/ld.so"
+    "--fatal-warnings"
 };
 
 const char* get_optimization_level_string(TargetConfig* config)
@@ -34,6 +32,26 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
 
     const char* optimization_level = get_optimization_level_string(target_config);
     g_array_append_val(arguments, optimization_level);
+
+    // enable dynamic linker on linux
+    if (extract_sys_from_triple(target_config->triple) == SYS_LINUX)
+    {
+        if (target_has_shared_dependency(link_config))
+        {
+            // add dynamic linker
+            print_message(Info, "Enabling dynamic linker for build");
+
+            const char* enable_dynamic_linker = "--Bdynamic";
+            g_array_append_val(arguments, enable_dynamic_linker);
+
+            const char* default_dynamic_linker_path = "/usr/bin/ld.so";
+            const char* dynamic_linker_option = "--dynamic-linker=";
+
+            char* buffer = mem_alloc(MemoryNamespaceLld, strlen(dynamic_linker_option) + strlen(default_dynamic_linker_path) + 1);
+            sprintf(buffer, "%s%s", dynamic_linker_option, default_dynamic_linker_path);
+            g_array_append_val(arguments, buffer);
+        }
+    }
 
     for (int i = 0; i < sizeof(FLAGS)/sizeof(char*); i++) {
         char* flag = (char*) FLAGS[i];

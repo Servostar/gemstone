@@ -17,6 +17,8 @@ driver = "ld.lld"
 print_asm = true
 print_ir = true
 print_ast = true
+opt = 3
+triple = "x86_64-unknown-linux"
 
 [targets.dependencies]
 std = { build-path = "../../lib/src", target = "gsc-libc" }
