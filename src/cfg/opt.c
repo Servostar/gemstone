@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <cfg/opt.h>
+#include <glib.h>
 #include <io/files.h>
 #include <link/driver.h>
 #include <mem/cache.h>
@@ -150,6 +151,58 @@ const char* extract_env_from_triple(const char* triple)
     };
 
     return find_string(triple, known_envs, sizeof(known_envs));
+}
+
+guint module_ref_len(ModuleRef* ref) {
+    return ref->module_path->len;
+}
+
+char* module_ref_get(ModuleRef* ref, guint idx) {
+    return g_array_index(ref->module_path, char*, idx);
+}
+
+void module_ref_push(ModuleRef* ref, char* name) {
+    char* chached_name = mem_strdup(MemoryNamespaceOpt, name);
+    g_array_append_val(ref->module_path, chached_name);
+}
+
+void module_ref_pop(ModuleRef* ref) {
+    g_array_remove_index(ref->module_path, ref->module_path->len - 1);
+}
+
+char* module_ref_to_str(ModuleRef* ref) {
+    GString* string = g_string_new("");
+
+    if (NULL != ref) {
+        for (guint n = 0; n < ref->module_path->len; n++) {
+            char* module = g_array_index(ref->module_path, char*, n);
+            g_string_append(string, module);
+
+            if (n + 1 < ref->module_path->len) {
+                g_string_append_unichar(string, ':');
+            }
+        }
+    }
+
+    char* cached_ref = mem_strdup(MemoryNamespaceAst, string->str);
+    g_string_free(string, true);
+
+    return cached_ref;
+}
+
+ModuleRef* module_ref_clone(ModuleRef* ref) {
+    ModuleRef* module = mem_alloc(MemoryNamespaceOpt, sizeof(ModuleRef));
+
+    module->module_path = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
+
+    for (guint n = 0; n < ref->module_path->len; n++) {
+        char* cstr = g_array_index(ref->module_path, char*, n);
+        char* copy = mem_strdup(MemoryNamespaceOpt, cstr);
+
+        g_array_append_val(module->module_path, copy);
+    }
+
+    return module;
 }
 
 static void clean(void) {

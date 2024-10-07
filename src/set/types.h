@@ -599,6 +599,9 @@ typedef struct Module_t {
     // to be resolved after the module has been parsed completely
     GArray* imports;
     GArray* includes;
+    // parent modules in descending order
+    // root > submodule > current-module
+    GArray* path;
 } Module;
 
 // .------------------------------------------------.

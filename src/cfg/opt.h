@@ -16,6 +16,22 @@
 
 #define TOML_ERROR_MSG_BUF 256
 
+typedef struct ModuleRef_t {
+    GArray* module_path;
+} ModuleRef;
+
+guint module_ref_len(ModuleRef*);
+
+char* module_ref_get(ModuleRef*, guint idx);
+
+void module_ref_push(ModuleRef*, char*);
+
+void module_ref_pop(ModuleRef*);
+
+char* module_ref_to_str(ModuleRef*);
+
+ModuleRef* module_ref_clone(ModuleRef*);
+
 typedef struct TargetLinkConfig_t {
     // name of object files to link
     GArray *object_file_names;

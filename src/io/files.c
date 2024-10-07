@@ -214,7 +214,8 @@ void print_diagnostic(TokenLocation* location, Message kind,
 TokenLocation new_location(unsigned long int line_start,
                            unsigned long int col_start,
                            unsigned long int line_end,
-                           unsigned long int col_end, ModuleFile* file) {
+                           unsigned long int col_end,
+                           ModuleFile* file, ModuleRef* ref) {
     TokenLocation location;
 
     location.line_start = line_start;
@@ -222,11 +223,12 @@ TokenLocation new_location(unsigned long int line_start,
     location.col_start  = col_start;
     location.col_end    = col_end;
     location.file       = file;
+    location.module_ref = ref;
 
     return location;
 }
 
-TokenLocation empty_location(ModuleFile* file) {
+TokenLocation empty_location(ModuleFile* file, ModuleRef* ref) {
     TokenLocation location;
 
     location.line_start = 0;
@@ -234,6 +236,7 @@ TokenLocation empty_location(ModuleFile* file) {
     location.col_start  = 0;
     location.col_end    = 0;
     location.file       = file;
+    location.module_ref = ref;
 
     return location;
 }

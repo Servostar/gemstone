@@ -14,11 +14,13 @@
 
     extern char* buffer;
     extern int yylineno;
-    
+
     extern int yylex();
     extern AST_NODE_PTR root;
 
-    #define new_loc() new_location(yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column, current_file)
+    extern ModuleRef* parser_ref;
+
+    #define new_loc() new_location(yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column, current_file, parser_ref)
 }
 
 %union {
@@ -67,7 +69,7 @@
 %type <node_ptr> paramlist
 %type <node_ptr> params
 %type <node_ptr> IOqualifyier
-%type <node_ptr> paramdecl 
+%type <node_ptr> paramdecl
 %type <node_ptr> boxbody
 %type <node_ptr> boxcontent
 %type <node_ptr> typecast
@@ -84,7 +86,7 @@
 %token KeyTo
 %token <string> ValInt
 %token <string> Ident
-%token <string> ValFloat 
+%token <string> ValFloat
 %token <string> ValStr
 %token <string> ValChar
 %token <string> ValMultistr
@@ -145,7 +147,7 @@
 %left '(' ')' '[' ']'
 
 %%
-program: program programbody {AST_push_node(root, $2); 
+program: program programbody {AST_push_node(root, $2);
                               }
        | programbody {AST_push_node(root, $1);};
 
@@ -286,7 +288,7 @@ box: KeyType KeyBox ':' Ident '{' boxbody '}' {AST_NODE_PTR box = AST_new_node(n
                                        AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $4);
                                        AST_push_node(box, ident);
                                        AST_push_node(box, $6);
-                                       $$ = box; 
+                                       $$ = box;
     DEBUG("Box"); }
    | KeyType KeyBox ':' Ident '{' '}' {AST_NODE_PTR box = AST_new_node(new_loc(), AST_Box, NULL);
                                        AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $4);
@@ -335,7 +337,7 @@ boxcall: boxaccess argumentlist {AST_NODE_PTR boxcall = AST_new_node(new_loc(), 
                                  AST_push_node(boxcall, $1);
                                  AST_push_node(boxcall, $2);
                                  $$ = boxcall;};
-                                 
+
 
 typecast: expr KeyAs type %prec KeyAs  {AST_NODE_PTR cast = AST_new_node(new_loc(), AST_Typecast, NULL);
                                         AST_push_node(cast, $1);
@@ -417,7 +419,7 @@ identlist: Ident ',' identlist {AST_NODE_PTR ident = AST_new_node(new_loc(), AST
         | Ident {AST_NODE_PTR list = AST_new_node(new_loc(), AST_IdentList, NULL);
                  AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $1);
                  AST_push_node(list, ident);
-                 $$ = list;};               
+                 $$ = list;};
 
 decl: type ':' identlist {AST_NODE_PTR decl = AST_new_node(new_loc(), AST_Decl, NULL);
                           AST_push_node(decl, $1);

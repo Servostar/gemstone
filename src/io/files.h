@@ -5,6 +5,7 @@
 #ifndef GEMSTONE_FILES_H
 #define GEMSTONE_FILES_H
 
+#include <cfg/opt.h>
 #include <glib.h>
 #include <stdio.h>
 
@@ -38,6 +39,7 @@ typedef struct TokenLocation_t {
     unsigned long int line_end;
     unsigned long int col_end;
     ModuleFile* file;
+    ModuleRef* module_ref;
 } TokenLocation;
 
 /**
@@ -74,13 +76,14 @@ void delete_files(ModuleFileStack* stack);
 TokenLocation new_location(unsigned long int line_start,
                            unsigned long int col_start,
                            unsigned long int line_end,
-                           unsigned long int col_end, ModuleFile* file);
+                           unsigned long int col_end,
+                           ModuleFile* file, ModuleRef* ref);
 
 /**
  * @brief Create a new empty location with all of its contents set to zero
  * @return
  */
-TokenLocation empty_location(ModuleFile* file);
+TokenLocation empty_location(ModuleFile*, ModuleRef* ref);
 
 /**
  * @brief Prints some diagnostic message to stdout.

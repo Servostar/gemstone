@@ -267,7 +267,8 @@ static void AST_fprint_graphviz_node_definition(FILE* stream,
     assert(stream != NULL);
     assert(node != NULL);
 
-    fprintf(stream, "\tnode%p [label=\"%s\"]\n", (void*) node,
+    char* module_path = module_ref_to_str(node->location.module_ref);
+    fprintf(stream, "\tnode%p [label=\"@%s\\n%s\"]\n", (void*) node, module_path,
             AST_node_to_string(node));
 
     if (node->children == NULL) {

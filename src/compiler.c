@@ -32,6 +32,10 @@ AST_NODE_PTR root;
 [[maybe_unused]]
 ModuleFile* current_file;
 
+[[maybe_unused]]
+ModuleRef* parser_ref;
+ModuleRef* module_ref;
+
 static int build_project_targets(ModuleFileStack* unit,
                                  const ProjectConfig* config);
 
@@ -64,6 +68,7 @@ static int compile_file_to_ast(AST_NODE_PTR ast, ModuleFile* file) {
     root         = ast;
     current_file = file;
     yyin         = file->handle;
+    parser_ref   = module_ref_clone(module_ref);
     yyrestart(yyin);
     lex_reset();
 
@@ -232,6 +237,13 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                                             const TargetConfig* target,
                                             AST_NODE_PTR root_module) {
 
+    if (NULL == module_ref) {
+       module_ref = mem_alloc(MemoryNamespaceOpt, sizeof(ModuleRef));
+       module_ref->module_path = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
+    }
+
+    module_ref_push(module_ref, g_filename_display_basename(file->path));
+
     GHashTable* imports =
       mem_new_g_hash_table(MemoryNamespaceAst, g_str_hash, g_str_equal);
 
@@ -287,7 +299,7 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
 
                             ModuleFile* imported_file = push_file(unit, path);
                             AST_NODE_PTR imported_module =
-                                    AST_new_node(empty_location(imported_file), AST_Module, NULL);
+                                    AST_new_node(empty_location(imported_file, module_ref), AST_Module, NULL);
 
                             if (compile_module_with_dependencies(unit, imported_file, dep_conf, imported_module)
                                 == EXIT_SUCCESS) {
@@ -358,9 +370,11 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                     continue;
                 }
 
+                module_ref_push(module_ref, g_filename_display_basename(path));
+
                 ModuleFile* imported_file = push_file(unit, path);
                 AST_NODE_PTR imported_module =
-                  AST_new_node(empty_location(imported_file), AST_Module, NULL);
+                  AST_new_node(empty_location(imported_file, module_ref), AST_Module, NULL);
 
                 if (compile_file_to_ast(imported_module, imported_file)
                     == EXIT_SUCCESS) {
@@ -376,11 +390,15 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                   mem_strdup(MemoryNamespaceLld, directory);
                 g_free(directory);
                 g_array_append_val(target->import_paths, cached_directory);
+
+                module_ref_pop(module_ref);
             }
         }
     } else {
         return EXIT_FAILURE;
     }
+
+    module_ref_pop(module_ref);
 
     return EXIT_SUCCESS;
 }
@@ -397,7 +415,7 @@ static int build_target(ModuleFileStack* unit, const TargetConfig* target) {
 
     ModuleFile* file = push_file(unit, target->root_module);
     AST_NODE_PTR root_module =
-      AST_new_node(empty_location(file), AST_Module, NULL);
+      AST_new_node(empty_location(file, module_ref), AST_Module, NULL);
 
     err = compile_module_with_dependencies(unit, file, target, root_module);
     if (err == EXIT_SUCCESS) {
