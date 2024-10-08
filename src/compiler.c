@@ -240,9 +240,9 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
     if (NULL == module_ref) {
        module_ref = mem_alloc(MemoryNamespaceOpt, sizeof(ModuleRef));
        module_ref->module_path = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
+    } else {
+        module_ref_push(module_ref, module_from_basename(file->path));
     }
-
-    module_ref_push(module_ref, module_from_basename(file->path));
 
     GHashTable* imports =
       mem_new_g_hash_table(MemoryNamespaceAst, g_str_hash, g_str_equal);
