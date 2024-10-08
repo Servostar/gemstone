@@ -58,6 +58,17 @@ ModuleFile* push_file(ModuleFileStack* stack, const char* path) {
     return new_file;
 }
 
+char* module_from_basename(char* path) {
+    char* basename = g_path_get_basename(path);
+    char* dot = strrchr(basename, '.');
+
+    if (dot != NULL) {
+        *dot = '\0';
+    }
+
+    return basename;
+}
+
 void delete_files(ModuleFileStack* stack) {
     for (size_t i = 0; i < stack->files->len; i++) {
         const ModuleFile* file = g_array_index(stack->files, ModuleFile*, i);

@@ -242,7 +242,7 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
        module_ref->module_path = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
     }
 
-    module_ref_push(module_ref, g_filename_display_basename(file->path));
+    module_ref_push(module_ref, module_from_basename(file->path));
 
     GHashTable* imports =
       mem_new_g_hash_table(MemoryNamespaceAst, g_str_hash, g_str_equal);
@@ -370,7 +370,7 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                     continue;
                 }
 
-                module_ref_push(module_ref, g_filename_display_basename(path));
+                module_ref_push(module_ref, module_from_basename(path));
 
                 ModuleFile* imported_file = push_file(unit, path);
                 AST_NODE_PTR imported_module =

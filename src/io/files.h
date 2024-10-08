@@ -42,6 +42,8 @@ typedef struct TokenLocation_t {
     ModuleRef* module_ref;
 } TokenLocation;
 
+char* module_from_basename(char* path);
+
 /**
  * @brief Create a new, empty file stack.
  * @return
