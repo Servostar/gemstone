@@ -7,5 +7,5 @@ fun _exit(in i32: code)
 
 #[noreturn]
 fun exit(in i32: code) {
-    os::_exit(code)
+    _exit(code)
 }

@@ -89,6 +89,45 @@ enum AST_SyntaxElement_t {
     AST_ELEMENT_COUNT
 };
 
+typedef enum AST_AnnotationKind_t {
+    AnnotationKindFlag,
+    AnnotationKindVariable,
+    AnnotationKindArray,
+    AnnotationKindNone
+} AST_AnnotationKind;
+
+struct AST_Annotation_t;
+
+typedef enum AST_AnnotationValueKind_t {
+    AnnotationValueKindAnnotation,
+    AnnotationValueKindString,
+    AnnotationValueKindInteger
+} AST_AnnotationValueKind;
+
+typedef struct AST_AnnotationValue_t {
+    AST_AnnotationValueKind kind;
+    union {
+        struct AST_Annotation_t* annotation;
+        char* string;
+        int64_t integer;
+    } impl;
+} AST_AnnotationValue;
+
+typedef struct AST_Annotation_t {
+    AST_AnnotationKind kind;
+    union {
+        // array of annotation values
+        GArray* array;
+        struct {
+            char* name;
+            AST_AnnotationValue value;
+        } variable;
+        char* flag;
+    } impl;
+} AST_Annotation;
+
+bool AST_annotation_array_contains_flag(AST_Annotation*, const char*);
+
 /**
  * @brief A single node which can be joined with other nodes like a graph.
  * Every node can have one ancestor (parent) but multiple (also none) children.
@@ -107,6 +146,8 @@ typedef struct AST_Node_t {
     const char* value;
 
     TokenLocation location;
+
+    AST_Annotation annotation;
 
     // children array
     GArray* children;

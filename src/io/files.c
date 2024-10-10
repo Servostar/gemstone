@@ -66,7 +66,10 @@ char* module_from_basename(char* path) {
         *dot = '\0';
     }
 
-    return basename;
+    char* cached_module_name = mem_strdup(MemoryNamespaceOpt, basename);
+    g_free(basename);
+
+    return cached_module_name;
 }
 
 void delete_files(ModuleFileStack* stack) {

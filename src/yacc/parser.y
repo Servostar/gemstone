@@ -6,6 +6,7 @@
     #include <ast/ast.h>
     #include <sys/col.h>
     #include <io/files.h>
+    #include <mem/cache.h>
     #include <glib.h>
     extern int yylineno;
     extern ModuleFile* current_file;
@@ -26,6 +27,9 @@
 %union {
     char *string;
     AST_NODE_PTR node_ptr;
+    AST_Annotation annotation;
+    AST_AnnotationValue annotationvalue;
+    GArray* array;
 }
 
 %type <node_ptr> operation
@@ -78,7 +82,11 @@
 %type <node_ptr> storage_expr
 %type <node_ptr> returnstmt
 %type <node_ptr> moduleref
-
+%type <node_ptr> callable
+%type <array> annotationlist
+%type <annotationvalue> annotationvalue
+%type <annotation> annotation
+%type <annotation> annotationbind
 
 %token KeyInt
 %token KeyFloat
@@ -155,14 +163,54 @@ program: program programbody {AST_push_node(root, $2);
 
 programbody: moduleimport {$$ = $1;}
        | moduleinclude {$$ = $1;}
-       | fundef{$$ = $1;}
-       | fundecl{$$ = $1;}
-       | procdecl{$$ = $1;}
-       | procdef{$$ = $1;}
+       | callable {$$ = $1;}
        | box{$$ = $1;}
        | definition{$$ = $1;}
        | decl{$$ = $1;}
        | typedef{$$ = $1;};
+
+callable: fundef {$$=$1;}
+        | fundecl {$$=$1;}
+        | procdef {$$=$1;}
+        | procdecl {$$=$1;}
+        | annotationbind callable {
+            $2->annotation = $1;
+            $$ = $2;
+        };
+
+annotationvalue: ValStr { AST_AnnotationValue value;
+                            value.impl.string = $1;
+                            value.kind = AnnotationValueKindString;
+                            $$ = value; }
+            | ValInt { AST_AnnotationValue value;
+                        value.impl.integer = atol($1);
+                        value.kind = AnnotationValueKindInteger;
+                        $$ = value; }
+            | annotation { AST_AnnotationValue value;
+                         value.impl.annotation = mem_clone(MemoryNamespaceAst, &($1), sizeof(AST_Annotation));
+                         value.kind = AnnotationValueKindAnnotation;
+                         $$ = value; };
+
+annotationlist: annotation ',' annotationlist { g_array_append_val($3, $1); $$ = $3; }
+        | annotation { GArray* list = mem_new_g_array(MemoryNamespaceSet, sizeof(AST_Annotation));
+                        g_array_append_val(list, $1);
+                        $$ = list; };
+
+annotation: Ident { AST_Annotation annotation;
+                    annotation.kind = AnnotationKindFlag;
+                    annotation.impl.flag = $1;
+                    $$ = annotation; }
+        | '[' annotationlist ']' { AST_Annotation annotation;
+                                 annotation.kind = AnnotationKindArray;
+                                 annotation.impl.array = $2;
+                                 $$ = annotation; }
+        | Ident '(' annotationvalue ')' { AST_Annotation annotation;
+                                         annotation.kind = AnnotationKindVariable;
+                                         annotation.impl.variable.name = $1;
+                                         annotation.impl.variable.value = $3;
+                                         $$ = annotation; };
+
+annotationbind: '#' annotation { $$ = $2; };
 
 moduleref: Ident {$$ = AST_new_node(new_loc(), AST_Ident, $1);}
         | Ident ModSep moduleref {AST_NODE_PTR modref = AST_new_node(new_loc(), AST_ModuleRef, NULL);

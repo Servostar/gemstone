@@ -167,7 +167,9 @@ void module_ref_push(ModuleRef* ref, char* name) {
 }
 
 void module_ref_pop(ModuleRef* ref) {
-    g_array_remove_index(ref->module_path, ref->module_path->len - 1);
+    if (ref->module_path->len > 0) {
+        g_array_remove_index(ref->module_path, ref->module_path->len - 1);
+    }
 }
 
 char* module_ref_to_str(ModuleRef* ref) {

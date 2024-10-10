@@ -5,6 +5,20 @@
 #include <stdio.h>
 #include <sys/log.h>
 
+bool AST_annotation_array_contains_flag(AST_Annotation* haystack, const char* needle) {
+    if (haystack->kind == AnnotationKindArray) {
+        for (guint i = 0; i < haystack->impl.array->len; i++) {
+            AST_Annotation child = g_array_index(haystack->impl.array, AST_Annotation, i);
+
+            if (child.kind == AnnotationKindFlag && strcmp(child.impl.flag, needle) == 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 struct AST_Node_t* AST_new_node(TokenLocation location,
                                 enum AST_SyntaxElement_t kind,
                                 const char* value) {
@@ -26,6 +40,7 @@ struct AST_Node_t* AST_new_node(TokenLocation location,
     node->kind     = kind;
     node->value    = value;
     node->location = location;
+    node->annotation.kind = AnnotationKindNone;
 
     return node;
 }

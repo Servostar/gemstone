@@ -12,5 +12,5 @@ fun main()
 #[nomangle,noreturn,entry]
 fun _start() {
     main()
-    os::exit(0 as i32)
+    std::os::exit(0 as i32)
 }
