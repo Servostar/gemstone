@@ -11,7 +11,8 @@
 extern int lld_main(int Argc, const char **Argv, const char **outstr);
 
 const char* FLAGS[] = {
-    "--fatal-warnings"
+    "--fatal-warnings",
+    "--nostdlib"
 };
 
 const char* get_optimization_level_string(TargetConfig* config)
@@ -32,6 +33,11 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
 
     if (is_option_set("color-always")) {
         char* colored_diagnostics = "--color-diagnostics=always";
+        g_array_append_val(arguments, colored_diagnostics);
+    }
+
+    if (link_config->entry != NULL) {
+        char* colored_diagnostics = mem_asprintf(MemoryNamespaceLld, "--entry=%s", link_config->entry);
         g_array_append_val(arguments, colored_diagnostics);
     }
 

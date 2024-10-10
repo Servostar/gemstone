@@ -55,6 +55,7 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused))
       mem_new_g_array(MemoryNamespaceLld, sizeof(char*));
     config->colorize = stdout_supports_ansi_esc();
     config->driver   = target_config->driver;
+    config->entry    = module->entry;
 
     // append build object file
     char* basename = g_strjoin(".", target_config->name, "o", NULL);

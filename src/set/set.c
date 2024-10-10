@@ -2868,6 +2868,7 @@ Module* create_set(AST_NODE_PTR currentNode) {
     rootModule->variables = variables;
     rootModule->imports   = imports;
     rootModule->includes  = includes;
+    rootModule->entry     = NULL;
 
     DEBUG("created Module struct");
 
@@ -2922,9 +2923,22 @@ Module* create_set(AST_NODE_PTR currentNode) {
                     Function* function =
                       mem_alloc(MemoryNamespaceSet, sizeof(Function));
 
-                    if (createFunction(function, AST_get_node(currentNode, i))
+                    AST_NODE_PTR function_node = AST_get_node(currentNode, i);
+                    if (createFunction(function, function_node)
                         == SEMANTIC_ERROR) {
                         return NULL;
+                    }
+
+                    if (function_node->annotation.kind == AnnotationKindArray) {
+                        if (AST_annotation_array_contains_flag(&function_node->annotation, "entry")) {
+
+                            if (rootModule->entry != NULL) {
+                                print_diagnostic(&function_node->location, Error, "Multiple functions marked as entry points");
+                                return NULL;
+                            }
+
+                            rootModule->entry = function->name;
+                        }
                     }
 
                     g_hash_table_insert(rootModule->functions, function->name, function);

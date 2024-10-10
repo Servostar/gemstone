@@ -602,6 +602,8 @@ typedef struct Module_t {
     // parent modules in descending order
     // root > submodule > current-module
     GArray* path;
+    // entry point symbol
+    char* entry;
 } Module;
 
 // .------------------------------------------------.

@@ -87,6 +87,15 @@ char* mem_strdup(MemoryNamespaceName name, char* string);
  */
 void* mem_clone(MemoryNamespaceName name, void* data, size_t size);
 
+/**
+ * @brief Write formatted output into a dynamically allocated buffer managed by this cache,
+ * @param name
+ * @param format
+ * @param ...
+ * @return
+ */
+char* mem_asprintf(MemoryNamespaceName name, const char* format, ...);
+
 void print_memory_statistics();
 
 GArray* mem_new_g_array(MemoryNamespaceName name, guint element_size);

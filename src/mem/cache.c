@@ -369,3 +369,19 @@ GHashTable* mem_new_g_hash_table(MemoryNamespaceName name, GHashFunc hash_func,
 
     return namespace_new_g_hash_table(cache, hash_func, key_equal_func);
 }
+
+char* mem_asprintf(MemoryNamespaceName name, const char* format, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    char* buffer = NULL;
+    int chars = vasprintf(&buffer, format, args);
+
+    va_end(args);
+
+    char* cached = mem_clone(name, buffer, chars);
+
+    free(buffer);
+
+    return cached;
+}
