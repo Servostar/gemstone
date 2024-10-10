@@ -41,6 +41,8 @@ typedef struct TargetLinkConfig_t {
     bool colorize;
     char *output_file;
     char *driver;
+    // entry point symbol name
+    char* entry;
 } TargetLinkConfig;
 
 typedef enum TargetCompilationMode_t {

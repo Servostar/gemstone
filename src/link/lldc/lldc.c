@@ -30,10 +30,14 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
     char* linker = "ld.lld";
     g_array_append_val(arguments, linker);
 
+    if (is_option_set("color-always")) {
+        char* colored_diagnostics = "--color-diagnostics=always";
+        g_array_append_val(arguments, colored_diagnostics);
+    }
+
     const char* optimization_level = get_optimization_level_string(target_config);
     g_array_append_val(arguments, optimization_level);
 
-    // enable dynamic linker on linux
     if (extract_sys_from_triple(target_config->triple) == SYS_LINUX)
     {
         if (target_has_shared_dependency(link_config))
