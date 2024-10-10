@@ -1,4 +1,5 @@
 #include "cfg/opt.h"
+
 #include <assert.h>
 #include <ast/ast.h>
 #include <glib.h>
@@ -2092,7 +2093,7 @@ char* module_ref_to_string(AST_NODE_PTR node) {
             char* submodule = module_ref_to_string(AST_get_last_node(node));
             char* curmodule = module_ref_to_string(AST_get_node(node, 0));
 
-            char* composed = g_strjoin("::", curmodule, submodule, NULL);
+            char* composed        = g_strjoin("::", curmodule, submodule, NULL);
             char* cached_composed = mem_strdup(MemoryNamespaceSet, composed);
             g_free(composed);
             mem_free(curmodule);
@@ -2649,12 +2650,15 @@ int createFunction(Function* function, AST_NODE_PTR currentNode) {
     }
 
     if (!(currentNode->annotation.kind == AnnotationKindArray
-        && AST_annotation_array_contains_flag(&currentNode->annotation, "nomangle"))) {
+          && AST_annotation_array_contains_flag(&currentNode->annotation,
+                                                "nomangle"))) {
 
         // compose function name by appending parent modules
         char* modules = module_ref_to_str(currentNode->location.module_ref);
-        char* composed_name = g_strjoin("", modules, "::", function->name, NULL);
-        char* cached_composed_name = mem_strdup(MemoryNamespaceSet, composed_name);
+        char* composed_name =
+          g_strjoin("", modules, "::", function->name, NULL);
+        char* cached_composed_name =
+          mem_strdup(MemoryNamespaceSet, composed_name);
 
         g_free(composed_name);
         function->name = cached_composed_name;
@@ -2930,10 +2934,13 @@ Module* create_set(AST_NODE_PTR currentNode) {
                     }
 
                     if (function_node->annotation.kind == AnnotationKindArray) {
-                        if (AST_annotation_array_contains_flag(&function_node->annotation, "entry")) {
+                        if (AST_annotation_array_contains_flag(
+                              &function_node->annotation, "entry")) {
 
                             if (rootModule->entry != NULL) {
-                                print_diagnostic(&function_node->location, Error, "Multiple functions marked as entry points");
+                                print_diagnostic(
+                                  &function_node->location, Error,
+                                  "Multiple functions marked as entry points");
                                 return NULL;
                             }
 
@@ -2941,7 +2948,8 @@ Module* create_set(AST_NODE_PTR currentNode) {
                         }
                     }
 
-                    g_hash_table_insert(rootModule->functions, function->name, function);
+                    g_hash_table_insert(rootModule->functions, function->name,
+                                        function);
 
                     DEBUG("created function successfully");
                     break;

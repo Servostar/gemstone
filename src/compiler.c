@@ -10,6 +10,7 @@
 #include <glib.h>
 #include <io/files.h>
 #include <lex/util.h>
+#include <link/lib.h>
 #include <llvm/backend.h>
 #include <mem/cache.h>
 #include <set/set.h>
@@ -17,7 +18,6 @@
 #include <sys/log.h>
 #include <unistd.h>
 #include <yacc/parser.tab.h>
-#include <link/lib.h>
 
 #define GRAPHVIZ_FILE_EXTENSION "gv"
 
@@ -238,8 +238,9 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                                             AST_NODE_PTR root_module) {
 
     if (NULL == module_ref) {
-       module_ref = mem_alloc(MemoryNamespaceOpt, sizeof(ModuleRef));
-       module_ref->module_path = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
+        module_ref = mem_alloc(MemoryNamespaceOpt, sizeof(ModuleRef));
+        module_ref->module_path =
+          mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
     } else {
         module_ref_push(module_ref, module_from_basename(file->path));
     }
@@ -262,40 +263,54 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                             gchar* cwd = g_get_current_dir();
                             chdir(dependency->mode.project.path);
 
-                            ProjectConfig* new_config = default_project_config();
+                            ProjectConfig* new_config =
+                              default_project_config();
                             if (load_project_config(new_config)) {
-                                print_message(Error, "Failed to load project config: `%s`",
-                                              child->value);
+                                print_message(
+                                  Error, "Failed to load project config: `%s`",
+                                  child->value);
                                 return EXIT_FAILURE;
                             }
 
-                            TargetConfig* dep_target = g_hash_table_lookup(new_config->targets, dependency->mode.project.target);
+                            TargetConfig* dep_target = g_hash_table_lookup(
+                              new_config->targets,
+                              dependency->mode.project.target);
                             if (build_target(unit, dep_target)) {
-                                print_message(Error, "Failed to build project config: `%s`",
-                                              child->value);
+                                print_message(
+                                  Error, "Failed to build project config: `%s`",
+                                  child->value);
                                 return EXIT_FAILURE;
                             }
 
-                            GPathBuf* buf = g_path_buf_new_from_path(dependency->mode.project.path);
-                            TargetConfig* dep_conf = g_hash_table_lookup(new_config->targets, dependency->mode.project.target);
+                            GPathBuf* buf = g_path_buf_new_from_path(
+                              dependency->mode.project.path);
+                            TargetConfig* dep_conf = g_hash_table_lookup(
+                              new_config->targets,
+                              dependency->mode.project.target);
                             char* root_mod = dep_conf->root_module;
                             g_path_buf_push(buf, root_mod);
                             char* rel_path = g_path_buf_to_path(buf);
 
                             GPathBuf* dep_bin = g_path_buf_new();
-                            g_path_buf_push(dep_bin, dependency->mode.project.path);
-                            g_path_buf_push(dep_bin, dep_conf->archive_directory);
-                            char* dep_obj_file = g_strjoin(".", dep_conf->name, "o", NULL);
+                            g_path_buf_push(dep_bin,
+                                            dependency->mode.project.path);
+                            g_path_buf_push(dep_bin,
+                                            dep_conf->archive_directory);
+                            char* dep_obj_file =
+                              g_strjoin(".", dep_conf->name, "o", NULL);
                             g_path_buf_push(dep_bin, dep_obj_file);
-                            char* dep_bin_path = g_path_buf_free_to_path(dep_bin);
+                            char* dep_bin_path =
+                              g_path_buf_free_to_path(dep_bin);
                             g_free(dep_obj_file);
-                            char* cached_dep_bin_path = mem_strdup(MemoryNamespaceLld, dep_bin_path);
+                            char* cached_dep_bin_path =
+                              mem_strdup(MemoryNamespaceLld, dep_bin_path);
                             g_free(dep_bin_path);
 
-                            g_array_append_val(dependency->libraries, cached_dep_bin_path);
+                            g_array_append_val(dependency->libraries,
+                                               cached_dep_bin_path);
 
                             const char* path =
-                                    get_absolute_import_path(target, rel_path);
+                              get_absolute_import_path(target, rel_path);
                             g_free(rel_path);
 
                             if (g_hash_table_contains(imports, path)) {
@@ -303,12 +318,16 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                             }
 
                             ModuleFile* imported_file = push_file(unit, path);
-                            AST_NODE_PTR imported_module =
-                                    AST_new_node(empty_location(imported_file, module_ref), AST_Module, NULL);
+                            AST_NODE_PTR imported_module = AST_new_node(
+                              empty_location(imported_file, module_ref),
+                              AST_Module, NULL);
 
-                            if (compile_module_with_dependencies(unit, imported_file, dep_conf, imported_module)
+                            if (compile_module_with_dependencies(
+                                  unit, imported_file, dep_conf,
+                                  imported_module)
                                 == EXIT_SUCCESS) {
-                                AST_import_module(root_module, i + 1, imported_module);
+                                AST_import_module(root_module, i + 1,
+                                                  imported_module);
                             } else {
                                 return EXIT_FAILURE;
                             }
@@ -318,42 +337,53 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                             g_path_buf_pop(buf);
                             gchar* directory = g_path_buf_free_to_path(buf);
                             gchar* cached_directory =
-                                    mem_strdup(MemoryNamespaceLld, directory);
+                              mem_strdup(MemoryNamespaceLld, directory);
                             g_free(directory);
-                            g_array_append_val(target->import_paths, cached_directory);
+                            g_array_append_val(target->import_paths,
+                                               cached_directory);
 
                             chdir(cwd);
                             g_free(cwd);
 
                             GHashTableIter iter;
 
-                            g_hash_table_iter_init(&iter, dep_target->dependencies);
+                            g_hash_table_iter_init(&iter,
+                                                   dep_target->dependencies);
                             char* key;
                             Dependency* dep;
-                            while (g_hash_table_iter_next(&iter, (gpointer) &key, (gpointer) &dep)) {
+                            while (g_hash_table_iter_next(
+                              &iter, (gpointer) &key, (gpointer) &dep)) {
                                 if (dep->kind == GemstoneProject) {
-                                    for (guint i = 0; i < dep->libraries->len; i++) {
-                                        char* dep_lib = g_array_index(dep->libraries, char*, i);
-                                        g_array_append_val(dependency->libraries, dep_lib);
+                                    for (guint i = 0; i < dep->libraries->len;
+                                         i++) {
+                                        char* dep_lib = g_array_index(
+                                          dep->libraries, char*, i);
+                                        g_array_append_val(
+                                          dependency->libraries, dep_lib);
                                     }
                                 } else if (dep->kind == NativeLibrary) {
-                                    char* library_name = build_platform_library_name(dep->mode.library.name, dep->mode.library.shared);
-                                    g_array_append_val(dependency->libraries, library_name);
+                                    char* library_name =
+                                      build_platform_library_name(
+                                        dep->mode.library.name,
+                                        dep->mode.library.shared);
+                                    g_array_append_val(dependency->libraries,
+                                                       library_name);
                                 }
                             }
 
                             break;
                         case NativeLibrary:
 
-                            char* library_name = build_platform_library_name(dependency->mode.library.name, dependency->mode.library.shared);
-                            g_array_append_val(dependency->libraries, library_name);
+                            char* library_name = build_platform_library_name(
+                              dependency->mode.library.name,
+                              dependency->mode.library.shared);
+                            g_array_append_val(dependency->libraries,
+                                               library_name);
 
                             break;
                         default:
                             break;
                     }
-
-
 
                 } else {
                     print_message(Error, "Cannot resolve path for import: `%s`",
@@ -378,9 +408,9 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
 
                 module_ref_push(module_ref, module_from_basename(path));
 
-                ModuleFile* imported_file = push_file(unit, path);
-                AST_NODE_PTR imported_module =
-                  AST_new_node(empty_location(imported_file, module_ref), AST_Module, NULL);
+                ModuleFile* imported_file    = push_file(unit, path);
+                AST_NODE_PTR imported_module = AST_new_node(
+                  empty_location(imported_file, module_ref), AST_Module, NULL);
 
                 if (compile_file_to_ast(imported_module, imported_file)
                     == EXIT_SUCCESS) {

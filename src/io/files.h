@@ -78,8 +78,8 @@ void delete_files(ModuleFileStack* stack);
 TokenLocation new_location(unsigned long int line_start,
                            unsigned long int col_start,
                            unsigned long int line_end,
-                           unsigned long int col_end,
-                           ModuleFile* file, ModuleRef* ref);
+                           unsigned long int col_end, ModuleFile* file,
+                           ModuleRef* ref);
 
 /**
  * @brief Create a new empty location with all of its contents set to zero

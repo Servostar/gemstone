@@ -60,7 +60,7 @@ ModuleFile* push_file(ModuleFileStack* stack, const char* path) {
 
 char* module_from_basename(char* path) {
     char* basename = g_path_get_basename(path);
-    char* dot = strrchr(basename, '.');
+    char* dot      = strrchr(basename, '.');
 
     if (dot != NULL) {
         *dot = '\0';
@@ -228,8 +228,8 @@ void print_diagnostic(TokenLocation* location, Message kind,
 TokenLocation new_location(unsigned long int line_start,
                            unsigned long int col_start,
                            unsigned long int line_end,
-                           unsigned long int col_end,
-                           ModuleFile* file, ModuleRef* ref) {
+                           unsigned long int col_end, ModuleFile* file,
+                           ModuleRef* ref) {
     TokenLocation location;
 
     location.line_start = line_start;

@@ -34,13 +34,13 @@ ModuleRef* module_ref_clone(ModuleRef*);
 
 typedef struct TargetLinkConfig_t {
     // name of object files to link
-    GArray *object_file_names;
+    GArray* object_file_names;
     // treat warnings as errors
     gboolean fatal_warnings;
     // colorize linker output
     bool colorize;
-    char *output_file;
-    char *driver;
+    char* output_file;
+    char* driver;
     // entry point symbol name
     char* entry;
 } TargetLinkConfig;
@@ -52,28 +52,25 @@ typedef enum TargetCompilationMode_t {
     Library
 } TargetCompilationMode;
 
-typedef enum DependencyKind_t {
-    GemstoneProject,
-    NativeLibrary
-} DependencyKind;
+typedef enum DependencyKind_t { GemstoneProject, NativeLibrary } DependencyKind;
 
 // Possible configuration modes:
 // - build project (local/git)
 // - native library (static/shared)
 typedef struct Dependency_t {
-    char *name;
+    char* name;
     DependencyKind kind;
     union {
         struct {
-            char *path;
-            char *target;
+            char* path;
+            char* target;
         } project;
         struct {
-            char *name;
+            char* name;
             bool shared;
         } library;
     } mode;
-    GArray *libraries;
+    GArray* libraries;
 } Dependency;
 
 /**
@@ -82,20 +79,20 @@ typedef struct Dependency_t {
  *        Intermediate representations can be printed as well.
  */
 typedef struct TargetConfig_t {
-    char *name;
+    char* name;
     bool print_ast;
     bool print_asm;
     bool print_ir;
     // root module file which imports all submodules
     // if this is NULL use the first commandline argument as root module
-    char *root_module;
+    char* root_module;
     // output directory for binaries
-    char *output_directory;
+    char* output_directory;
     // output directory for intermediate representations (LLVM-IR, Assembly,
     // ...)
-    char *archive_directory;
+    char* archive_directory;
     // binary driver for executable generation
-    char *driver;
+    char* driver;
     // system to compile code for
     // LLVM triple, see: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
     // in case this is empty this will be the native platform
@@ -106,13 +103,13 @@ typedef struct TargetConfig_t {
     int optimization_level;
     // path to look for object files
     // (can be extra library paths, auto included is output_directory)
-    GArray *link_search_paths;
+    GArray* link_search_paths;
     // treat linker warnings as errors
     bool lld_fatal_warnings;
     // treat parser warnings as errors
     bool gsc_fatal_warnings;
-    GArray *import_paths;
-    GHashTable *dependencies;
+    GArray* import_paths;
+    GHashTable* dependencies;
 } TargetConfig;
 
 /**
@@ -122,16 +119,16 @@ typedef struct TargetConfig_t {
  */
 typedef struct ProjectConfig_t {
     // name of the project
-    char *name;
+    char* name;
     // description
-    char *desc;
+    char* desc;
     // version
-    char *version;
+    char* version;
     // license
-    char *license;
+    char* license;
     // list of authors
-    GArray *authors;
-    GHashTable *targets;
+    GArray* authors;
+    GHashTable* targets;
 } ProjectConfig;
 
 /**
@@ -141,9 +138,9 @@ typedef struct Option_t {
     // index in which the option appeared in the argument array
     int index;
     // identifier of the option
-    const char *string;
+    const char* string;
     // option if format is equals to --option=value
-    const char *value;
+    const char* value;
     // whether or not this option has a value
     bool is_opt;
 } Option;
@@ -194,7 +191,7 @@ bool target_has_shared_dependency(TargetLinkConfig*);
  */
 [[nodiscard("must be freed")]]
 
-TargetConfig *default_target_config();
+TargetConfig* default_target_config();
 
 /**
  * @brief Create the default configuration for a project.
@@ -203,7 +200,7 @@ TargetConfig *default_target_config();
  */
 [[nodiscard("must be freed")]]
 
-ProjectConfig *default_project_config();
+ProjectConfig* default_project_config();
 
 /**
  * @brief Create a new default target configuration an write command line
@@ -212,7 +209,7 @@ ProjectConfig *default_project_config();
  */
 [[nodiscard("must be freed")]]
 
-TargetConfig *default_target_config_from_args();
+TargetConfig* default_target_config_from_args();
 
 /**
  * @brief Load a project configuration from a TOML file with the name
@@ -222,7 +219,7 @@ TargetConfig *default_target_config_from_args();
  */
 [[gnu::nonnull(1)]]
 
-int load_project_config(ProjectConfig *config);
+int load_project_config(ProjectConfig* config);
 
 /**
  * @brief Print a help dialog to stdout.
@@ -235,14 +232,14 @@ void print_help(void);
  */
 [[gnu::nonnull(1)]]
 
-void delete_project_config(ProjectConfig *config);
+void delete_project_config(ProjectConfig* config);
 
 /**
  * @brief Delete a target configuration by deallocation.
  */
 [[gnu::nonnull(1)]]
 
-void delete_target_config(TargetConfig *);
+void delete_target_config(TargetConfig*);
 
 /**
  * @brief Parse the given command line arguments so that calls to
@@ -250,7 +247,7 @@ void delete_target_config(TargetConfig *);
  * @param argc Number of arguments
  * @param argv Array of arguments
  */
-void parse_options(int argc, char *argv[]);
+void parse_options(int argc, char* argv[]);
 
 /**
  * @brief Tests whether an option was set as argument.
@@ -260,7 +257,7 @@ void parse_options(int argc, char *argv[]);
  */
 [[gnu::nonnull(1)]]
 
-bool is_option_set(const char *option);
+bool is_option_set(const char* option);
 
 /**
  * @brief Returns the options information if present
@@ -270,7 +267,7 @@ bool is_option_set(const char *option);
  */
 [[gnu::nonnull(1)]]
 
-const Option *get_option(const char *option);
+const Option* get_option(const char* option);
 
 /**
  * @brief Put a copy of all options whos index is greather than the index
@@ -280,7 +277,7 @@ const Option *get_option(const char *option);
  */
 [[gnu::nonnull(1)]] [[nodiscard("must be freed")]]
 
-GArray *get_non_options_after(const char *command);
+GArray* get_non_options_after(const char* command);
 
 void init_toml();
 

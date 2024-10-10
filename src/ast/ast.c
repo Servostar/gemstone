@@ -5,12 +5,15 @@
 #include <stdio.h>
 #include <sys/log.h>
 
-bool AST_annotation_array_contains_flag(AST_Annotation* haystack, const char* needle) {
+bool AST_annotation_array_contains_flag(AST_Annotation* haystack,
+                                        const char* needle) {
     if (haystack->kind == AnnotationKindArray) {
         for (guint i = 0; i < haystack->impl.array->len; i++) {
-            AST_Annotation child = g_array_index(haystack->impl.array, AST_Annotation, i);
+            AST_Annotation child =
+              g_array_index(haystack->impl.array, AST_Annotation, i);
 
-            if (child.kind == AnnotationKindFlag && strcmp(child.impl.flag, needle) == 0) {
+            if (child.kind == AnnotationKindFlag
+                && strcmp(child.impl.flag, needle) == 0) {
                 return true;
             }
         }
@@ -232,8 +235,8 @@ void AST_delete_node(struct AST_Node_t* node) {
     DEBUG("Deleting AST node: %p", node);
 
     if (node->parent != NULL) {
-        [[maybe_unused]] const struct AST_Node_t* child =
-          AST_detach_child(node->parent, node);
+        [[maybe_unused]]
+        const struct AST_Node_t* child = AST_detach_child(node->parent, node);
         assert(child == node);
     }
 
@@ -284,8 +287,8 @@ static void AST_fprint_graphviz_node_definition(FILE* stream,
     assert(node != NULL);
 
     char* module_path = module_ref_to_str(node->location.module_ref);
-    fprintf(stream, "\tnode%p [label=\"@%s\\n%s\"]\n", (void*) node, module_path,
-            AST_node_to_string(node));
+    fprintf(stream, "\tnode%p [label=\"@%s\\n%s\"]\n", (void*) node,
+            module_path, AST_node_to_string(node));
 
     if (node->children == NULL) {
         return;
@@ -366,27 +369,29 @@ void AST_import_module(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
         // TODO: resolve by public symbols
         switch (node->kind) {
             case AST_FunDef:
-            {
-                AST_NODE_PTR decl = AST_new_node(node->location, AST_FunDecl, NULL);
+                {
+                    AST_NODE_PTR decl =
+                      AST_new_node(node->location, AST_FunDecl, NULL);
 
-                for (int u = 0; u < node->children->len - 1; u++) {
-                    AST_push_node(decl, AST_get_node(node, u));
+                    for (int u = 0; u < node->children->len - 1; u++) {
+                        AST_push_node(decl, AST_get_node(node, u));
+                    }
+
+                    node = decl;
+                    break;
                 }
-
-                node = decl;
-                break;
-            }
             case AST_ProcDef:
-            {
-                AST_NODE_PTR decl = AST_new_node(node->location, AST_ProcDecl, NULL);
+                {
+                    AST_NODE_PTR decl =
+                      AST_new_node(node->location, AST_ProcDecl, NULL);
 
-                for (int u = 0; u < node->children->len - 1; u++) {
-                    AST_push_node(decl, AST_get_node(node, u));
+                    for (int u = 0; u < node->children->len - 1; u++) {
+                        AST_push_node(decl, AST_get_node(node, u));
+                    }
+
+                    node = decl;
+                    break;
                 }
-
-                node = decl;
-                break;
-            }
             case AST_Typedef:
             case AST_Def:
                 break;
@@ -394,7 +399,7 @@ void AST_import_module(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
                 node = NULL;
         }
 
-        if (node != NULL)  {
+        if (node != NULL) {
             AST_insert_node(dst, k + d, node);
             d++;
         }

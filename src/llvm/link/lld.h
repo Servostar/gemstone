@@ -13,7 +13,8 @@ TargetLinkConfig* lld_create_link_config(__attribute__((unused))
                                          const TargetConfig* target_config,
                                          const Module* module);
 
-BackendError lld_link_target(TargetConfig* target_config, TargetLinkConfig* config);
+BackendError lld_link_target(TargetConfig* target_config,
+                             TargetLinkConfig* config);
 
 void lld_delete_link_config(TargetLinkConfig* config);
 

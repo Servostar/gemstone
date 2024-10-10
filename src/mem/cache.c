@@ -375,7 +375,7 @@ char* mem_asprintf(MemoryNamespaceName name, const char* format, ...) {
     va_start(args, fmt);
 
     char* buffer = NULL;
-    int chars = vasprintf(&buffer, format, args);
+    int chars    = vasprintf(&buffer, format, args);
 
     va_end(args);
 

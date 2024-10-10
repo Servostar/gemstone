@@ -8,15 +8,11 @@
 #include <mem/cache.h>
 #include <stdio.h>
 
-extern int lld_main(int Argc, const char **Argv, const char **outstr);
+extern int lld_main(int Argc, const char** Argv, const char** outstr);
 
-const char* FLAGS[] = {
-    "--fatal-warnings",
-    "--nostdlib"
-};
+const char* FLAGS[] = {"--fatal-warnings", "--nostdlib"};
 
-const char* get_optimization_level_string(TargetConfig* config)
-{
+const char* get_optimization_level_string(TargetConfig* config) {
     char* buffer = mem_alloc(MemoryNamespaceLld, 6);
 
     sprintf(buffer, "-O%d", config->optimization_level);
@@ -37,17 +33,17 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
     }
 
     if (link_config->entry != NULL) {
-        char* colored_diagnostics = mem_asprintf(MemoryNamespaceLld, "--entry=%s", link_config->entry);
+        char* colored_diagnostics =
+          mem_asprintf(MemoryNamespaceLld, "--entry=%s", link_config->entry);
         g_array_append_val(arguments, colored_diagnostics);
     }
 
-    const char* optimization_level = get_optimization_level_string(target_config);
+    const char* optimization_level =
+      get_optimization_level_string(target_config);
     g_array_append_val(arguments, optimization_level);
 
-    if (extract_sys_from_triple(target_config->triple) == SYS_LINUX)
-    {
-        if (target_has_shared_dependency(link_config))
-        {
+    if (extract_sys_from_triple(target_config->triple) == SYS_LINUX) {
+        if (target_has_shared_dependency(link_config)) {
             // add dynamic linker
             print_message(Info, "Enabling dynamic linker for build");
 
@@ -55,15 +51,18 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
             g_array_append_val(arguments, enable_dynamic_linker);
 
             const char* default_dynamic_linker_path = "/usr/bin/ld.so";
-            const char* dynamic_linker_option = "--dynamic-linker=";
+            const char* dynamic_linker_option       = "--dynamic-linker=";
 
-            char* buffer = mem_alloc(MemoryNamespaceLld, strlen(dynamic_linker_option) + strlen(default_dynamic_linker_path) + 1);
-            sprintf(buffer, "%s%s", dynamic_linker_option, default_dynamic_linker_path);
+            char* buffer = mem_alloc(
+              MemoryNamespaceLld, strlen(dynamic_linker_option)
+                                    + strlen(default_dynamic_linker_path) + 1);
+            sprintf(buffer, "%s%s", dynamic_linker_option,
+                    default_dynamic_linker_path);
             g_array_append_val(arguments, buffer);
         }
     }
 
-    for (int i = 0; i < sizeof(FLAGS)/sizeof(char*); i++) {
+    for (int i = 0; i < sizeof(FLAGS) / sizeof(char*); i++) {
         char* flag = (char*) FLAGS[i];
 
         g_array_append_val(arguments, flag);
@@ -83,15 +82,17 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
         chars += strlen(g_array_index(arguments, char*, i)) + 1;
     }
 
-    char* buffer = mem_alloc(MemoryNamespaceLld, chars + 1);
+    char* buffer  = mem_alloc(MemoryNamespaceLld, chars + 1);
     size_t offset = 0;
     for (guint i = 0; i < arguments->len; i++) {
-        offset += sprintf(buffer + offset, "%s ", g_array_index(arguments, char*, i));
+        offset +=
+          sprintf(buffer + offset, "%s ", g_array_index(arguments, char*, i));
     }
     print_message(Info, buffer);
 
     const char* message = NULL;
-    const bool code = lld_main(arguments->len, (const char**) arguments->data, &message);
+    const bool code =
+      lld_main(arguments->len, (const char**) arguments->data, &message);
 
     if (!code) {
         print_message(Error, message);
@@ -113,4 +114,3 @@ BinaryDriver* lldc_get_driver() {
 
     return driver;
 }
-

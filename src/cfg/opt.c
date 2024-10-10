@@ -14,21 +14,21 @@
 
 static GHashTable* args = NULL;
 
-static Dependency *new_dependency();
+static Dependency* new_dependency();
 
 const char* ARCH_X86_64 = "x86_64";
-const char* ARCH_I386 = "i386";
-const char* ARCH_ARM = "arm";
-const char* ARCH_THUMB = "thumb";
-const char* ARCH_MIPS = "mips";
+const char* ARCH_I386   = "i386";
+const char* ARCH_ARM    = "arm";
+const char* ARCH_THUMB  = "thumb";
+const char* ARCH_MIPS   = "mips";
 
-const char* SUB_V5 = "v5";
+const char* SUB_V5  = "v5";
 const char* SUB_V6M = "v6m";
 const char* SUB_V7A = "v7a";
 const char* SUB_V7M = "v7m";
 
-const char* VENDOR_PC      = "pc";
-const char* VENDOR_APPLE   = "apple";
+const char* VENDOR_PC     = "pc";
+const char* VENDOR_APPLE  = "apple";
 const char* VENDOR_NVIDIA = "nvidia";
 const char* VENDOR_IBM    = "ibm";
 
@@ -38,49 +38,42 @@ const char* SYS_WIN32  = "win32";
 const char* SYS_DARWIN = "darwin";
 const char* SYS_CUDA   = "cuda";
 
-const char* ENV_EABI   = "eabi";
+const char* ENV_EABI    = "eabi";
 const char* ENV_GNU     = "gnu";
 const char* ENV_ANDROID = "android";
 const char* ENV_MACHO   = "macho";
-const char* ENV_ELF    = "elf";
+const char* ENV_ELF     = "elf";
 
-bool target_has_shared_dependency(TargetLinkConfig* config)
-{
+bool target_has_shared_dependency(TargetLinkConfig* config) {
     bool has_shared = false;
 
-    const char* shared_files[] = {
-        ".so",
-        ".dll"
-    };
+    const char* shared_files[] = {".so", ".dll"};
 
-    for (guint i = 0; i < config->object_file_names->len; i++)
-    {
+    for (guint i = 0; i < config->object_file_names->len; i++) {
         char* object_file = g_array_index(config->object_file_names, char*, i);
 
-        for (int k = 0; k < sizeof(shared_files)/sizeof(char*); k++)
-        {
+        for (int k = 0; k < sizeof(shared_files) / sizeof(char*); k++) {
             has_shared = g_str_has_suffix(object_file, shared_files[k]);
-            if (has_shared)
+            if (has_shared) {
                 break;
+            }
         }
 
-        if (has_shared)
+        if (has_shared) {
             break;
+        }
     }
 
     return has_shared;
 }
 
-const char* find_string(const char* haystack, const char** options, size_t size)
-{
+const char* find_string(const char* haystack, const char** options,
+                        size_t size) {
     const static char* found = NULL;
 
-    if (haystack != NULL)
-    {
-        for (size_t i = 0; i < size/sizeof(const char*); i++)
-        {
-            if (strstr(haystack, options[i]))
-            {
+    if (haystack != NULL) {
+        for (size_t i = 0; i < size / sizeof(const char*); i++) {
+            if (strstr(haystack, options[i])) {
                 found = options[i];
                 break;
             }
@@ -90,65 +83,36 @@ const char* find_string(const char* haystack, const char** options, size_t size)
     return found;
 }
 
-const char* extract_arch_from_triple(const char* triple)
-{
-    const char* known_archs[] = {
-        ARCH_X86_64,
-        ARCH_I386,
-        ARCH_ARM,
-        ARCH_THUMB,
-        ARCH_MIPS
-    };
+const char* extract_arch_from_triple(const char* triple) {
+    const char* known_archs[] = {ARCH_X86_64, ARCH_I386, ARCH_ARM, ARCH_THUMB,
+                                 ARCH_MIPS};
 
     return find_string(triple, known_archs, sizeof(known_archs));
 }
 
-const char* extract_sub_from_triple(const char* triple)
-{
-    const char* known_subs[] = {
-        SUB_V5,
-        SUB_V6M,
-        SUB_V7A,
-        SUB_V7M
-    };
+const char* extract_sub_from_triple(const char* triple) {
+    const char* known_subs[] = {SUB_V5, SUB_V6M, SUB_V7A, SUB_V7M};
 
     return find_string(triple, known_subs, sizeof(known_subs));
 }
 
-const char* extract_vendor_from_triple(const char* triple)
-{
-    const char* known_subs[] = {
-        VENDOR_PC,
-        VENDOR_APPLE,
-        VENDOR_NVIDIA,
-        VENDOR_IBM
-    };
+const char* extract_vendor_from_triple(const char* triple) {
+    const char* known_subs[] = {VENDOR_PC, VENDOR_APPLE, VENDOR_NVIDIA,
+                                VENDOR_IBM};
 
     return find_string(triple, known_subs, sizeof(known_subs));
 }
 
-const char* extract_sys_from_triple(const char* triple)
-{
-    const char* known_sys[] = {
-        SYS_NONE,
-        SYS_LINUX,
-        SYS_WIN32,
-        SYS_DARWIN,
-        SYS_CUDA
-    };
+const char* extract_sys_from_triple(const char* triple) {
+    const char* known_sys[] = {SYS_NONE, SYS_LINUX, SYS_WIN32, SYS_DARWIN,
+                               SYS_CUDA};
 
     return find_string(triple, known_sys, sizeof(known_sys));
 }
 
-const char* extract_env_from_triple(const char* triple)
-{
-    const char* known_envs[] = {
-        ENV_EABI,
-        ENV_GNU,
-        ENV_ANDROID,
-        ENV_MACHO,
-        ENV_ELF
-    };
+const char* extract_env_from_triple(const char* triple) {
+    const char* known_envs[] = {ENV_EABI, ENV_GNU, ENV_ANDROID, ENV_MACHO,
+                                ENV_ELF};
 
     return find_string(triple, known_envs, sizeof(known_envs));
 }
@@ -305,7 +269,7 @@ TargetConfig* default_target_config() {
     config->lld_fatal_warnings = FALSE;
     config->gsc_fatal_warnings = FALSE;
     config->import_paths = mem_new_g_array(MemoryNamespaceOpt, sizeof(char*));
-    config->triple = NULL;
+    config->triple       = NULL;
 
     return config;
 }
@@ -603,7 +567,8 @@ static int get_mode_from_str(TargetCompilationMode* mode, const char* name) {
     return PROJECT_SEMANTIC_ERR;
 }
 
-static int parse_dependency(Dependency* dependency, toml_table_t* table, char* name) {
+static int parse_dependency(Dependency* dependency, toml_table_t* table,
+                            char* name) {
     dependency->name = mem_strdup(MemoryNamespaceOpt, name);
 
     bool is_project = false;
@@ -676,7 +641,8 @@ static int parse_target(const ProjectConfig* config,
 
     toml_table_t* dependencies = toml_table_in(target_table, "dependencies");
     if (dependencies) {
-        target_config->dependencies = mem_new_g_hash_table(MemoryNamespaceOpt, g_str_hash, g_str_equal);
+        target_config->dependencies =
+          mem_new_g_hash_table(MemoryNamespaceOpt, g_str_hash, g_str_equal);
         for (int i = 0; i < toml_table_ntab(dependencies); i++) {
             char* key = (char*) toml_key_in(dependencies, i);
 
@@ -685,12 +651,15 @@ static int parse_target(const ProjectConfig* config,
             }
 
             toml_table_t* dependency_table = toml_table_in(dependencies, key);
-            Dependency* dependency = new_dependency();
-            if (parse_dependency(dependency, dependency_table, key) == PROJECT_SEMANTIC_ERR) {
+            Dependency* dependency         = new_dependency();
+            if (parse_dependency(dependency, dependency_table, key)
+                == PROJECT_SEMANTIC_ERR) {
                 return PROJECT_SEMANTIC_ERR;
             }
 
-            g_hash_table_insert(target_config->dependencies, mem_strdup(MemoryNamespaceOpt, key), dependency);
+            g_hash_table_insert(target_config->dependencies,
+                                mem_strdup(MemoryNamespaceOpt, key),
+                                dependency);
         }
     }
 

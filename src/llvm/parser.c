@@ -124,8 +124,7 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
     LLVMInitializeAllAsmPrinters();
 
     DEBUG("creating target...");
-    if (LLVMGetTargetFromTriple(target->triple, &llvm_target, &error)
-        != 0) {
+    if (LLVMGetTargetFromTriple(target->triple, &llvm_target, &error) != 0) {
         ERROR("failed to create target machine: %s", error);
         err = new_backend_impl_error(Implementation, NULL,
                                      "unable to create target machine");
@@ -135,8 +134,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
 
     DEBUG("Creating target machine...");
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(
-      llvm_target, target->triple, target->cpu, target->features,
-      target->opt, target->reloc, target->model);
+      llvm_target, target->triple, target->cpu, target->features, target->opt,
+      target->reloc, target->model);
 
     print_message(Info, "Generating code for: %s", target->triple);
 

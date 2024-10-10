@@ -11,7 +11,8 @@
 #include <mem/cache.h>
 #include <sys/log.h>
 
-static driver_init AVAILABLE_DRIVER[] = {clang_get_driver, gcc_get_driver, lldc_get_driver};
+static driver_init AVAILABLE_DRIVER[] = {clang_get_driver, gcc_get_driver,
+                                         lldc_get_driver};
 
 static GHashTable* binary_driver = NULL;
 
@@ -82,7 +83,8 @@ static const char* get_library_file_extension(bool shared) {
 }
 
 char* build_platform_library_name(char* basename, bool shared) {
-    char* library_name = g_strjoin("", "lib", basename, ".", get_library_file_extension(shared), NULL);
+    char* library_name        = g_strjoin("", "lib", basename, ".",
+                                          get_library_file_extension(shared), NULL);
     char* cached_library_name = mem_strdup(MemoryNamespaceLld, library_name);
     g_free(library_name);
     return cached_library_name;

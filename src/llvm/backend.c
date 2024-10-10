@@ -60,8 +60,7 @@ static char* create_target_output_name(const TargetConfig* config) {
     return cached_name;
 }
 
-Target create_target_from_triple(char* triple)
-{
+Target create_target_from_triple(char* triple) {
     Target target;
 
     target.triple = mem_strdup(MemoryNamespaceLld, triple);
@@ -79,11 +78,9 @@ Target create_target_from_config(TargetConfig* config) {
     DEBUG("Building target from configuration");
 
     Target target = create_native_target();
-    if (config->triple != NULL)
-    {
+    if (config->triple != NULL) {
         target = create_target_from_triple(config->triple);
-    } else
-    {
+    } else {
         config->triple = target.triple;
     }
 
@@ -91,8 +88,8 @@ Target create_target_from_config(TargetConfig* config) {
 
     target.opt = llvm_opt_from_int(config->optimization_level);
 
-    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name,
-         target.opt, target.triple, target.cpu, target.features);
+    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name, target.opt,
+         target.triple, target.cpu, target.features);
 
     return target;
 }
