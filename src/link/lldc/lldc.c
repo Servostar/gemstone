@@ -70,7 +70,7 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
 
     size_t chars = 0;
     for (guint i = 0; i < arguments->len; i++) {
-        chars += strlen(g_array_index(arguments, char*, i));
+        chars += strlen(g_array_index(arguments, char*, i)) + 1;
     }
 
     char* buffer = mem_alloc(MemoryNamespaceLld, chars + 1);
