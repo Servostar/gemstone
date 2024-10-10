@@ -2655,7 +2655,7 @@ int createFunction(Function* function, AST_NODE_PTR currentNode) {
         char* modules = module_ref_to_str(currentNode->location.module_ref);
         char* composed_name = g_strjoin("", modules, "::", function->name, NULL);
         char* cached_composed_name = mem_strdup(MemoryNamespaceSet, composed_name);
-        g_free(modules);
+
         g_free(composed_name);
         function->name = cached_composed_name;
     }
