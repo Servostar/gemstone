@@ -6,11 +6,11 @@
     #include <mem/cache.h>
 
     int yyLineNumber = 1;
-  
+
     int yylex();
 
     extern int yyerror(const char* s);
-  
+
     #define YY_USER_ACTION beginToken(yytext);
 
     #define YY_INPUT(buf,result,max_size)  {\
@@ -30,6 +30,7 @@
 
 #.* ;
 
+"::" {return(ModSep);};
 ":" {DEBUG("\"%s\" tokenized with \':\'", yytext); return(':');};
 "=" {DEBUG("\"%s\" tokenized with \'=\'", yytext); return('=');};
 "+" {DEBUG("\"%s\" tokenized with \'+\'", yytext); return('+');};
@@ -57,7 +58,7 @@
 "short" {DEBUG("\"%s\" tokenized with \'KeyShort\'", yytext); return(KeyShort);};
 "long" {DEBUG("\"%s\" tokenized with \'KeyLong\'", yytext); return(KeyLong);};
 "half" {DEBUG("\"%s\" tokenized with \'KeyHalf\'", yytext); return(KeyHalf);};
-"double" {DEBUG("\"%s\" tokenized with \'KeyDouble\'", yytext); return(KeyDouble);}; 
+"double" {DEBUG("\"%s\" tokenized with \'KeyDouble\'", yytext); return(KeyDouble);};
 "signed" {DEBUG("\"%s\" tokenized with \'KeySigned\'", yytext); return(KeySigned);};
 "unsigned" {DEBUG("\"%s\" tokenized with \'KeyUnsigned\'", yytext); return(KeyUnsigned);};
 "ref" {DEBUG("\"%s\" tokenized with \'KeyRef\'", yytext); return(KeyRef);};
@@ -106,7 +107,7 @@
 \"([^\"\n])*\" {
     yytext = yytext +1;
     yytext[yyleng - 2] = 0;
-    
+
     DEBUG("\"%s\" tokenized with \'ValStr\'", yytext);
     yylval.string = collapse_escape_sequences(yytext);
     return(ValStr);

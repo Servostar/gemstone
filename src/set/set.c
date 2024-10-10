@@ -2083,6 +2083,27 @@ Parameter get_param_from_func(Function* func, size_t index) {
     }
 }
 
+char* module_ref_to_string(AST_NODE_PTR node) {
+    switch (node->kind) {
+        case AST_Ident:
+            return mem_strdup(MemoryNamespaceSet, node->value);
+        case AST_ModuleRef:
+
+            char* submodule = module_ref_to_string(AST_get_last_node(node));
+            char* curmodule = module_ref_to_string(AST_get_node(node, 0));
+
+            char* composed = g_strjoin("::", curmodule, submodule, NULL);
+            char* cached_composed = mem_strdup(MemoryNamespaceSet, composed);
+            mem_free(composed);
+            mem_free(curmodule);
+            mem_free(submodule);
+
+            return cached_composed;
+        default:
+            return NULL;
+    }
+}
+
 int createfuncall(FunctionCall* funcall, AST_NODE_PTR currentNode) {
     assert(currentNode != NULL);
     assert(currentNode->children->len == 2);
@@ -2090,12 +2111,14 @@ int createfuncall(FunctionCall* funcall, AST_NODE_PTR currentNode) {
     AST_NODE_PTR argsListNode = AST_get_node(currentNode, 1);
     AST_NODE_PTR nameNode     = AST_get_node(currentNode, 0);
 
+    char* function_name = module_ref_to_string(nameNode);
+
     Function* fun = NULL;
-    if (nameNode->kind == AST_Ident) {
-        int result = getFunction(nameNode->value, &fun);
+    if (nameNode->kind == AST_ModuleRef || nameNode->kind == AST_Ident) {
+        int result = getFunction(function_name, &fun);
         if (result == SEMANTIC_ERROR) {
             print_diagnostic(&currentNode->location, Error,
-                             "Unknown function: `%s`", nameNode->value);
+                             "Unknown function: `%s`", function_name);
             return SEMANTIC_ERROR;
         }
     }
@@ -2107,10 +2130,8 @@ int createfuncall(FunctionCall* funcall, AST_NODE_PTR currentNode) {
         // unique
         const char* boxName =
           AST_get_node(nameNode, (nameNode->children->len - 2))->value;
-        const char* funName =
-          AST_get_node(nameNode, (nameNode->children->len - 1))->value;
 
-        const char* name = g_strjoin("", boxName, ".", funName, NULL);
+        const char* name = g_strjoin("", boxName, ".", function_name, NULL);
 
         int result = getFunction(name, &fun);
         if (result) {
@@ -2629,7 +2650,7 @@ int createFunction(Function* function, AST_NODE_PTR currentNode) {
 
     // compose function name by appending parent modules
     char* modules = module_ref_to_str(currentNode->location.module_ref);
-    char* composed_name = g_strjoin("", modules, ":", function->name, NULL);
+    char* composed_name = g_strjoin("", modules, "::", function->name, NULL);
     g_free(modules);
     function->name = composed_name;
 

@@ -93,6 +93,7 @@ void AST_init() {
     lookup_table[AST_Dereference] = "deref";
     lookup_table[AST_Reference]   = "ref";
     lookup_table[AST_Return]      = "ret";
+    lookup_table[AST_ModuleRef]   = "modref";
 }
 
 const char* AST_node_to_string(const struct AST_Node_t* node) {

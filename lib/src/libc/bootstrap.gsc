@@ -8,7 +8,8 @@ include "os"
 fun main()
 
 # entrypoint function
+#[nomangle,noreturn,entry]
 fun _start() {
     main()
-    _exit(0 as i32)
+    os::exit(0 as i32)
 }

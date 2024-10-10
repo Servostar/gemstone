@@ -77,6 +77,7 @@
 %type <node_ptr> program
 %type <node_ptr> storage_expr
 %type <node_ptr> returnstmt
+%type <node_ptr> moduleref
 
 
 %token KeyInt
@@ -128,6 +129,7 @@
 %token FunExtsupport
 %token Invalid
 %token KeyReturn
+%token ModSep
 
 /* Operator associativity */
 /* Operators at lower line number have lower precedence */
@@ -162,7 +164,11 @@ programbody: moduleimport {$$ = $1;}
        | decl{$$ = $1;}
        | typedef{$$ = $1;};
 
-
+moduleref: Ident {$$ = AST_new_node(new_loc(), AST_Ident, $1);}
+        | Ident ModSep moduleref {AST_NODE_PTR modref = AST_new_node(new_loc(), AST_ModuleRef, NULL);
+                                   AST_push_node(modref, AST_new_node(new_loc(), AST_Ident, $1));
+                                   AST_push_node(modref, $3);
+                                   $$ = modref;};
 
 expr: ValFloat {$$ = AST_new_node(new_loc(), AST_Float, $1);}
     | ValInt    {$$ = AST_new_node(new_loc(), AST_Int, $1);}
@@ -352,9 +358,8 @@ reinterpretcast: expr KeyTo type %prec KeyTo { AST_NODE_PTR cast = AST_new_node(
                                     DEBUG("Reinterpret-Cast"); };
 
 
-funcall: Ident argumentlist {AST_NODE_PTR funcall = AST_new_node(new_loc(), AST_Call, NULL);
-                             AST_NODE_PTR ident = AST_new_node(new_loc(), AST_Ident, $1);
-                             AST_push_node(funcall, ident);
+funcall: moduleref argumentlist {AST_NODE_PTR funcall = AST_new_node(new_loc(), AST_Call, NULL);
+                             AST_push_node(funcall, $1);
                              AST_push_node(funcall, $2);
                              $$ = funcall;
                              DEBUG("Function call"); };

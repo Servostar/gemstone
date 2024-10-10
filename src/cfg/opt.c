@@ -180,6 +180,7 @@ char* module_ref_to_str(ModuleRef* ref) {
 
             if (n + 1 < ref->module_path->len) {
                 g_string_append_unichar(string, ':');
+                g_string_append_unichar(string, ':');
             }
         }
     }
