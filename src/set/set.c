@@ -470,7 +470,7 @@ int createDef(AST_NODE_PTR currentNode, GArray** variables) {
     def.declaration  = decl;
     Expression* name = createExpression(expression);
     if (name == NULL) {
-        status = SEMANTIC_OK;
+        return SEMANTIC_ERROR;
     }
 
     if (!compareTypes(def.declaration.type, name->result)) {
