@@ -13,20 +13,18 @@ Target create_native_target() {
     DEBUG("creating native target...");
     Target target;
 
-    target.name.str        = "tmp";
-    target.name.allocation = NONE;
+    char* triple   = LLVMGetDefaultTargetTriple();
+    char* cpu      = LLVMGetHostCPUName();
+    char* features = LLVMGetHostCPUFeatures();
 
-    target.triple.str        = LLVMGetDefaultTargetTriple();
-    target.triple.allocation = LLVM;
-    assert(target.triple.str != NULL);
+    target.name     = "tmp";
+    target.triple   = mem_strdup(MemoryNamespaceLld, triple);
+    target.cpu      = mem_strdup(MemoryNamespaceLld, cpu);
+    target.features = mem_strdup(MemoryNamespaceLld, features);
 
-    target.cpu.str        = LLVMGetHostCPUName();
-    target.cpu.allocation = LLVM;
-    assert(target.cpu.str != NULL);
-
-    target.features.str        = LLVMGetHostCPUFeatures();
-    target.features.allocation = LLVM;
-    assert(target.features.str != NULL);
+    LLVMDisposeMessage(triple);
+    LLVMDisposeMessage(cpu);
+    LLVMDisposeMessage(features);
 
     target.opt   = LLVMCodeGenLevelNone;
     target.reloc = LLVMRelocDefault;
@@ -66,16 +64,13 @@ Target create_target_from_triple(char* triple)
 {
     Target target;
 
-    target.triple.str = mem_strdup(MemoryNamespaceLld, triple);
-    target.triple.allocation = NONE;
+    target.triple = mem_strdup(MemoryNamespaceLld, triple);
 
     // select default
-    target.cpu.str = "";
-    target.cpu.allocation = NONE;
+    target.cpu = "";
 
     // select default
-    target.features.str = "";
-    target.features.allocation = NONE;
+    target.features = "";
 
     return target;
 }
@@ -89,39 +84,24 @@ Target create_target_from_config(TargetConfig* config) {
         target = create_target_from_triple(config->triple);
     } else
     {
-        config->triple = target.triple.str;
+        config->triple = target.triple;
     }
 
-    target.name.str        = create_target_output_name(config);
-    target.name.allocation = NONE; // freed later by compiler
+    target.name = create_target_output_name(config);
 
     target.opt = llvm_opt_from_int(config->optimization_level);
 
-    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name.str,
-         target.opt, target.triple.str, target.cpu.str, target.features.str);
+    INFO("Configured target: %s/%d: (%s) on %s { %s }", target.name,
+         target.opt, target.triple, target.cpu, target.features);
 
     return target;
 }
 
-static void delete_string(String string) {
-    DEBUG("deleting string...");
-    switch (string.allocation) {
-        case LLVM:
-            LLVMDisposeMessage(string.str);
-            break;
-        case LIBC:
-            free(string.str);
-            break;
-        case NONE:
-            break;
-    }
-}
-
 void delete_target(Target target) {
-    delete_string(target.name);
-    delete_string(target.cpu);
-    delete_string(target.features);
-    delete_string(target.triple);
+    mem_free(target.name);
+    mem_free(target.cpu);
+    mem_free(target.features);
+    mem_free(target.triple);
 }
 
 typedef enum LLVMBackendError_t { UnresolvedImport } LLVMBackendError;

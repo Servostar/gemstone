@@ -26,7 +26,7 @@ BackendError export_IR(LLVMBackendCompileUnit* unit, const Target* target,
     // convert module to LLVM-IR
     char* ir = LLVMPrintModuleToString(unit->module);
 
-    char* basename = g_strjoin(".", target->name.str, "ll", NULL);
+    char* basename = g_strjoin(".", target->name, "ll", NULL);
     // construct file name
     const char* filename =
       g_build_filename(config->archive_directory, basename, NULL);
@@ -110,8 +110,8 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
     BackendError err = SUCCESS;
     DEBUG("exporting object file...");
 
-    INFO("Using target (%s): %s with features: %s", target->name.str,
-         target->triple.str, target->features.str);
+    INFO("Using target (%s): %s with features: %s", target->name,
+         target->triple, target->features);
 
     LLVMTargetRef llvm_target = NULL;
     char* error               = NULL;
@@ -124,7 +124,7 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
     LLVMInitializeAllAsmPrinters();
 
     DEBUG("creating target...");
-    if (LLVMGetTargetFromTriple(target->triple.str, &llvm_target, &error)
+    if (LLVMGetTargetFromTriple(target->triple, &llvm_target, &error)
         != 0) {
         ERROR("failed to create target machine: %s", error);
         err = new_backend_impl_error(Implementation, NULL,
@@ -135,10 +135,10 @@ BackendError export_object(LLVMBackendCompileUnit* unit, const Target* target,
 
     DEBUG("Creating target machine...");
     LLVMTargetMachineRef target_machine = LLVMCreateTargetMachine(
-      llvm_target, target->triple.str, target->cpu.str, target->features.str,
+      llvm_target, target->triple, target->cpu, target->features,
       target->opt, target->reloc, target->model);
 
-    print_message(Info, "Generating code for: %s", target->triple.str);
+    print_message(Info, "Generating code for: %s", target->triple);
 
     if (config->print_asm) {
         err = emit_module_to_file(unit, target_machine, LLVMAssemblyFile, error,

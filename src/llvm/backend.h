@@ -6,16 +6,11 @@
 
 enum StringAllocation_t { LLVM, LIBC, NONE };
 
-typedef struct String_t {
-    enum StringAllocation_t allocation;
-    char* str;
-} String;
-
 typedef struct Target_t {
-    String name;
-    String triple;
-    String cpu;
-    String features;
+    char* name;
+    char* triple;
+    char* cpu;
+    char* features;
     LLVMCodeGenOptLevel opt;
     LLVMRelocMode reloc;
     LLVMCodeModel model;
