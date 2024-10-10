@@ -85,6 +85,9 @@ bool lldc_link(TargetConfig* target_config, TargetLinkConfig* link_config) {
 
     if (!code) {
         print_message(Error, message);
+    }
+
+    if (message != NULL) {
         free((void*) message);
     }
 
