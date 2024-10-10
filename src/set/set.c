@@ -2094,7 +2094,7 @@ char* module_ref_to_string(AST_NODE_PTR node) {
 
             char* composed = g_strjoin("::", curmodule, submodule, NULL);
             char* cached_composed = mem_strdup(MemoryNamespaceSet, composed);
-            mem_free(composed);
+            g_free(composed);
             mem_free(curmodule);
             mem_free(submodule);
 

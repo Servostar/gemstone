@@ -285,13 +285,18 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                             GPathBuf* dep_bin = g_path_buf_new();
                             g_path_buf_push(dep_bin, dependency->mode.project.path);
                             g_path_buf_push(dep_bin, dep_conf->archive_directory);
-                            g_path_buf_push(dep_bin, g_strjoin(".", dep_conf->name, "o", NULL));
-                            char* dep_bin_path = g_path_buf_to_path(dep_bin);
+                            char* dep_obj_file = g_strjoin(".", dep_conf->name, "o", NULL);
+                            g_path_buf_push(dep_bin, dep_obj_file);
+                            char* dep_bin_path = g_path_buf_free_to_path(dep_bin);
+                            g_free(dep_obj_file);
+                            char* cached_dep_bin_path = mem_strdup(MemoryNamespaceLld, dep_bin_path);
+                            g_free(dep_bin_path);
 
-                            g_array_append_val(dependency->libraries, dep_bin_path);
+                            g_array_append_val(dependency->libraries, cached_dep_bin_path);
 
                             const char* path =
                                     get_absolute_import_path(target, rel_path);
+                            g_free(rel_path);
 
                             if (g_hash_table_contains(imports, path)) {
                                 continue;
@@ -311,13 +316,14 @@ static int compile_module_with_dependencies(ModuleFileStack* unit,
                             g_hash_table_insert(imports, (gpointer) path, NULL);
 
                             g_path_buf_pop(buf);
-                            gchar* directory = g_path_buf_to_path(buf);
+                            gchar* directory = g_path_buf_free_to_path(buf);
                             gchar* cached_directory =
                                     mem_strdup(MemoryNamespaceLld, directory);
                             g_free(directory);
                             g_array_append_val(target->import_paths, cached_directory);
 
                             chdir(cwd);
+                            g_free(cwd);
 
                             GHashTableIter iter;
 
