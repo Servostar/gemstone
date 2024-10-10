@@ -28,7 +28,7 @@
 %%
 "\n"    yyLineNumber++;
 
-#.* ;
+//.* ;
 
 "::" {return(ModSep);};
 ":" {DEBUG("\"%s\" tokenized with \':\'", yytext); return(':');};

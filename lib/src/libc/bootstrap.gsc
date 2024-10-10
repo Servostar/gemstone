@@ -1,13 +1,14 @@
-# ----------------------------------------
-# Bootstrap module for libgscstd-glibc
-# used on GNU/Linux operating systems
+// ----------------------------------------
+// Bootstrap module for libgscstd-glibc
+// used on GNU/Linux operating systems
 
 include "os"
 
-# main function is to be implemented by the application source
+// main function is to be implemented by the application source
+#[nomangle]
 fun main()
 
-# entrypoint function
+// entrypoint function
 #[nomangle,noreturn,entry]
 fun _start() {
     main()

@@ -1,7 +1,7 @@
 
 include "types"
 
-# from unistd.h
+// from unistd.h
 #[nomangle,preserve,noreturn]
 fun _exit(in i32: code)
 
