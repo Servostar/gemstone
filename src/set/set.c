@@ -1,3 +1,4 @@
+#include "cfg/opt.h"
 #include <assert.h>
 #include <ast/ast.h>
 #include <glib.h>
@@ -2625,6 +2626,12 @@ int createFunction(Function* function, AST_NODE_PTR currentNode) {
             ERROR("invalid AST node type: %s", AST_node_to_string(currentNode));
             return SEMANTIC_ERROR;
     }
+
+    // compose function name by appending parent modules
+    char* modules = module_ref_to_str(currentNode->location.module_ref);
+    char* composed_name = g_strjoin("", modules, ":", function->name, NULL);
+    g_free(modules);
+    function->name = composed_name;
 
     mem_free(functionParameter);
     functionParameter = NULL;
