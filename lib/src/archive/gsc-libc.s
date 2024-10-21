@@ -114,18 +114,8 @@ _start:
 	.type	"std::io::getStdoutHandle",@function
 "std::io::getStdoutHandle":
 	.cfi_startproc
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	movq	%rsp, %rax
-	leaq	-16(%rax), %rsp
-	movl	$0, -16(%rax)
-	xorl	%eax, %eax
-	movq	%rbp, %rsp
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
+	movl	$1, -8(%rsp)
+	movl	$1, %eax
 	retq
 .Lfunc_end4:
 	.size	"std::io::getStdoutHandle", .Lfunc_end4-"std::io::getStdoutHandle"

@@ -1365,7 +1365,7 @@ int createBitNotOperation(Expression* ParentExpression,
  */
 GArray* getBoxMember(Type* currentBoxType, GArray* names) {
 
-    GArray* members = mem_new_g_array(MemoryNamespaceSet, sizeof(BoxMember));
+    GArray* members = mem_new_g_array(MemoryNamespaceSet, sizeof(BoxMember*));
     // list of members of the type
     GHashTable* memberList = currentBoxType->impl.box->member;
 
@@ -1392,7 +1392,7 @@ GArray* getBoxMember(Type* currentBoxType, GArray* names) {
                 return NULL;
             }
 
-            g_array_append_vals(members, (BoxMember*) otherMember->data,
+            g_array_append_vals(members, (BoxMember**) otherMember->data,
                                 otherMember->len);
 
             return members;
@@ -1428,18 +1428,20 @@ int createBoxAccess(Expression* ParentExpression, AST_NODE_PTR currentNode) {
     }
 
     // filling boxAccess variable
+    ParentExpression->impl.variable = mem_alloc(MemoryNamespaceSet, sizeof(Variable));
     ParentExpression->impl.variable->kind    = VariableKindBoxMember;
     ParentExpression->impl.variable->nodePtr = currentNode;
-    ParentExpression->impl.variable->name    = NULL;
+    ParentExpression->impl.variable->name    = boxVariable->name;
     ParentExpression->impl.variable->impl.member.nodePtr = currentNode;
 
     // filling boxacces.variable
     ParentExpression->impl.variable->impl.member.variable = boxVariable;
+    ParentExpression->kind = ExpressionKindVariable;
 
     // first one is the box itself
-    GArray* names = mem_alloc(MemoryNamespaceSet, sizeof(GArray));
+    GArray* names = mem_new_g_array(MemoryNamespaceSet, sizeof(char*));
     if (currentNode->kind == AST_IdentList) {
-        for (size_t i = 1; i < currentNode->children->len; i++) {
+        for (size_t i = 1; i < AST_get_child_count(currentNode); i++) {
             g_array_append_val(names, AST_get_node(currentNode, i)->value);
         }
     } else if (currentNode->kind == AST_List) {
@@ -1455,7 +1457,7 @@ int createBoxAccess(Expression* ParentExpression, AST_NODE_PTR currentNode) {
     GArray* boxMember = getBoxMember(boxType, names);
     ParentExpression->impl.variable->impl.member.member = boxMember;
     ParentExpression->result =
-      g_array_index(boxMember, BoxMember, boxMember->len).type;
+      g_array_index(boxMember, BoxMember*, boxMember->len - 1)->type;
     return SEMANTIC_OK;
 }
 

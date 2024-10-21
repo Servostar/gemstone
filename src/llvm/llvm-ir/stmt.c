@@ -107,8 +107,11 @@ BackendError impl_storage_expr(LLVMBackendCompileUnit* unit,
                 BoxMember* member = g_array_index(expr->impl.boxAccess.member, BoxMember*, i);
 
                 LLVMTypeRef member_type = NULL;
+                Type* type = mem_alloc(MemoryNamespaceLlvm, sizeof(Type));
+                type->kind = TypeKindBox;
+                type->impl.box = member->box;
                 err = get_type_impl(unit, scope->func_scope->global_scope,
-                                    expr->target_type, &member_type);
+                                    type, &member_type);
                 if (err.kind != Success) {
                     return err;
                 }

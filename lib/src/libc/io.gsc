@@ -21,5 +21,5 @@ fun print(in ref u8: buf, in u32: n) {
 
     Handle: stdout = std::io::getStdoutHandle()
 
-    write(1 as i32, buf, n as u64)
+    write(stdout.fd as i32, buf, n as u64)
 }
