@@ -80,6 +80,7 @@ typedef struct Block_t Block;
 typedef struct Expression_t Expression;
 
 typedef struct BoxMember_t {
+    unsigned int index;
     const char* name;
     Type* type;
     BoxType* box;

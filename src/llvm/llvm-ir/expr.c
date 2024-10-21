@@ -373,6 +373,8 @@ BackendError impl_variable_load(LLVMBackendCompileUnit* unit,
 
     Type* type;
 
+    // TODO: get member of boxes
+
     if (variable->kind == VariableKindDefinition) {
         type = variable->impl.definiton.declaration.type;
     } else {
@@ -442,12 +444,8 @@ BackendError impl_parameter_load(LLVMBackendCompileUnit* unit,
 
         get_type_impl(unit, scope->func_scope->global_scope, type, &llvm_type);
 
-        if (LLVMGetTypeKind(LLVMTypeOf(llvm_variable)) == LLVMPointerTypeKind) {
-            *llvm_result =
-              LLVMBuildLoad2(builder, llvm_type, llvm_variable, "");
-        } else {
-            *llvm_result = llvm_variable;
-        }
+        *llvm_result =
+          LLVMBuildLoad2(builder, llvm_type, llvm_variable, "");
     }
 
     return SUCCESS;

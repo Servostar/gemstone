@@ -394,6 +394,7 @@ void AST_import_module(AST_NODE_PTR dst, size_t k, AST_NODE_PTR src) {
                 }
             case AST_Typedef:
             case AST_Def:
+            case AST_Box:
                 break;
             default:
                 node = NULL;

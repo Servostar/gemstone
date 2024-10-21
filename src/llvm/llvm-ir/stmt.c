@@ -75,7 +75,8 @@ BackendError impl_storage_expr(LLVMBackendCompileUnit* unit,
                 }
             }
 
-            if (true) {
+            // not sure why this was enabled?
+            if (false) {
                 LLVMTypeRef deref_type = NULL;
                 err = get_type_impl(unit, scope->func_scope->global_scope,
                                     expr->impl.dereference.array->target_type,
@@ -100,7 +101,23 @@ BackendError impl_storage_expr(LLVMBackendCompileUnit* unit,
 
             break;
         case StorageExprKindBoxAccess:
-            // TODO: resolve LLVMValueRef from BoxAccess
+            LLVMValueRef variable = get_variable(scope, expr->impl.boxAccess.variable->name);
+
+            for (guint i = 0; i < expr->impl.boxAccess.member->len; i++) {
+                BoxMember* member = g_array_index(expr->impl.boxAccess.member, BoxMember*, i);
+
+                LLVMTypeRef member_type = NULL;
+                err = get_type_impl(unit, scope->func_scope->global_scope,
+                                    expr->target_type, &member_type);
+                if (err.kind != Success) {
+                    return err;
+                }
+
+                variable = LLVMBuildStructGEP2(builder, member_type, variable, member->index, "");
+            }
+
+            *storage_target = variable;
+
             break;
     }
 

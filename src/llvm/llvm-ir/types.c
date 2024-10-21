@@ -270,13 +270,13 @@ BackendError impl_box_type(LLVMBackendCompileUnit* unit, LLVMGlobalScope* scope,
             break;
         }
 
-        g_array_append_val(members, llvm_type);
+        g_array_append_val(members, llvm_local_type);
     }
     DEBUG("implemented %ld members", members->len);
 
     if (err.kind == Success) {
         *llvm_type =
-          LLVMStructType((LLVMTypeRef*) members->data, members->len, 0);
+          LLVMStructTypeInContext(unit->context, (LLVMTypeRef*) members->data, members->len, false);
     }
 
     g_array_free(members, FALSE);

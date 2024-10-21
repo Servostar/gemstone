@@ -1889,6 +1889,49 @@ int createStorageExpr(StorageExpr* expr, AST_NODE_PTR node) {
                 return SEMANTIC_ERROR;
             };
             break;
+        case AST_IdentList: {
+            expr->kind = StorageExprKindBoxAccess;
+
+            const char* boxname   = AST_get_node(node, 0)->value;
+            int status            = getVariableFromScope(boxname, &expr->impl.boxAccess.variable);
+            Variable* boxvar      = expr->impl.boxAccess.variable;
+
+            if (status == SEMANTIC_ERROR) {
+                print_diagnostic(&AST_get_node(node, 0)->location, Error,
+                                 "Variable of name `%s` does not exist");
+                return SEMANTIC_ERROR;
+            }
+
+            expr->impl.boxAccess.nodePtr = node;
+            expr->impl.boxAccess.member = mem_new_g_array(MemoryNamespaceSet, sizeof(BoxMember));
+
+            BoxType* boxtype = NULL;
+            if (boxvar->kind == VariableKindDeclaration) {
+
+                boxtype = boxvar->impl.declaration.type->impl.box;
+            } else if (boxvar->kind == VariableKindDefinition) {
+                boxtype = boxvar->impl.definiton.declaration.type->impl.box;
+            } else {
+                return SEMANTIC_ERROR;
+            }
+
+            for (guint i = 1; i < AST_get_child_count(node); i++) {
+                AST_NODE_PTR member = AST_get_node(node, i);
+
+                if (g_hash_table_contains(boxtype->member, member->value)) {
+                    BoxMember* boxmember = g_hash_table_lookup(boxtype->member, member->value);
+
+                    g_array_append_val(expr->impl.boxAccess.member, boxmember);
+                    boxtype = boxmember->box;
+                    expr->target_type = boxmember->type;
+                } else {
+                    print_diagnostic(&member->location, Error, "no member `%s` exists", member->value);
+                    return SEMANTIC_ERROR;
+                }
+            }
+        }
+            break;
+
         default:
             print_message(Error, "Unimplemented");
             return SEMANTIC_ERROR;
@@ -2349,7 +2392,7 @@ int createParam(GArray* Paramlist, AST_NODE_PTR currentNode) {
             PANIC("IO_Qualifier is not in or out");
         }
     } else {
-        PANIC("IO_Qualifier has not the right amount of children");
+        decl.qualifier = In;
     }
 
     if (set_get_type_impl(AST_get_node(paramdecl, 0), &(decl.type))) {
@@ -2675,7 +2718,7 @@ int createFunction(Function* function, AST_NODE_PTR currentNode) {
     return SEMANTIC_OK;
 }
 
-int createDeclMember(BoxType* ParentBox, AST_NODE_PTR currentNode) {
+int createDeclMember(BoxType* ParentBox, unsigned int index, AST_NODE_PTR currentNode) {
 
     Type* declType = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     int status     = set_get_type_impl(AST_get_node(currentNode, 0), &declType);
@@ -2691,6 +2734,7 @@ int createDeclMember(BoxType* ParentBox, AST_NODE_PTR currentNode) {
         decl->box        = ParentBox;
         decl->initalizer = NULL;
         decl->type       = declType;
+        decl->index      = index;
         if (g_hash_table_contains(ParentBox->member, (gpointer) decl->name)) {
             return SEMANTIC_ERROR;
         }
@@ -2768,15 +2812,19 @@ int createBox(GHashTable* boxes, AST_NODE_PTR currentNode) {
 
     Type* boxType     = mem_alloc(MemoryNamespaceSet, sizeof(Type));
     boxType->nodePtr  = currentNode;
+    boxType->kind     = TypeKindBox;
     boxType->impl.box = box;
+    boxType->impl.box->member = mem_new_g_hash_table(MemoryNamespaceSet, g_str_hash, g_str_equal);
 
-    for (size_t i = 0; boxMemberList->children->len; i++) {
+    unsigned int index = 0;
+    for (size_t i = 0; i < boxMemberList->children->len; i++) {
         switch (AST_get_node(boxMemberList, i)->kind) {
             case AST_Decl:
             case AST_Def:
-                if (createDeclMember(box, AST_get_node(boxMemberList, i))) {
+                if (createDeclMember(box, index, AST_get_node(boxMemberList, i))) {
                     return SEMANTIC_ERROR;
                 }
+                index ++;
                 break;
             case AST_FunDef:
                 {
@@ -2793,7 +2841,14 @@ int createBox(GHashTable* boxes, AST_NODE_PTR currentNode) {
     if (g_hash_table_contains(boxes, (gpointer) boxName)) {
         return SEMANTIC_ERROR;
     }
-    g_hash_table_insert(boxes, (gpointer) boxName, box);
+
+    Typedefine* boxdef = mem_alloc(MemoryNamespaceSet, sizeof(Typedefine));
+    boxdef->name = boxName;
+    boxdef->type = boxType;
+    boxdef->nodePtr = currentNode;
+
+    g_hash_table_insert(boxes, (gpointer) boxName, boxdef);
+    g_hash_table_insert(declaredBoxes, (gpointer) boxName, boxType);
 
     return SEMANTIC_OK;
 }

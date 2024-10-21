@@ -19,3 +19,7 @@ CTestTestfile.cmake
 DartConfiguration.tcl
 *.cmake
 *.ll
+*.ninja_deps
+*.ninja_log
+*.ninja
+*.svg
